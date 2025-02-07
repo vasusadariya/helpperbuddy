@@ -110,3 +110,8 @@ enum Category {
   WASHING_MACHINE_REPAIR
   WATER_PURIFIER_REPAIR
 }
+
+model RequestedService {
+  id          String   @id @default(cuid())
+  name        String
+}
