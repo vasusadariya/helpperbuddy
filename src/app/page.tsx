@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import HeroHeading from "@/components/HeroHeading";
-
+import SearchBar from '@/components/searchbar';
 
 export default function Home() {
   const { data: session } = useSession();
@@ -102,6 +102,10 @@ onClick={()=>{router.push("/admin/approvals")} }>
         </div>
       </section>
 
+      <section>
+        <h2>Search for a Service</h2>
+        <SearchBar />
+      </section>
     </div>
   );
 }
