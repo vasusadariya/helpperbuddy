@@ -13,22 +13,24 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Check if the requester is an admin.
-  const admin = await isAdmin(request)
-  if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   try {
-    const body = await request.json()
-    const { name, description, price, category } = body
-
-    const service = await prisma.service.create({
-      data: { name, description, price, category }
-    })
-    return NextResponse.json(service, { status: 201 })
+    const services = await prisma.service.findMany({
+      select: {
+        name: true,
+        price: true,
+      },
+    });
+    return new Response(JSON.stringify(services), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    console.error('Error creating service:', error)
-    return NextResponse.json({ error: 'Error creating service' }, { status: 500 })
+    return new Response(
+      JSON.stringify({ error: 'Failed to fetch services' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }

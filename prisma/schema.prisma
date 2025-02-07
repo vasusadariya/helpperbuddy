@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,45 +8,43 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  password      String
-  role          Role      @default(USER)
-  wallet        Wallet?
-  orders        Order[]
-  referralCode  String    @unique @default(cuid())
-  referredBy    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  createdAt    DateTime @default(now())
+  password     String
+  referralCode String   @unique @default(cuid())
+  referredBy   String?
+  role         Role     @default(USER)
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  wallet       Wallet?
 }
 
 model Service {
-  id          String   @id @default(cuid())
+  id          String            @id @default(uuid())
   name        String
   description String
   price       Float
-  category    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+  category    Category
   orders      Order[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  providers   ServiceProvider[]
 }
 
 model Order {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  serviceId       String
-  service         Service  @relation(fields: [serviceId], references: [id])
-  status          Status   @default(PENDING)
-  date            DateTime
-  time            String
-  remarks         String?
-  razorpayOrderId String?  @unique
-  amount          Float    @default(0)
-  currency        String   @default("INR")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  serviceId String
+  status    Status   @default(PENDING)
+  date      DateTime
+  time      String
+  remarks   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  service   Service  @relation(fields: [serviceId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Wallet {
@@ -58,15 +55,34 @@ model Wallet {
 }
 
 model Partner {
-  id       String   @id @default(cuid())
-  name     String
-  email    String   @unique
-  password String
-  services String[]
-  pincodes String[]
-  approved Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String            @id @default(cuid())
+  name      String
+  email     String            @unique
+  password  String
+  approved  Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  pincodes  PartnerPincode[]
+  services  ServiceProvider[]
+}
+
+model ServiceProvider {
+  id        String  @id @default(cuid())
+  serviceId String
+  partnerId String
+  partner   Partner @relation(fields: [partnerId], references: [id])
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  @@unique([serviceId, partnerId])
+}
+
+model PartnerPincode {
+  id        String  @id @default(cuid())
+  partnerId String
+  pincode   String
+  partner   Partner @relation(fields: [partnerId], references: [id])
+
+  @@unique([partnerId, pincode])
 }
 
 enum Role {
@@ -79,4 +95,18 @@ enum Status {
   PENDING
   COMPLETED
   CANCELLED
+}
+
+enum Category {
+  AC_SERVICE
+  BATHROOM_KITCHEN_CLEANING
+  CARPENTER
+  CHIMNEY_REPAIR
+  ELECTRICIAN
+  MICROWAVE_REPAIR
+  PLUMBERS
+  REFRIGERATOR_REPAIR
+  SOFA_CARPET_CLEANING
+  WASHING_MACHINE_REPAIR
+  WATER_PURIFIER_REPAIR
 }
