@@ -1,5 +1,5 @@
 "use client";
-
+import axios from "axios";
 import { useEffect, useState } from "react";
 
 export default function AdminApprovals() {
@@ -30,15 +30,10 @@ export default function AdminApprovals() {
   async function handleApproval(partnerId: string, approved: boolean) {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/approve-partner", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partnerId, approved }),
-      });
+      const res = await axios.put("http://localhost:3000/api/admin/approve-partner", { partnerId, approved });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to update partner approval.");
+      if (res.status !== 200) {
+        throw new Error(res.data.error || "Failed to update partner approval.");
       }
 
       setPartners(partners.filter((partner) => partner.id !== partnerId));

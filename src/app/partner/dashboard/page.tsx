@@ -29,7 +29,7 @@ export default function PartnerDashboard() {
     return (
         <div className="min-h-screen bg-gray-100">
             <div className="max-w-4xl mx-auto p-6">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome, {session.user.email}!</h1>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome, {session.user.name} !</h1>
 
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <h2 className="text-2xl font-semibold mb-3">Partner Profile</h2>
