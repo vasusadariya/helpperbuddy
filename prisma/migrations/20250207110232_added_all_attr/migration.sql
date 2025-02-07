@@ -1,23 +1,25 @@
+/*
+  Warnings:
+
+  - A unique constraint covering the columns `[referralCode]` on the table `User` will be added. If there are existing duplicate values, this will fail.
+  - Added the required column `password` to the `User` table without a default value. This is not possible if the table is not empty.
+  - The required column `referralCode` was added to the `User` table with a prisma-level default value. This is not possible if the table is not empty. Please add this column as optional, then populate it before making it required.
+  - Added the required column `updatedAt` to the `User` table without a default value. This is not possible if the table is not empty.
+
+*/
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN', 'PARTNER');
 
 -- CreateEnum
 CREATE TYPE "Status" AS ENUM ('PENDING', 'COMPLETED', 'CANCELLED');
 
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "role" "Role" NOT NULL DEFAULT 'USER',
-    "referralCode" TEXT NOT NULL,
-    "referredBy" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "password" TEXT NOT NULL,
+ADD COLUMN     "referralCode" TEXT NOT NULL,
+ADD COLUMN     "referredBy" TEXT,
+ADD COLUMN     "role" "Role" NOT NULL DEFAULT 'USER',
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
 
 -- CreateTable
 CREATE TABLE "Service" (
@@ -72,16 +74,13 @@ CREATE TABLE "Partner" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_referralCode_key" ON "User"("referralCode");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Wallet_userId_key" ON "Wallet"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Partner_email_key" ON "Partner"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_referralCode_key" ON "User"("referralCode");
 
 -- AddForeignKey
 ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
