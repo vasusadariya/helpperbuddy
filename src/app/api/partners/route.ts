@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { isAdmin } from '@/lib/auth'
-import { hash } from 'bcrypt'
-
-export async function GET(request: NextRequest) {
-  // Check if the requester is an admin.
-  const admin = await isAdmin(request)
-  if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  try {
-    const partners = await prisma.partner.findMany()
-    return NextResponse.json(partners, { status: 200 })
-  } catch (error) {
-    console.error('Error fetching partners:', error)
-    return NextResponse.json({ error: 'Error fetching partners' }, { status: 500 })
-  }
-}
+import { hash } from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {

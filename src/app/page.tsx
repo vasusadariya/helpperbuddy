@@ -1,9 +1,21 @@
 "use client";
 
+
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
+
 export default function Home() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    signOut();
+  };
+
   return (
     <div className="bg-black text-white">
       {/* Hero Section with Navbar Inside */}
@@ -79,6 +91,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
     </div>
   );
 }
