@@ -17,13 +17,20 @@ export default function PartnerRegister() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+  
+    const formattedData = {
+      ...formData,
+      services: formData.services.split(",").map(s => s.trim()), // Convert to array
+      pincodes: formData.pincodes.split(",").map(p => p.trim()), // Convert to array
+    };
+  
     try {
       const response = await fetch("/api/partners", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formattedData),
       });
-
+  
       const data = await response.json();
       if (response.ok) {
         alert("Registration successful! Wait for admin approval.");
@@ -35,6 +42,7 @@ export default function PartnerRegister() {
       alert("Something went wrong!");
     }
   };
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
