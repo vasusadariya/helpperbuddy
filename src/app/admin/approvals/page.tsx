@@ -30,29 +30,39 @@ export default function AdminApprovals() {
   async function handleApproval(partnerId: string, approved: boolean) {
     setLoading(true);
     try {
+      console.log("Sending request with:", { partnerId, approved });
+  
       const res = await fetch("/api/admin/approve-partner", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ partnerId, approved }),
       });
-
+  
+      console.log("Response Status:", res.status);
+  
+      // Check if response is empty
+      const text = await res.text();
+      console.log("Raw Response Text:", text);
+  
+      if (!text) throw new Error("Empty response from server");
+  
+      const data = JSON.parse(text);
+      console.log("Parsed Response Data:", data);
+  
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to update partner approval.");
+        throw new Error(data.error || "Failed to update partner approval.");
       }
-
+  
       setPartners(partners.filter((partner) => partner.id !== partnerId));
     } catch (error) {
-      console.error(error);
-      if (error instanceof Error) {
-        alert(error.message);
-      } else {
-        alert("An unknown error occurred.");
-      }
+      console.error("Error in handleApproval:", error);
+      alert(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
       setLoading(false);
     }
   }
+  
+  
 
   return (
     <div className="p-6">

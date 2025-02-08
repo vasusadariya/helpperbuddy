@@ -17,6 +17,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+
     const { name, description, price, category } = await request.json();
 
     // Validate required fields
@@ -56,5 +57,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating service:', error);
     return NextResponse.json({ error: 'Failed to create service' }, { status: 500 });
+
   }
 }

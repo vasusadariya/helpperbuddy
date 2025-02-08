@@ -3,13 +3,26 @@ import prisma from "@/lib/prisma";
 
 export async function PUT(request: NextRequest) {
   try {
-    const { partnerId, approved} = await request.json();
+    // Log the raw request body
+    const text = await request.text();
+    console.log("Raw Request Body:", text);
 
-    if (!partnerId || approved == undefined) {
+    // Ensure the body is not empty
+    if (!text) {
+      return NextResponse.json({ error: "Empty request body" }, { status: 400 });
+    }
+
+    const body = JSON.parse(text);
+    console.log("Parsed Request Body:", body);
+
+    const { partnerId, approved } = body;
+
+    if (!partnerId || approved === undefined) {
       return NextResponse.json({ error: "Partner ID and approval status are required" }, { status: 400 });
     }
 
-    const partner = await prisma.partner.update({
+    // Update partner approval in DB
+    await prisma.partner.update({
       where: { id: partnerId },
       data: { approved },
     });
