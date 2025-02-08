@@ -27,7 +27,7 @@ export const authOptions = {
                     const isValid = await bcrypt.compare(credentials.password, user.password);
                     if (!isValid) throw new Error("Invalid credentials");
 
-                    return { id: user.id, email: user.email, role: "USER" };
+                    return { id: user.id, email: user.email, name: user.name, role: "USER" };
                 }
 
                 if (partner) {
@@ -36,7 +36,7 @@ export const authOptions = {
                     const isValid = await bcrypt.compare(credentials.password, partner.password);
                     if (!isValid) throw new Error("Invalid credentials");
 
-                    return { id: partner.id, email: partner.email, role: "PARTNER" };
+                    return { id: partner.id, email: partner.email, name: partner.name ,role: "PARTNER" };
                 }
 
                 throw new Error("No account found.");
