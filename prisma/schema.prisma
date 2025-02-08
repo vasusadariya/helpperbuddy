@@ -34,17 +34,22 @@ model Service {
 }
 
 model Order {
-  id        String   @id @default(cuid())
-  userId    String
-  serviceId String
-  status    Status   @default(PENDING)
-  date      DateTime
-  time      String
-  remarks   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  service   Service  @relation(fields: [serviceId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id              String   @id @default(cuid())
+  userId          String
+  serviceId       String
+  status          Status   @default(PENDING)
+  date            DateTime
+  time            String
+  remarks         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  partnerId       String?
+  amount          Float    @default(0)
+  currency        String   @default("INR")
+  razorpayOrderId String?  @unique
+  Partner         Partner? @relation(fields: [partnerId], references: [id])
+  service         Service  @relation(fields: [serviceId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
 }
 
 model Wallet {
@@ -63,6 +68,7 @@ model Partner {
   approved  Boolean           @default(false)
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
+  Order     Order[]
   pincodes  PartnerPincode[]
   servicesPartner  ServiceProvider[]
 }
@@ -85,6 +91,22 @@ model PartnerPincode {
   @@unique([partnerId, pincode])
 }
 
+model Blog {
+  id        String   @id @default(cuid())
+  title     String   @db.VarChar(255)
+  content   String
+  image     String?
+  author    String
+  readTime  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RequestedService {
+  id   String @id @default(cuid())
+  name String
+}
+
 enum Role {
   USER
   ADMIN
@@ -93,6 +115,7 @@ enum Role {
 
 enum Status {
   PENDING
+  ACCEPTED
   COMPLETED
   CANCELLED
 }
