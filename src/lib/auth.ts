@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/app/api/auth/[...nextauth]/options'
+
 
 /**
  * Checks if the incoming request is authenticated.
