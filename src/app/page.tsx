@@ -1,6 +1,5 @@
 "use client";
 
-
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 
@@ -35,33 +34,29 @@ export default function Home() {
           Reliable, Fast & Affordable Services
           </h1> */}
 
-          <HeroHeading/>
-          
+          <HeroHeading />
+
           <p className="text-gray-600 mt-4 max-w-md">
-          delivering top-quality, eco-friendly solutions tailored to your needs. Our trusted team ensures your spaces are spotless, fresh, and well-maintained.
+            delivering top-quality, eco-friendly solutions tailored to your needs. Our trusted team ensures your spaces are spotless, fresh, and well-maintained.
           </p>
           <h2 className="text-2xl md:text-xl font-bold mt-4 leading-tight">
-          Your Helper Buddy is Just a Click Away!
+            Your Helper Buddy is Just a Click Away!
           </h2>
           <div className="mt-6 flex justify-center md:justify-start space-x-4">
-          <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-          onClick={() => router.push("/partner/register")}>
-  partner
-</button>
+            <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
+              onClick={() => router.push("/partner/register")}>
+              partner
+            </button>
 
-<button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-          onClick={() => router.push("/signup")}>
-  signup
-</button>
+            <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
+              onClick={() => router.push("/signup")}>
+              signup
+            </button>
 
-<button className="relative border border-black px-6 py-3 rounded-full font-medium hover:bg-gray-300 hover:text-white shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-onClick={()=>{router.push("/admin/approvals")} }>
-  admin aprrovals
-</button>
-
-
-
-
+            <button className="relative border border-black px-6 py-3 rounded-full font-medium hover:bg-gray-300 hover:text-white shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
+              onClick={() => { router.push("/admin/approvals") }}>
+              admin aprrovals
+            </button>
           </div>
         </div>
 
