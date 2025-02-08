@@ -13,13 +13,36 @@ model User {
   email        String   @unique
   createdAt    DateTime @default(now())
   password     String
+
   referralCode String   @unique @default(cuid())
   referredBy   String?
+  referredUsers User[]  @relation("Referrals")
+  referrer     User?    @relation("Referrals", fields: [referredBy], references: [id])
+
   role         Role     @default(USER)
   updatedAt    DateTime @updatedAt
   orders       Order[]
   wallet       Wallet?
+  transactions Transaction[]
 }
+
+model Transaction {
+  id          String          @id @default(cuid())
+  amount      Float
+  type        TransactionType
+  description String
+  walletId    String
+  userId      String
+  wallet      Wallet         @relation(fields: [walletId], references: [id])
+  user        User           @relation(fields: [userId], references: [id])
+  orderId     String?        @unique  
+  order       Order?         @relation(fields: [orderId], references: [id]) 
+  createdAt   DateTime       @default(now())
+  
+  @@index([userId, type])
+  @@index([walletId, createdAt])
+}
+
 
 model Service {
   id          String            @id @default(uuid())
@@ -34,37 +57,59 @@ model Service {
 }
 
 model Order {
-  id        String   @id @default(cuid())
-  userId    String
-  serviceId String
-  status    Status   @default(PENDING)
-  date      DateTime
-  time      String
-  remarks   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  service   Service  @relation(fields: [serviceId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id              String   @id @default(cuid())
+  userId          String
+  serviceId       String
+  status          Status   @default(PENDING)
+  date            DateTime
+  time            String
+  remarks         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  partnerId       String?
+  
+  amount          Float    @default(0)
+  currency        String   @default("INR")
+  razorpayOrderId String?  @unique
+  razorpayPaymentId String? @unique
+  paidAt           DateTime?
+
+  walletAmount    Float     @default(0)
+  remainingAmount Float     @default(0)
+ 
+  transaction     Transaction?
+  Partner         Partner? @relation(fields: [partnerId], references: [id])
+  service         Service  @relation(fields: [serviceId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([partnerId, status])
 }
 
 model Wallet {
-  id      String @id @default(cuid())
-  balance Float  @default(0)
-  userId  String @unique
-  user    User   @relation(fields: [userId], references: [id])
+  id           String        @id @default(cuid())
+  balance      Float         @default(0)
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
 }
 
 model Partner {
-  id        String            @id @default(cuid())
-  name      String
-  email     String            @unique
-  password  String
-  service   String[]
-  approved  Boolean           @default(false)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  pincodes  PartnerPincode[]
-  servicesPartner  ServiceProvider[]
+  id              String            @id @default(cuid())
+  name            String
+  email           String            @unique
+  password        String
+  service         String[]
+  approved        Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  Order           Order[]
+  pincodes        PartnerPincode[]
+  servicesPartner ServiceProvider[]
 }
 
 model ServiceProvider {
@@ -73,6 +118,7 @@ model ServiceProvider {
   partnerId String
   partner   Partner @relation(fields: [partnerId], references: [id])
   service   Service @relation(fields: [serviceId], references: [id])
+
   @@unique([serviceId, partnerId])
 }
 
@@ -85,6 +131,22 @@ model PartnerPincode {
   @@unique([partnerId, pincode])
 }
 
+model Blog {
+  id        String   @id
+  title     String   @db.VarChar(255)
+  content   String
+  image     String?
+  author    String
+  readTime  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model RequestedService {
+  id   String @id
+  name String
+}
+
 enum Role {
   USER
   ADMIN
@@ -93,6 +155,7 @@ enum Role {
 
 enum Status {
   PENDING
+  ACCEPTED
   COMPLETED
   CANCELLED
 }
@@ -109,6 +172,11 @@ enum Category {
   SOFA_CARPET_CLEANING
   WASHING_MACHINE_REPAIR
   WATER_PURIFIER_REPAIR
-
 }
 
+enum TransactionType {
+  CREDIT
+  DEBIT
+  REFERRAL_BONUS
+  SIGNUP_BONUS
+}
