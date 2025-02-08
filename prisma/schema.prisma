@@ -85,6 +85,11 @@ model PartnerPincode {
   @@unique([partnerId, pincode])
 }
 
+model RequestedService {
+  id   String @id @default(cuid())
+  name String
+}
+
 enum Role {
   USER
   ADMIN
@@ -109,9 +114,4 @@ enum Category {
   SOFA_CARPET_CLEANING
   WASHING_MACHINE_REPAIR
   WATER_PURIFIER_REPAIR
-}
-
-model RequestedService {
-  id          String   @id @default(cuid())
-  name        String
 }
