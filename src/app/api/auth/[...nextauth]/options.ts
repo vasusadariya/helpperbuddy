@@ -106,7 +106,7 @@ export const authOptions = {
                     data: {
                         email: profile.email,
                         name: profile.name,
-                        role: isAdminPattern ? "PENDING_ADMIN" : "USER",
+                        role: "USER", // Always create as USER, handle admin status separately
                         password: profile.password, // Set a default or random password
                     },
                 });
