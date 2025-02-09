@@ -1,5 +1,6 @@
 "use client"; // Required for Client Components
 
+import Link from "next/link";
 import React from "react";
 
 export default function UserDashboard() {
@@ -16,9 +17,9 @@ export default function UserDashboard() {
           <button className="w-full px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
             View Profile
           </button>
-          <button className="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700">
+          <Link href='./orders' className="w-full px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700">
             View Orders
-          </button>
+          </Link>
         </div>
       </div>
     </div>
