@@ -4,7 +4,6 @@ import { signIn, useSession } from "next-auth/react";
 import { Session } from "next-auth";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
 
 interface CustomSession extends Session {
   user: {
@@ -27,6 +26,8 @@ export default function SignIn() {
       router.push("/user/dashboard");
     } else if (session.user.role === "PARTNER") {
       router.push("/partner/dashboard");
+    } else if (session.user.role === "ADMIN") {
+      router.push("/admin/approvals");
     }
   }
 

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import Razorpay from "razorpay";
 import { PrismaClient } from "@prisma/client";
 import { authOptions } from "../auth/[...nextauth]/options";
+import { awardReferralBonus } from "../refferals/route";  
 
 const prisma = new PrismaClient();
 
@@ -12,80 +13,308 @@ const razorpay = new Razorpay({
 });
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
-    const orders = await prisma.order.findMany({
-      where: { userId: session.user.id },
-      include: { service: true }
+    const session = await getServerSession(authOptions);
+    const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Unauthorized',
+        timestamp: currentUTCTime 
+      }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
     });
-    return NextResponse.json(orders, { status: 200 });
+
+    if (!user) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'User not found',
+        timestamp: currentUTCTime 
+      }, { status: 404 });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { userId: user.id },
+      include: { 
+        service: true,
+        transaction: true,
+        Partner: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        orders,
+        timestamp: currentUTCTime
+      }
+    });
   } catch (error) {
+    const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
     console.error('Error fetching orders:', error);
-    return NextResponse.json(
-      { error: 'Error fetching orders' },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Error fetching orders',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: currentUTCTime
+    }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (!session?.user?.email) {
+      return NextResponse.json({
+        success: false,
+        error: "Unauthorized",
+        details: "Valid session required",
+        timestamp: currentUTCTime
+      }, { status: 401 });
     }
 
-    const { serviceId, date, time, remarks } = await req.json();
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
 
-    // Fetch the service to get its price
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        error: "User not found",
+        timestamp: currentUTCTime
+      }, { status: 404 });
+    }
+
+    const body = await req.json();
+    const { serviceId, date, time, remarks } = body;
+
+    // Validate required fields
+    if (!serviceId || !date || !time) {
+      return NextResponse.json({
+        success: false,
+        error: "Missing required fields",
+        received: { serviceId, date, time, remarks },
+        timestamp: currentUTCTime
+      }, { status: 400 });
+    }
+
+    // Get service details
     const service = await prisma.service.findUnique({
       where: { id: serviceId }
     });
 
     if (!service) {
-      return NextResponse.json({ error: "Service not found" }, { status: 404 });
+      return NextResponse.json({
+        success: false,
+        error: "Service not found",
+        serviceId,
+        timestamp: currentUTCTime
+      }, { status: 404 });
     }
 
-    // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(service.price * 100),
-      currency: "INR", // or "USD" based on your setup
-      receipt: `receipt_${Date.now()}`,
-      notes: {
-        serviceId: serviceId,
-      },
+    // Get user's wallet
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId: user.id }
     });
 
-    // Store the new order in the database using Prisma
-    const newOrder = await prisma.order.create({
-      data: {
-        userId: session.user.id,
-        serviceId: serviceId,
-        date: new Date(date),
-        time: time,
-        remarks: remarks,
-        razorpayOrderId: razorpayOrder.id,
-        amount: service.price,
-        currency: razorpayOrder.currency,
-        status: "PENDING",
-      },
+    // Calculate amounts
+    const totalAmount = service.price;
+    const walletAmount = wallet ? Math.min(wallet.balance, totalAmount) : 0;
+    const remainingAmount = totalAmount - walletAmount;
+
+    // Use transaction to handle wallet deduction and order creation
+    const result = await prisma.$transaction(async (tx) => {
+      // Create order first
+      const order = await tx.order.create({
+        data: {
+          userId: user.id,
+          serviceId: serviceId,
+          date: new Date(date),
+          time: time,
+          remarks: remarks || "",
+          amount: totalAmount,
+          walletAmount: walletAmount,
+          remainingAmount: remainingAmount,
+          status: 'PENDING'
+        }
+      });
+
+      let transaction = null;
+
+      // Handle wallet payment if available
+      if (walletAmount > 0 && wallet) {
+        // Deduct from wallet
+        await tx.wallet.update({
+          where: { userId: user.id },
+          data: {
+            balance: { decrement: walletAmount }
+          }
+        });
+
+        // Create wallet transaction record
+        transaction = await tx.transaction.create({
+          data: {
+            amount: walletAmount,
+            type: 'DEBIT',
+            description: `Payment for ${service.name}`,
+            walletId: wallet.id,
+            userId: user.id,
+            orderId: order.id
+          }
+        });
+      }
+
+      let razorpayOrder = null;
+      let updatedOrder = order;
+
+      if (remainingAmount > 0) {
+        razorpayOrder = await razorpay.orders.create({
+          amount: Math.round(remainingAmount * 100),
+          currency: "INR",
+          receipt: `order_rcpt_${order.id}`,
+          notes: {
+            orderId: order.id,
+            serviceId: serviceId,
+            userId: user.id
+          }
+        });
+
+        updatedOrder = await tx.order.update({
+          where: { id: order.id },
+          data: { razorpayOrderId: razorpayOrder.id }
+        });
+      } else {
+        updatedOrder = await tx.order.update({
+          where: { id: order.id },
+          data: { status: 'COMPLETED' }
+        });
+
+        try {
+          await awardReferralBonus(user.id);
+        } catch (bonusError) {
+          console.error('Error awarding referral bonus:', bonusError);
+        }
+      }
+
+      return { order: updatedOrder, transaction, razorpayOrder };
     });
 
     return NextResponse.json({
-      orderId: razorpayOrder.id,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
-      dbOrderId: newOrder.id,
+      success: true,
+      data: {
+        orderId: result.order.id,
+        totalAmount,
+        walletAmount,
+        remainingAmount,
+        razorpayOrderId: result.razorpayOrder?.id,
+        razorpayAmount: remainingAmount > 0 ? Math.round(remainingAmount * 100) : 0,
+        status: result.order.status,
+        walletTransaction: result.transaction,
+        serviceDetails: {
+          name: service.name,
+          description: service.description
+        },
+        timestamp: currentUTCTime
+      }
     });
+
   } catch (error) {
     console.error("Error creating order:", error);
-    return NextResponse.json(
-      { error: "Failed to create order" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: "Failed to create order",
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: currentUTCTime
+    }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({
+        success: false,
+        error: "Unauthorized",
+        timestamp: currentUTCTime
+      }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { orderId, status, razorpayPaymentId } = body;
+
+    if (!orderId || !status) {
+      return NextResponse.json({
+        success: false,
+        error: "Missing required fields",
+        timestamp: currentUTCTime
+      }, { status: 400 });
+    }
+
+    const currentOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { service: true }
+    });
+
+    if (!currentOrder) {
+      return NextResponse.json({
+        success: false,
+        error: "Order not found",
+        timestamp: currentUTCTime
+      }, { status: 404 });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updateData: any = { status };
+      
+      if (status === 'COMPLETED' && razorpayPaymentId) {
+        updateData.razorpayPaymentId = razorpayPaymentId;
+        updateData.paidAt = new Date();
+      }
+
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: updateData
+      });
+
+      if (status === 'COMPLETED') {
+        try {
+          await awardReferralBonus(currentOrder.userId);
+        } catch (error) {
+          console.error('Error awarding referral bonus:', error);
+        }
+      }
+
+      return updatedOrder;
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        order: result,
+        timestamp: currentUTCTime
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating order:", error);
+    return NextResponse.json({
+      success: false,
+      error: "Failed to update order",
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: currentUTCTime
+    }, { status: 500 });
   }
 }
