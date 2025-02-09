@@ -1,86 +1,247 @@
 import { NextRequest, NextResponse } from "next/server";
+import Razorpay from "razorpay";
+import { PrismaClient, Transaction, Wallet, Order } from "@prisma/client";
 import crypto from "crypto";
-import { PrismaClient } from "@prisma/client";
-import nodemailer from "nodemailer";
 
+// Constants
+const REFERRAL_BONUS_AMOUNT = 50;
+const CURRENCY = "INR";
+
+// Configuration
 const prisma = new PrismaClient();
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
 
-export async function POST(req: NextRequest) {
+// Types
+type ReferralResult = {
+  wallet: Wallet;
+  transaction: Transaction;
+} | null;
+
+type WebhookEvent = {
+  event: string;
+  payload: {
+    payment: {
+      entity: {
+        id: string;
+        order_id: string;
+        amount: number;
+        currency: string;
+        status: string;
+        error_description?: string;
+      };
+    };
+  };
+};
+
+type ResponseData = {
+  success: boolean;
+  data: {
+    message: string;
+    order: {
+      id: string;
+      status: string;
+      amount: number;
+      service: string;
+    };
+    paymentId: string;
+    timestamp: string;
+    referralBonus?: {
+      amount: number;
+      transaction: Transaction;
+    };
+  };
+};
+
+async function processReferralBonus(orderId: string): Promise<ReferralResult> {
   try {
-    // Read raw body text because we need to verify the signature.
-    const body = await req.text();
-    const signature = req.headers.get("x-razorpay-signature");
+    const orderWithDetails = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: {
+          include: {
+            referrer: {
+              include: {
+                wallet: true
+              }
+            }
+          }
+        }
+      }
+    });
 
-    // Verify the signature using your Razorpay webhook secret.
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET!)
-      .update(body)
-      .digest("hex");
+    const referrerWallet = orderWithDetails?.user?.referrer?.wallet;
+    const referrerId = orderWithDetails?.user?.referrer?.id;
 
-    if (!signature || signature !== expectedSignature) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    if (!referrerWallet || !referrerId) {
+      console.log(`No valid referral chain found for order: ${orderId}`);
+      return null;
     }
 
-
-    const event = JSON.parse(body);
-
-    if (event.event === "payment.captured") {
-      const payment = event.payload.payment.entity;
-
-
-      const updatedOrder = await prisma.order.update({
-        where: { razorpayOrderId: payment.order_id },
+    const result = await prisma.$transaction(async (tx) => {
+      // Update referrer's wallet
+      const updatedWallet = await tx.wallet.update({
+        where: { id: referrerWallet.id },
         data: {
-          status: "COMPLETED",
-
-        },
-        include: {
-          user: {
-            select: { email: true },
-          },
-          service: {
-            select: { name: true },
-          },
-        },
+          balance: { increment: REFERRAL_BONUS_AMOUNT }
+        }
       });
 
-      // If the order was found and updated, send a confirmation email.
-      if (updatedOrder) {
-        // Configure Nodemailer to send mail via Mailtrap (example).
-        const transporter = nodemailer.createTransport({
-          host: "sandbox.smtp.mailtrap.io",
-          port: 2525,
-          auth: {
-            user: process.env.MAILTRAP_USER,
-            pass: process.env.MAILTRAP_PASS,
-          },
-        });
+      // Create bonus transaction
+      const bonusTransaction = await tx.transaction.create({
+        data: {
+          amount: REFERRAL_BONUS_AMOUNT,
+          type: 'REFERRAL_BONUS',
+          description: `Referral bonus for order #${orderId}`,
+          walletId: referrerWallet.id,
+          userId: referrerId
+        }
+      });
 
-        // Construct the message text (customize to match your app's needs).
-        const messageText = `
-Thank you for your purchase!
+      return {
+        wallet: updatedWallet,
+        transaction: bonusTransaction
+      };
+    });
 
-Order Details:
-- Order ID: ${updatedOrder.id.slice(-6)}
-- Service: ${updatedOrder.service?.name}
-- Price: ₹${updatedOrder.amount?.toFixed(2)}
+    console.log(`Referral bonus processed for order: ${orderId}`, {
+      walletId: result.wallet.id,
+      transactionId: result.transaction.id,
+      amount: REFERRAL_BONUS_AMOUNT
+    });
+    
+    return result;
 
-Your service is now available. Thank you for shopping with us!
-`.trim();
+  } catch (error) {
+    console.error(`Error processing referral bonus for order ${orderId}:`, error);
+    return null;
+  }
+}
 
-        await transporter.sendMail({
-          from: '"ImageKit Shop" <noreply@imagekitshop.com>',
-          to: updatedOrder.user.email,
-          subject: "Payment Confirmation - ImageKit Shop",
-          text: messageText,
-        });
-      }
+export async function POST(req: NextRequest) {
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  
+  try {
+    const body = await req.text();
+    const signature = req.headers.get("x-razorpay-signature");
+    const isTestMode = process.env.NODE_ENV === 'development';
+    
+    if (!isTestMode && !signature) {
+      return NextResponse.json({
+        success: false,
+        error: "No signature provided",
+        timestamp: currentUTCTime
+      }, { status: 400 });
     }
 
-    // Respond to Razorpay that the webhook was processed successfully.
-    return NextResponse.json({ received: true });
+    const event = JSON.parse(body) as WebhookEvent;
+    console.log("Webhook event received:", {
+      event_type: event.event,
+      timestamp: currentUTCTime,
+      order_id: event.payload?.payment?.entity?.order_id
+    });
+
+    if (event.event === "payment.captured") {
+      const { id: paymentId, order_id: orderId, amount } = event.payload.payment.entity;
+      const amountInRupees = amount / 100;
+
+      const order = await prisma.order.findUnique({
+        where: { razorpayOrderId: orderId },
+        include: {
+          service: true,
+          user: true
+        }
+      });
+
+      if (!order) {
+        console.error(`Order not found: ${orderId}`);
+        return NextResponse.json({
+          success: false,
+          error: "Order not found",
+          timestamp: currentUTCTime
+        }, { status: 404 });
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedOrder = await tx.order.update({
+          where: { id: order.id },
+          data: { 
+            status: "COMPLETED",
+            updatedAt: new Date(currentUTCTime)
+          }
+        });
+
+        const referralResult = await processReferralBonus(order.id);
+
+        return {
+          order: updatedOrder,
+          referralResult
+        };
+      });
+
+      const responseData: ResponseData = {
+        success: true,
+        data: {
+          message: "Payment processed successfully",
+          order: {
+            id: result.order.id,
+            status: result.order.status,
+            amount: amountInRupees,
+            service: order.service.name
+          },
+          paymentId,
+          timestamp: currentUTCTime
+        }
+      };
+
+      if (result.referralResult) {
+        responseData.data.referralBonus = {
+          amount: REFERRAL_BONUS_AMOUNT,
+          transaction: result.referralResult.transaction
+        };
+      }
+
+      return NextResponse.json(responseData);
+    }
+
+    if (event.event === "payment.failed") {
+      const { order_id: orderId, error_description } = event.payload.payment.entity;
+      
+      await prisma.order.update({
+        where: { razorpayOrderId: orderId },
+        data: { 
+          status: "PENDING",
+          updatedAt: new Date(currentUTCTime)
+        }
+      });
+
+      return NextResponse.json({
+        success: false,
+        data: {
+          message: "Payment failed",
+          error: error_description,
+          orderId,
+          timestamp: currentUTCTime
+        }
+      });
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: "Unhandled event type",
+      event_type: event.event,
+      timestamp: currentUTCTime
+    }, { status: 400 });
+
   } catch (error) {
-    console.error("Webhook error:", error);
-    return NextResponse.json({ error: "Webhook failed" }, { status: 500 });
+    console.error("Error handling webhook:", error);
+    return NextResponse.json({
+      success: false,
+      error: "Webhook failed",
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: currentUTCTime
+    }, { status: 500 });
   }
 }

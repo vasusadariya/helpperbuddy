@@ -24,6 +24,22 @@ model User {
   wallet       Wallet?
 }
 
+model Transaction {
+  id          String          @id @default(cuid())
+  amount      Float
+  type        TransactionType
+  description String
+  walletId    String
+  userId      String
+  orderId     String?         @unique
+  createdAt   DateTime        @default(now())
+  order       Order?          @relation(fields: [orderId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
+  wallet      Wallet          @relation(fields: [walletId], references: [id])
+
+  @@index([userId, type])
+  @@index([walletId, createdAt])
+
 model Service {
   id          String            @id @default(uuid())
   name        String
@@ -71,6 +87,20 @@ model Wallet {
   updatedAt   DateTime
   Transaction Transaction[]
   user        User          @relation(fields: [userId], references: [id])
+  transaction       Transaction?
+
+  @@index([userId, status])
+  @@index([partnerId, status])
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  balance      Float         @default(0)
+  userId       String        @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+  user         User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }

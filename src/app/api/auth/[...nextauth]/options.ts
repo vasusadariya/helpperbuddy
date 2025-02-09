@@ -4,6 +4,34 @@ import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+const SIGNUP_BONUS = 100; // ₹100 signup bonus
+
+// Helper function to ensure wallet exists
+async function ensureWalletExists(userId: string) {
+    const existingWallet = await prisma.wallet.findUnique({
+        where: { userId }
+    });
+
+    if (!existingWallet) {
+        // Create wallet with signup bonus
+        await prisma.wallet.create({
+            data: {
+                userId,
+                balance: SIGNUP_BONUS,
+                transactions: {
+                    create: {
+                        amount: SIGNUP_BONUS,
+                        type: 'SIGNUP_BONUS',
+                        description: 'Welcome bonus',
+                        userId
+                    }
+                }
+            }
+        });
+    }
+}
+
+
 export const authOptions = {
     providers: [
         CredentialsProvider({
@@ -50,6 +78,7 @@ export const authOptions = {
                 let partner = await prisma.partner.findUnique({ where: { email: profile.email } });
 
                 if (user) {
+                    await ensureWalletExists(user.id);
                     return { id: user.id, email: user.email, role: "USER" } as any;
                 }
 
@@ -69,6 +98,18 @@ export const authOptions = {
         async jwt({ token, user }: { token: any; user?: any }) {
             if (user) token.role = user.role;
             return token;
+        },
+        async signIn({ user }: { user: any }) {
+            try {
+                if (user.role === "USER") {
+                    // Ensure wallet exists when user signs in
+                    await ensureWalletExists(user.id);
+                }
+                return true;
+            } catch (error) {
+                console.error("Error in signIn callback:", error);
+                return true; // Still allow sign in even if wallet creation fails
+            }
         },
         async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
             if (url.startsWith("/")) return `${baseUrl}${url}`;

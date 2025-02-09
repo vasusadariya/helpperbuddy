@@ -1,63 +1,107 @@
-"use client";
+// app/partner/dashboard/page.tsx
+'use client';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
-import { useSession, signOut } from "next-auth/react";
-import { Session } from "next-auth";
-import { useRouter } from "next/navigation";
-type ExtendedSession = Session & {
-    user: {
-        role: string;
-    };
-};
-  
-export default function PartnerDashboard() {
-    const { data: session, status } = useSession() as { data: ExtendedSession | null; status: string };
-    const router = useRouter();
-
-    if (status === "loading") {
-        return (
-            <div className="h-screen flex items-center justify-center">
-                <p className="text-gray-600">Loading...</p>
-            </div>
-        );
-    }
-
-    if (!session?.user || session.user.role !== "PARTNER") {
-        router.push("/signin");
-        return null;
-    }
-
-    return (
-        <div className="min-h-screen bg-gray-100">
-            <div className="max-w-4xl mx-auto p-6">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome, {session.user.name} !</h1>
-
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-semibold mb-3">Partner Profile</h2>
-                    <p><strong>Email:</strong> {session.user.email}</p>
-                    <p><strong>Role:</strong> Partner</p>
-
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <DashboardCard title="Manage Services" description="Add or update your services." link="/partner/services" />
-                        <DashboardCard title="View Orders" description="Check assigned orders and status." link="/partner/orders" />
-                    </div>
-
-                    <button 
-                        onClick={() => signOut()}
-                        className="mt-6 w-full bg-red-600 text-white py-2 rounded-lg text-center"
-                    >
-                        Logout
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+interface Service {
+  id: string;
+  name: string;
 }
 
-function DashboardCard({ title, description, link }: { title: string; description: string; link: string }) {
-    return (
-        <a href={link} className="block p-4 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
-            <h3 className="text-xl font-semibold">{title}</h3>
-            <p className="text-gray-600">{description}</p>
-        </a>
+export default function PartnerDashboard() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [newService, setNewService] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const response = await fetch('/api/partner');
+        const data = await response.json();
+        setServices(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        setLoading(false);
+      }
+    }
+    fetchServices();
+  }, []);
+
+  const handleServiceSelection = (serviceName: string) => {
+    setSelectedServices((prev: string[]) =>
+      prev.includes(serviceName) ? prev.filter((s) => s !== serviceName) : [...prev, serviceName]
     );
+  };
+
+  const handleRequestService = async () => {
+    if (!newService) return;
+    try {
+      await fetch('/api/partner', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceName: newService })
+      });
+      alert('Requested service added for admin approval');
+    } catch (error) {
+      console.error('Error requesting service:', error);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Partner Dashboard</h1>
+        <Link 
+          href="/partner/orders"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          View Service Requests
+        </Link>
+      </div>
+
+      {loading ? (
+        <p>Loading services...</p>
+      ) : (
+        <div className="grid gap-6">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Your Services</h2>
+            <div className="grid gap-3">
+              {services.map((service) => (
+                <label key={service.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedServices.includes(service.name)}
+                    onChange={() => handleServiceSelection(service.name)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>{service.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Request New Service</h2>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={newService}
+                onChange={(e) => setNewService(e.target.value)}
+                placeholder="Enter new service"
+                className="flex-1 px-3 py-2 border rounded"
+              />
+              <button 
+                onClick={handleRequestService}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+              >
+                Request Service
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

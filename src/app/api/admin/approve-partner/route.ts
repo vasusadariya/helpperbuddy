@@ -22,19 +22,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Partner ID and approval status are required" }, { status: 400 });
     }
 
-    // Update partner approval in DB and get the updated partner data
-    const partner = await prisma.partner.update({
-      where: { id: partnerId },
-      data: { approved },
-      select: {
-        name: true,
-        email: true,
-        service: true
-      }
-    });
-
-    // Send email only if partner is approved
     if (approved) {
+      // If approving, just update the approval status
+      const partner = await prisma.partner.update({
+        where: { id: partnerId },
+        data: { approved },
+        select: {
+          name: true,
+          email: true,
+          service: true
+        }
+      });
+
+      // Send approval email
       try {
         await sendApprovalEmail({
           name: partner.name,
@@ -46,12 +46,36 @@ export async function PUT(request: NextRequest) {
         console.error("Error sending approval email:", emailError);
         // Continue execution even if email fails
       }
-    }
 
-    return NextResponse.json({ 
-      message: `Partner ${approved ? "approved" : "rejected"} successfully`,
-      emailSent: approved 
-    }, { status: 200 });
+      return NextResponse.json({ 
+        message: "Partner approved successfully",
+        emailSent: true 
+      }, { status: 200 });
+
+    } else {
+      // If rejecting, delete all related records in a transaction
+      await prisma.$transaction(async (tx) => {
+        // First delete all partner pincodes
+        await tx.partnerPincode.deleteMany({
+          where: { partnerId }
+        });
+
+        // Delete all service provider entries
+        await tx.serviceProvider.deleteMany({
+          where: { partnerId }
+        });
+
+        // Finally delete the partner
+        await tx.partner.delete({
+          where: { id: partnerId }
+        });
+      });
+
+      return NextResponse.json({ 
+        message: "Partner rejected and all related records deleted successfully",
+        emailSent: false 
+      }, { status: 200 });
+    }
 
   } catch (error) {
     console.error("Error updating partner approval:", error);
