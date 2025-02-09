@@ -1,81 +1,97 @@
 "use client";
-
 import { useEffect, useState } from "react";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+    const [pendingAdmins, setPendingAdmins] = useState<{ id: string; name: string; email: string }[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [processing, setProcessing] = useState<string | null>(null);
+    const router = useRouter();
+    useEffect(() => {
+        async function fetchPendingAdmins() {
+            try {
+                const res = await fetch("/api/admin");
+                if (!res.ok) throw new Error("Failed to fetch pending admins");
 
-  useEffect(() => {
-    async function fetchUsers() {
-      try {
-        const res = await fetch("/api/admin");
-        if (!res.ok) throw new Error("Failed to fetch users");
-        const data = await res.json();
-        setUsers(data.users);
-      } catch (error) {
-        console.error(error);
-        alert("Error fetching users. Please try again.");
-      }
+                const data = await res.json();
+                setPendingAdmins(data.users || []);
+            } catch (err) {
+                setError("Error loading pending admins.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchPendingAdmins();
+    }, []);
+
+    async function handleAction(userId: string, action: "approve" | "reject") {
+        setProcessing(userId);
+
+        try {
+            const res = await fetch("/api/admin/make-admin", {
+                method: "POST",
+                body: JSON.stringify({ userId, action }),
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!res.ok) throw new Error(`Failed to ${action} admin`);
+
+            setPendingAdmins(pendingAdmins.filter((user) => user.id !== userId));
+        } catch (err) {
+            alert(`Error: Could not ${action} admin.`);
+        } finally {
+            setProcessing(null);
+        }
     }
-    fetchUsers();
-  }, []);
 
-  async function promoteToAdmin(userId: string) {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/make-admin", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
+    return (
+        <div>
+        <div className="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-lg">
+            <h1 className="text-2xl font-bold mb-4">Admin Requests</h1>
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to promote user.");
-      }
+            {loading && <p>Loading pending admins...</p>}
+            {error && <p className="text-red-500">{error}</p>}
 
-      setUsers(users.map(user => (user.id === userId ? { ...user, role: "ADMIN" } : user)));
-    } catch (error) {
-      console.error(error);
-      alert("Failed to promote user.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-      <ul className="mt-4">
-        {users.map((user) => (
-          <li key={user.id} className="p-4 bg-white shadow rounded-lg flex justify-between items-center">
-            <div>
-              <p className="font-semibold">{user.name}</p>
-              <p className="text-gray-500">{user.email}</p>
-              <p className={`text-sm ${user.role === "ADMIN" ? "text-green-500" : "text-red-500"}`}>
-                Role: {user.role}
-              </p>
-            </div>
-            {user.role !== "ADMIN" && (
-              <button
-                onClick={() => promoteToAdmin(user.id)}
-                disabled={loading}
-                className="bg-blue-500 text-white px-3 py-1 rounded"
-              >
-                Make Admin
-              </button>
+            {pendingAdmins.length === 0 && !loading && (
+                <p className="text-gray-500">No pending admin requests.</p>
             )}
-          </li>
-        ))}
-      </ul>
+
+            {pendingAdmins.length > 0 && (
+                <ul className="space-y-4">
+                    {pendingAdmins.map((user) => (
+                        <li key={user.id} className="flex justify-between items-center p-3 border rounded-lg">
+                            <span>{user.name} ({user.email})</span>
+                            <div className="space-x-2">
+                                <button 
+                                    onClick={() => handleAction(user.id, "approve")}
+                                    disabled={processing === user.id}
+                                    className={`px-4 py-2 text-white rounded-lg ${
+                                        processing === user.id ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                                    }`}
+                                >
+                                    {processing === user.id ? "Approving..." : "Approve"}
+                                </button>
+                                <button 
+                                    onClick={() => handleAction(user.id, "reject")}
+                                    disabled={processing === user.id}
+                                    className={`px-4 py-2 text-white rounded-lg ${
+                                        processing === user.id ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
+                                    }`}
+                                >
+                                    {processing === user.id ? "Rejecting..." : "Reject"}
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg"
+                onClick={() => router.push("/admin/partners")}>
+                Go to Partners Approval
+            </button>
+        </div>
     </div>
-  );
+    );
 }

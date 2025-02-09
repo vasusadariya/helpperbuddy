@@ -1,8 +1,7 @@
 // app/api/admin/approve-partner/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { sendApprovalEmail } from "../../services/emailService";
-import { hash } from 'bcryptjs';
+import { sendApprovalEmail } from "../../services/emailServices/route";
 
 export async function PUT(request: NextRequest) {
   try {
