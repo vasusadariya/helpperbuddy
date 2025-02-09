@@ -56,7 +56,7 @@ export default function SearchBar() {
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             fetchServices(query);
-        }, 300); // Add debounce effect
+        }, 300);
 
         return () => clearTimeout(delayDebounceFn);
     }, [query]);

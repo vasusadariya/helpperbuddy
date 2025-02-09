@@ -8,16 +8,19 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
-  email        String   @unique
-  createdAt    DateTime @default(now())
+  email        String        @unique
+  createdAt    DateTime      @default(now())
   password     String
-  referralCode String   @unique @default(cuid())
+  referralCode String        @unique @default(cuid())
   referredBy   String?
-  role         Role     @default(USER)
-  updatedAt    DateTime @updatedAt
+  role         Role          @default(USER)
+  updatedAt    DateTime      @updatedAt
   orders       Order[]
+  Transaction  Transaction[]
+  User         User?         @relation("UserToUser", fields: [referredBy], references: [id])
+  other_User   User[]        @relation("UserToUser")
   wallet       Wallet?
 }
 
@@ -34,43 +37,56 @@ model Service {
 }
 
 model Order {
-  id              String   @id @default(cuid())
-  userId          String
-  serviceId       String
-  status          Status   @default(PENDING)
-  date            DateTime
-  time            String
-  remarks         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  partnerId       String?
-  amount          Float    @default(0)
-  currency        String   @default("INR")
-  razorpayOrderId String?  @unique
-  Partner         Partner? @relation(fields: [partnerId], references: [id])
-  service         Service  @relation(fields: [serviceId], references: [id])
-  user            User     @relation(fields: [userId], references: [id])
+  id                String       @id @default(cuid())
+  userId            String
+  serviceId         String
+  status            Status       @default(PENDING)
+  date              DateTime
+  time              String
+  remarks           String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  partnerId         String?
+  amount            Float        @default(0)
+  currency          String       @default("INR")
+  razorpayOrderId   String?      @unique
+  remainingAmount   Float        @default(0)
+  walletAmount      Float        @default(0)
+  paidAt            DateTime?
+  razorpayPaymentId String?      @unique
+  Partner           Partner?     @relation(fields: [partnerId], references: [id])
+  service           Service      @relation(fields: [serviceId], references: [id])
+  user              User         @relation(fields: [userId], references: [id])
+  Transaction       Transaction?
+
+  @@index([partnerId, status])
+  @@index([userId, status])
 }
 
 model Wallet {
-  id      String @id @default(cuid())
-  balance Float  @default(0)
-  userId  String @unique
-  user    User   @relation(fields: [userId], references: [id])
+  id          String        @id @default(cuid())
+  balance     Float         @default(0)
+  userId      String        @unique
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  Transaction Transaction[]
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model Partner {
-  id        String            @id @default(cuid())
-  name      String
-  email     String            @unique
-  password  String
-  service   String[]
-  approved  Boolean           @default(false)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  Order     Order[]
-  pincodes  PartnerPincode[]
-  servicesPartner  ServiceProvider[]
+  id              String            @id @default(cuid())
+  name            String
+  email           String            @unique
+  password        String
+  service         String[]
+  approved        Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  Order           Order[]
+  pincodes        PartnerPincode[]
+  servicesPartner ServiceProvider[]
 }
 
 model ServiceProvider {
@@ -79,6 +95,7 @@ model ServiceProvider {
   partnerId String
   partner   Partner @relation(fields: [partnerId], references: [id])
   service   Service @relation(fields: [serviceId], references: [id])
+
   @@unique([serviceId, partnerId])
 }
 
@@ -107,10 +124,28 @@ model RequestedService {
   name String
 }
 
+model Transaction {
+  id          String          @id
+  amount      Float
+  type        TransactionType
+  description String
+  walletId    String
+  userId      String
+  orderId     String?         @unique
+  createdAt   DateTime        @default(now())
+  Order       Order?          @relation(fields: [orderId], references: [id])
+  User        User            @relation(fields: [userId], references: [id])
+  Wallet      Wallet          @relation(fields: [walletId], references: [id])
+
+  @@index([userId, type])
+  @@index([walletId, createdAt])
+}
+
 enum Role {
   USER
   ADMIN
   PARTNER
+  PENDING_ADMIN
 }
 
 enum Status {
@@ -132,6 +167,11 @@ enum Category {
   SOFA_CARPET_CLEANING
   WASHING_MACHINE_REPAIR
   WATER_PURIFIER_REPAIR
-
 }
 
+enum TransactionType {
+  CREDIT
+  DEBIT
+  REFERRAL_BONUS
+  SIGNUP_BONUS
+}
