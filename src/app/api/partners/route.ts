@@ -2,103 +2,69 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hash } from 'bcryptjs';
 
-// Partner Registration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, pincodes } = body;
+    console.log('Received body:', body);
 
-    if (!name || !email || !password || !pincodes) {
+    let { name, email, password, services, pincodes } = body;
+
+    if (!name || !email || !password || !services || !pincodes) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Ensure services is an array
+    const servicesArray = Array.isArray(services) ? services : services.split(',').map((s: string) => s.trim());
+    const pincodesArray = Array.isArray(pincodes) ? pincodes.map(p => p.trim()) : [pincodes.trim()];
+
+    console.log('Processed services:', servicesArray);
+    console.log('Processed pincodes:', pincodesArray);
+
+    // Check if partner already exists
+    const existingPartner = await prisma.partner.findUnique({
+      where: { email },
+    });
+
+    if (existingPartner) {
+      return NextResponse.json({ error: 'Partner with this email already exists' }, { status: 400 });
+    }
+
+    // Hash the password
     const hashedPassword = await hash(password, 10);
 
+    // Create partner first
     const partner = await prisma.partner.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        pincodes: Array.isArray(pincodes) ? pincodes : [pincodes],
-        approved: false, // Requires admin approval
+      data: { 
+        name, 
+        email, 
+        password: hashedPassword, 
+        service: servicesArray,  
+        approved: false
       }
     });
 
-    return NextResponse.json({ id: partner.id, name: partner.name, email: partner.email, approved: partner.approved }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating partner:', error);
-    return NextResponse.json({ error: 'Error creating partner', details: error.message }, { status: 500 });
-  }
-}
+    console.log('Partner created:', partner.id);
 
-// Get All Services
-export async function GET(request: NextRequest) {
-  try {
-    const services = await prisma.service.findMany();
-    return NextResponse.json(services, { status: 200 });
-  } catch (error) {
-    console.error('Error fetching services:', error);
-    return NextResponse.json({ error: 'Error fetching services' }, { status: 500 });
-  }
-}
-
-// Request New Service (Partner Requests for Admin Approval)
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { partnerId, serviceName } = body;
-
-    if (!partnerId || !serviceName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-
-    const serviceRequest = await prisma.serviceRequest.create({
-      data: {
-        partnerId,
-        name: serviceName,
-        approved: false, // Needs admin approval
-      }
-    });
-
-    return NextResponse.json(serviceRequest, { status: 201 });
-  } catch (error) {
-    console.error('Error requesting new service:', error);
-    return NextResponse.json({ error: 'Error requesting new service' }, { status: 500 });
-  }
-}
-
-// Admin Approves a Partner or Service
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { type, id, approve } = body;
-
-    if (type === 'partner') {
-      const partner = await prisma.partner.update({
-        where: { id },
-        data: { approved: approve }
+    // Insert pincodes separately
+    if (pincodesArray.length > 0) {
+      await prisma.partnerPincode.createMany({
+        data: pincodesArray.map(pincode => ({
+          partnerId: partner.id,
+          pincode: pincode
+        }))
       });
-      return NextResponse.json(partner, { status: 200 });
     }
 
-    if (type === 'service') {
-      const serviceRequest = await prisma.serviceRequest.update({
-        where: { id },
-        data: { approved: approve }
-      });
+    return NextResponse.json(
+      { id: partner.id, name: partner.name, email: partner.email, approved: partner.approved },
+      { status: 201 }
+    );
 
-      if (approve) {
-        await prisma.service.create({
-          data: { name: serviceRequest.name }
-        });
-      }
-
-      return NextResponse.json(serviceRequest, { status: 200 });
-    }
-
-    return NextResponse.json({ error: 'Invalid request type' }, { status: 400 });
-  } catch (error) {
-    console.error('Error approving request:', error);
-    return NextResponse.json({ error: 'Error processing request' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error creating partner:', error.message, error.stack);
+    return NextResponse.json({ 
+      error: 'Error creating partner', 
+      details: JSON.stringify(error, null, 2) 
+    }, { status: 500 });
   }
 }
