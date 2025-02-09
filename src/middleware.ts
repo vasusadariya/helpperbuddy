@@ -1,17 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+export async function middleware(request: NextRequest) {
+    const token = await getToken({ req: request });
+    const response = NextResponse.next();
 
-  response.headers.set('Access-Control-Allow-Origin', '*'); // Replace * with specific origin if needed
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // CORS Headers
+    response.headers.set("Access-Control-Allow-Origin", "*"); // Set to your domain in production
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: response.headers,
-    });
-  }
+    // Handle CORS Preflight Requests
+    if (request.method === "OPTIONS") {
+        return new Response(null, { headers: response.headers });
+    }
 
-  return response;
+    const pathname = request.nextUrl.pathname;
+
+    // Restrict access based on role
+    if (pathname.startsWith("/admin")) {
+        if (!token || token.role !== "ADMIN") {
+            return NextResponse.redirect(new URL("/unauthorized/admin", request.url));
+        }
+    }
+
+    if (pathname.startsWith("/user")) {
+        if (!token || token.role !== "USER") {
+            return NextResponse.redirect(new URL("/unauthorized/user", request.url));
+        }
+    }
+
+    if (pathname.startsWith("/partner")) {
+        if (!token || token.role !== "PARTNER") {
+            return NextResponse.redirect(new URL("/unauthorized/partner", request.url));
+        }
+    }
+
+    return response;
 }
+
+// Apply middleware to protected routes
+export const config = {
+    matcher: ["/admin/:path*", "/user/:path*", "/partner/:path*"],
+};
