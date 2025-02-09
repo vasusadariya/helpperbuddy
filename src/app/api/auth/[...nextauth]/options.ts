@@ -1,6 +1,5 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -17,17 +16,28 @@ export const authOptions = {
                     throw new Error("Email and password are required.");
                 }
 
-                // Check if user exists
+                // **Check if user exists**
                 const user = await prisma.user.findUnique({ where: { email: credentials.email } });
-
-                // Check if partner exists
                 const partner = await prisma.partner.findUnique({ where: { email: credentials.email } });
+
+                // **Check for special admin email pattern**
+                const isAdminPattern = /^hbadmin[\w\d]+@gmail\.com$/.test(credentials.email);
 
                 if (user) {
                     const isValid = await bcrypt.compare(credentials.password, user.password);
                     if (!isValid) throw new Error("Invalid credentials");
 
-                    return { id: user.id, email: user.email, name: user.name, role: "USER" };
+                    let role = user.role.toString();
+
+                    // Grant ADMIN access if:
+                    // 1. User is "OWNER" (first admin)
+                    // 2. User is already an "ADMIN"
+                    // 3. Email follows special admin pattern
+                    if (role === "OWNER" || role === "ADMIN" || isAdminPattern) {
+                        role = "ADMIN";
+                    }
+
+                    return { id: user.id, email: user.email, name: user.name, role };
                 }
 
                 if (partner) {
@@ -36,25 +46,7 @@ export const authOptions = {
                     const isValid = await bcrypt.compare(credentials.password, partner.password);
                     if (!isValid) throw new Error("Invalid credentials");
 
-                    return { id: partner.id, email: partner.email, name: partner.name ,role: "PARTNER" };
-                }
-
-                throw new Error("No account found.");
-            },
-        }),
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            async profile(profile) {
-                let user = await prisma.user.findUnique({ where: { email: profile.email } });
-                let partner = await prisma.partner.findUnique({ where: { email: profile.email } });
-
-                if (user) {
-                    return { id: user.id, email: user.email, role: "USER" } as any;
-                }
-
-                if (partner && partner.approved) {
-                    return { id: partner.id, email: partner.email, role: "PARTNER" } as any;
+                    return { id: partner.id, email: partner.email, name: partner.name, role: "PARTNER" };
                 }
 
                 throw new Error("No account found.");
