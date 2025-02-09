@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model User {
   id            String        @id @default(cuid())
   name          String
@@ -52,10 +53,21 @@ model Service {
   image       String?
   orders      Order[]
   providers   ServiceProvider[]
+
+model Blog {
+  id        String   @id
+  title     String   @db.VarChar(255)
+  content   String
+  image     String?
+  author    String
+  readTime  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
 }
 
 model Order {
-  id                String       @id @default(cuid())
+  id                String       @id
   userId            String
   serviceId         String
   status            Status       @default(PENDING)
@@ -63,7 +75,7 @@ model Order {
   time              String
   remarks           String?
   createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  updatedAt         DateTime
   partnerId         String?
   amount            Float        @default(0)
   currency          String       @default("INR")
@@ -89,78 +101,125 @@ model Wallet {
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
   user         User          @relation(fields: [userId], references: [id])
-
   @@index([userId])
+  Service           Service      @relation(fields: [serviceId], references: [id])
+  User              User         @relation(fields: [userId], references: [id])
+  Transaction       Transaction?
+
+  @@index([partnerId, status])
+  @@index([userId, status])
 }
 
 model Partner {
-  id              String            @id @default(cuid())
+  id              String            @id
   name            String
   email           String            @unique
   password        String
   service         String[]
   approved        Boolean           @default(false)
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  updatedAt       DateTime
   Order           Order[]
-  pincodes        PartnerPincode[]
-  servicesPartner ServiceProvider[]
-}
-
-model ServiceProvider {
-  id        String  @id @default(cuid())
-  serviceId String
-  partnerId String
-  partner   Partner @relation(fields: [partnerId], references: [id])
-  service   Service @relation(fields: [serviceId], references: [id])
-
-  @@unique([serviceId, partnerId])
+  PartnerPincode  PartnerPincode[]
+  ServiceProvider ServiceProvider[]
 }
 
 model PartnerPincode {
-  id        String  @id @default(cuid())
+  id        String  @id
   partnerId String
   pincode   String
-  partner   Partner @relation(fields: [partnerId], references: [id])
+  Partner   Partner @relation(fields: [partnerId], references: [id])
 
   @@unique([partnerId, pincode])
 }
 
-model Blog {
-  id        String   @id @default(cuid())
-  title     String   @db.VarChar(255)
-  content   String
-  image     String?
-  author    String
-  readTime  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model RequestedService {
-  id   String @id @default(cuid())
+  id   String @id
   name String
 }
+
 
 model PartnerRequestedService {
   id          String  @id
   name        String
   description String?
   status      Status  @default(PENDING)
+=======
+model Service {
+  id              String            @id
+  name            String
+  description     String
+  price           Float
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
+  category        Category
+  image           String?
+  Order           Order[]
+  ServiceProvider ServiceProvider[]
 }
 
-enum Role {
-  USER
-  ADMIN
-  PARTNER
-  PENDING_ADMIN
+model ServiceProvider {
+  id        String  @id
+  serviceId String
+  partnerId String
+  Partner   Partner @relation(fields: [partnerId], references: [id])
+  Service   Service @relation(fields: [serviceId], references: [id])
+
+  @@unique([serviceId, partnerId])
 }
 
-enum Status {
-  PENDING
-  ACCEPTED
-  COMPLETED
-  CANCELLED
+model Transaction {
+  id          String          @id
+  amount      Float
+  type        TransactionType
+  description String
+  walletId    String
+  userId      String
+  orderId     String?         @unique
+  createdAt   DateTime        @default(now())
+  Order       Order?          @relation(fields: [orderId], references: [id])
+  User        User            @relation(fields: [userId], references: [id])
+  Wallet      Wallet          @relation(fields: [walletId], references: [id])
+
+  @@index([userId, type])
+  @@index([walletId, createdAt])
+
+}
+
+model User {
+  id           String        @id
+  name         String
+  email        String        @unique
+  createdAt    DateTime      @default(now())
+  password     String
+  referralCode String        @unique
+  referredBy   String?
+  role         Role          @default(USER)
+  updatedAt    DateTime
+  Order        Order[]
+  Transaction  Transaction[]
+  User         User?         @relation("UserToUser", fields: [referredBy], references: [id])
+  other_User   User[]        @relation("UserToUser")
+  Wallet       Wallet?
+}
+
+model Wallet {
+  id          String        @id
+  balance     Float         @default(0)
+  userId      String        @unique
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  Transaction Transaction[]
+  User        User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model PartnerRequestedService {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  status      Status  @default(PENDING)
 }
 
 enum Category {
@@ -175,6 +234,20 @@ enum Category {
   SOFA_CARPET_CLEANING
   WASHING_MACHINE_REPAIR
   WATER_PURIFIER_REPAIR
+}
+
+enum Role {
+  USER
+  ADMIN
+  PARTNER
+  PENDING_ADMIN
+}
+
+enum Status {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
 }
 
 enum TransactionType {
