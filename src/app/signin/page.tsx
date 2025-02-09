@@ -27,7 +27,7 @@ export default function SignIn() {
     } else if (session.user.role === "PARTNER") {
       router.push("/partner/dashboard");
     } else if (session.user.role === "ADMIN") {
-      router.push("/admin/approvals");
+      router.push("/admin/dashboard");
     }
   }
 
