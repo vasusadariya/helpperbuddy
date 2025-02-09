@@ -32,31 +32,65 @@ export async function POST(request: NextRequest) {
     // Hash the password
     const hashedPassword = await hash(password, 10);
 
-    // Create partner first
-    const partner = await prisma.partner.create({
-      data: { 
-        name, 
-        email, 
-        password: hashedPassword, 
-        service: servicesArray,  
-        approved: false
+    // Use transaction to ensure all operations succeed or fail together
+    const result = await prisma.$transaction(async (tx) => {
+      // Create partner first
+      const partner = await tx.partner.create({
+        data: { 
+          name, 
+          email, 
+          password: hashedPassword, 
+          service: servicesArray,  
+          approved: false
+        }
+      });
+
+      console.log('Partner created:', partner.id);
+
+      // Insert pincodes
+      if (pincodesArray.length > 0) {
+        await tx.partnerPincode.createMany({
+          data: pincodesArray.map(pincode => ({
+            partnerId: partner.id,
+            pincode: pincode
+          }))
+        });
       }
+
+      // Get service IDs for the selected service names
+      const serviceRecords = await tx.service.findMany({
+        where: {
+          name: {
+            in: servicesArray
+          }
+        },
+        select: {
+          id: true
+        }
+      });
+
+      console.log('Found service records:', serviceRecords);
+
+      // Create ServiceProvider entries
+      if (serviceRecords.length > 0) {
+        await tx.serviceProvider.createMany({
+          data: serviceRecords.map(service => ({
+            partnerId: partner.id,
+            serviceId: service.id
+          }))
+        });
+      }
+
+      return partner;
     });
 
-    console.log('Partner created:', partner.id);
-
-    // Insert pincodes separately
-    if (pincodesArray.length > 0) {
-      await prisma.partnerPincode.createMany({
-        data: pincodesArray.map(pincode => ({
-          partnerId: partner.id,
-          pincode: pincode
-        }))
-      });
-    }
-
     return NextResponse.json(
-      { id: partner.id, name: partner.name, email: partner.email, approved: partner.approved },
+      { 
+        id: result.id, 
+        name: result.name, 
+        email: result.email, 
+        approved: result.approved 
+      },
       { status: 201 }
     );
 

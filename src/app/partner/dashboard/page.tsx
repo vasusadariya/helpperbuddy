@@ -1,5 +1,12 @@
+// app/partner/dashboard/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+
+interface Service {
+  id: string;
+  name: string;
+}
 
 export default function PartnerDashboard() {
   const [services, setServices] = useState<Service[]>([]);
@@ -22,16 +29,11 @@ export default function PartnerDashboard() {
     fetchServices();
   }, []);
 
-interface Service {
-    id: string;
-    name: string;
-}
-
-const handleServiceSelection = (serviceName: string) => {
+  const handleServiceSelection = (serviceName: string) => {
     setSelectedServices((prev: string[]) =>
-        prev.includes(serviceName) ? prev.filter((s) => s !== serviceName) : [...prev, serviceName]
+      prev.includes(serviceName) ? prev.filter((s) => s !== serviceName) : [...prev, serviceName]
     );
-};
+  };
 
   const handleRequestService = async () => {
     if (!newService) return;
@@ -48,34 +50,57 @@ const handleServiceSelection = (serviceName: string) => {
   };
 
   return (
-    <div>
-      <h1>Partner Dashboard</h1>
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Partner Dashboard</h1>
+        <Link 
+          href="/partner/orders"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          View Service Requests
+        </Link>
+      </div>
 
-      {loading ? <p>Loading services...</p> : (
-        <>
-          <h2>Select Services You Provide:</h2>
-          <ul>
-            {services.map((service) => (
-              <li key={service.id}>
-                <input
-                  type="checkbox"
-                  checked={selectedServices.includes(service.name)}
-                  onChange={() => handleServiceSelection(service.name)}
-                />
-                {service.name}
-              </li>
-            ))}
-          </ul>
+      {loading ? (
+        <p>Loading services...</p>
+      ) : (
+        <div className="grid gap-6">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Your Services</h2>
+            <div className="grid gap-3">
+              {services.map((service) => (
+                <label key={service.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedServices.includes(service.name)}
+                    onChange={() => handleServiceSelection(service.name)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>{service.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
-          <h2>Request a New Service:</h2>
-          <input
-            type="text"
-            value={newService}
-            onChange={(e) => setNewService(e.target.value)}
-            placeholder="Enter new service"
-          />
-          <button onClick={handleRequestService}>Request Service</button>
-        </>
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Request New Service</h2>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={newService}
+                onChange={(e) => setNewService(e.target.value)}
+                placeholder="Enter new service"
+                className="flex-1 px-3 py-2 border rounded"
+              />
+              <button 
+                onClick={handleRequestService}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+              >
+                Request Service
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
