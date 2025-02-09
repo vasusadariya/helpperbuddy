@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { Session } from "next-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface CustomSession extends Session {
@@ -21,15 +21,28 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  if (session?.user?.role) {
-    if (session.user.role === "USER") {
-      router.push("/user/dashboard");
-    } else if (session.user.role === "PARTNER") {
-      router.push("/partner/dashboard");
-    } else if (session.user.role === "ADMIN") {
-      router.push("/admin/approvals");
+  // Redirect based on role
+  useEffect(() => {
+    if (session?.user?.role) {
+      switch (session.user.role) {
+        case "USER":
+          router.push("/user/dashboard");
+          break;
+        case "PARTNER":
+          router.push("/partner/dashboard");
+          break;
+        case "ADMIN":
+          router.push("/admin/dashboard");
+          break;
+        case "PENDING_ADMIN":
+          setError("Your admin request is pending approval.");
+          router.push("/"); 
+          break;
+        default:
+          router.push("/"); // New user not in database -> Redirect to home
+      }
     }
-  }
+  }, [session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,23 +62,21 @@ export default function SignIn() {
   };
 
   return (
-    <div>
-      <div className="h-screen flex items-center justify-center">
-        <div className="w-full max-w-md p-6 bg-white border border-gray-200 rounded-lg shadow-md">
-          <h1 className="text-3xl font-bold text-center mb-6">Sign In</h1>
-          {error && <p className="text-red-600 text-center mb-4">{error}</p>}
-          <form onSubmit={handleSubmit}>
-            <LabelledInput label="Email" type="email" onChange={(e) => setEmail(e.target.value)} />
-            <LabelledInput label="Password" type="password" onChange={(e) => setPassword(e.target.value)} />
-            <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg mt-4">Sign In</button>
-          </form>
-          <button
-            onClick={() => signIn("google")}
-            className="mt-4 w-full bg-red-600 text-white py-2 rounded-lg"
-          >
-            Sign in with Google
-          </button>
-        </div>
+    <div className="h-screen flex items-center justify-center">
+      <div className="w-full max-w-md p-6 bg-white border border-gray-200 rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold text-center mb-6">Sign In</h1>
+        {error && <p className="text-red-600 text-center mb-4">{error}</p>}
+        <form onSubmit={handleSubmit}>
+          <LabelledInput label="Email" type="email" onChange={(e) => setEmail(e.target.value)} />
+          <LabelledInput label="Password" type="password" onChange={(e) => setPassword(e.target.value)} />
+          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg mt-4">Sign In</button>
+        </form>
+        <button
+          onClick={() => signIn("google")}
+          className="mt-4 w-full bg-red-600 text-white py-2 rounded-lg"
+        >
+          Sign in with Google
+        </button>
       </div>
     </div>
   );
@@ -84,4 +95,3 @@ function LabelledInput({ label, type, onChange }: { label: string; type: string;
     </div>
   );
 }
-

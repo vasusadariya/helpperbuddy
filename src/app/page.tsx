@@ -2,7 +2,6 @@
 
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
-
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import HeroHeading from "@/components/HeroHeading";
@@ -44,18 +43,18 @@ export default function Home() {
           </h2>
           <div className="mt-6 flex justify-center md:justify-start space-x-4">
             <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-              onClick={() => router.push("/partner/register")}>
-              partner
+              onClick={() => router.push("/register")}>
+              Partner
             </button>
 
             <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
               onClick={() => router.push("/signup")}>
-              signup
+              Signup
             </button>
 
             <button className="relative border border-black px-6 py-3 rounded-full font-medium hover:bg-gray-300 hover:text-white shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-              onClick={() => { router.push("/admin/approvals") }}>
-              admin aprrovals
+              onClick={() => { router.push("/admin/partners") }}>
+              Admin
             </button>
           </div>
         </div>

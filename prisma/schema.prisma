@@ -145,6 +145,7 @@ enum Role {
   USER
   ADMIN
   PARTNER
+  PENDING_ADMIN
 }
 
 enum Status {
