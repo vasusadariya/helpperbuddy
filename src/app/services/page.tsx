@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -54,7 +54,7 @@ export default function ServicesPage() {
 
   // Fetch services on component mount
   useEffect(() => {
-    fetchCategories();
+    fetchServices();
   }, []);
 
   // Fetch services function
