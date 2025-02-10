@@ -15,7 +15,7 @@ model Blog {
   author    String
   readTime  Int
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @default(now())
 }
 
 model Order {
@@ -27,7 +27,7 @@ model Order {
   time              String
   remarks           String?
   createdAt         DateTime     @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime     @default(now())
   partnerId         String?
   amount            Float        @default(0)
   currency          String       @default("INR")
@@ -46,17 +46,18 @@ model Order {
 }
 
 model Partner {
-  id              String            @id
-  name            String
-  email           String            @unique
-  password        String
-  service         String[]
-  approved        Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  Order           Order[]
-  PartnerPincode  PartnerPincode[]
-  ServiceProvider ServiceProvider[]
+  id                      String                    @id
+  name                    String
+  email                   String                    @unique
+  password                String
+  service                 String[]
+  approved                Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @default(now())
+  Order                   Order[]
+  PartnerPincode          PartnerPincode[]
+  PartnerRequestedService PartnerRequestedService[]
+  ServiceProvider         ServiceProvider[]
 }
 
 model PartnerPincode {
@@ -69,11 +70,17 @@ model PartnerPincode {
 }
 
 model PartnerRequestedService {
-  id          String  @id
+  id          String               @id
   name        String
   description String?
-  status      Status  @default(PENDING)
   partnerId   String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @default(now())
+  status      ServiceRequestStatus @default(PENDING)
+  Partner     Partner              @relation(fields: [partnerId], references: [id])
+
+  @@index([partnerId])
+  @@index([status])
 }
 
 model RequestedService {
@@ -130,7 +137,7 @@ model User {
   referralCode String        @unique
   referredBy   String?
   role         Role          @default(USER)
-  updatedAt    DateTime
+  updatedAt    DateTime      @default(now())
   Order        Order[]
   Transaction  Transaction[]
   User         User?         @relation("UserToUser", fields: [referredBy], references: [id])
@@ -143,7 +150,7 @@ model Wallet {
   balance     Float         @default(0)
   userId      String        @unique
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime      @default(now())
   Transaction Transaction[]
   User        User          @relation(fields: [userId], references: [id])
 
@@ -183,4 +190,10 @@ enum TransactionType {
   DEBIT
   REFERRAL_BONUS
   SIGNUP_BONUS
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

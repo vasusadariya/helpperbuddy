@@ -1,4 +1,3 @@
-// app/services/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -41,6 +40,33 @@ export default function ServicesPage() {
     } catch (error) {
       console.error("Error fetching services:", error);
       setLoading(false);
+    }
+  };
+
+  const handleBookService = async (serviceId: string) => {
+    if (!session) {
+      router.push("/api/auth/signin");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ serviceId, userId: session?.user?.email }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        router.push(`/orders/${data.orderId}`);
+      } else {
+        alert("Failed to book the service. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error booking service:", error);
+      alert("An error occurred while booking the service. Please try again.");
     }
   };
 
@@ -101,7 +127,7 @@ export default function ServicesPage() {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-medium">₹{service.price.toFixed(2)}</span>
                 <button
-                  onClick={() => router.push(`/book-service/${service.id}`)}
+                  onClick={() => handleBookService(service.id)}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
                 >
                   Book Now

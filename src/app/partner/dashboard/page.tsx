@@ -122,10 +122,10 @@ export default function PartnerDashboard() {
         </div>
 
         {/* Column 2: Order Notifications */}
-        <div className="bg-white rounded-lg shadow p-6">
+
           <h2 className="text-xl font-semibold mb-4">Recent Orders</h2>
           <OrderNotification />
-        </div>
+
 
         {/* Column 3: Request New Service */}
         <div className="bg-white rounded-lg shadow p-6">
