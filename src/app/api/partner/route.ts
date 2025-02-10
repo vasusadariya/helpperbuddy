@@ -1,6 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hash } from 'bcryptjs';
+import { getServerSession } from "next-auth";
+import { PrismaClient } from "@prisma/client";
+import { authOptions } from "../auth/[...nextauth]/options";
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    if (!session?.user?.email) {
+      return NextResponse.json({
+        success: false,
+        error: "Unauthorized",
+        timestamp: currentUTCTime
+      }, { status: 401 });
+    }
+
+    // Get the partner
+    const partner = await prisma.partner.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!partner) {
+      return NextResponse.json({
+        success: false,
+        error: "Partner not found",
+        timestamp: currentUTCTime
+      }, { status: 404 });
+    }
+
+    const { serviceName, description } = await request.json();
+
+    if (!serviceName?.trim()) {
+      return NextResponse.json({
+        success: false,
+        error: "Service name is required",
+        timestamp: currentUTCTime
+      }, { status: 400 });
+    }
+
+    // Check if a similar request is already pending
+    const existingRequest = await prisma.partnerRequestedService.findFirst({
+      where: {
+        name: serviceName.trim(),
+        partnerId: partner.id,
+        status: 'PENDING'
+      }
+    });
+
+    if (existingRequest) {
+      return NextResponse.json({
+        success: false,
+        error: "A similar service request is already pending",
+        timestamp: currentUTCTime
+      }, { status: 400 });
+    }
+
+    // Create the service request with description
+    const serviceRequest = await prisma.partnerRequestedService.create({
+      data: {
+        name: serviceName.trim(),
+        description: description?.trim() || null, // Handle description
+        partnerId: partner.id,
+        status: 'PENDING'
+      }
+    });
+
+    console.log('Created service request:', serviceRequest); // Debug log
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        request: serviceRequest,
+        timestamp: currentUTCTime
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating service request:', error);
+    return NextResponse.json({
+      success: false,
+      error: "Failed to create service request",
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

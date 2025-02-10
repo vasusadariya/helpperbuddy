@@ -13,14 +13,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(allServices, { status: 200 });
     }
 
+    // const services = await prisma.$queryRaw`
+    //   SELECT *, 
+    //          (0.8 * similarity("name", ${query}) + 0.2 * similarity("category"::TEXT, ${query})) AS relevance
+    //   FROM "Service"
+    //   WHERE LOWER("name") ILIKE '%' || LOWER(${query}) || '%' 
+    //      OR LOWER("category"::TEXT) ILIKE '%' || LOWER(${query}) || '%'
+    //   ORDER BY relevance DESC
+    //   LIMIT 5;`;
+
     const services = await prisma.$queryRaw`
-      SELECT *, 
-             (0.8 * similarity("name", ${query}) + 0.2 * similarity("category"::TEXT, ${query})) AS relevance
-      FROM "Service"
-      WHERE LOWER("name") ILIKE '%' || LOWER(${query}) || '%' 
-         OR LOWER("category"::TEXT) ILIKE '%' || LOWER(${query}) || '%'
-      ORDER BY relevance DESC
-      LIMIT 5;`;
+  SELECT *, similarity(name, ${query}) AS sml
+FROM "Service"
+where similarity(name, ${query})>0.1
+ORDER BY sml DESC
+LIMIT 5;
+
+`;
+
 
     return NextResponse.json(services, { status: 200 });
   } catch (error) {

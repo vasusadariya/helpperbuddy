@@ -7,53 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-model User {
-  id            String        @id @default(cuid())
-  name          String
-  email         String        @unique
-  createdAt     DateTime      @default(now())
-  password      String
-  referralCode  String        @unique @default(cuid())
-  referredBy    String?
-  role          Role          @default(USER)
-  updatedAt     DateTime      @updatedAt
-  orders        Order[]
-  transactions  Transaction[]
-  referrer      User?         @relation("Referrals", fields: [referredBy], references: [id])
-  referredUsers User[]        @relation("Referrals")
-  wallet        Wallet?
-}
-
-model Transaction {
-  id          String          @id @default(cuid())
-  amount      Float
-  type        TransactionType
-  description String
-  walletId    String
-  userId      String
-  orderId     String?         @unique
-  createdAt   DateTime        @default(now())
-  order       Order?          @relation(fields: [orderId], references: [id])
-  user        User            @relation(fields: [userId], references: [id])
-  wallet      Wallet          @relation(fields: [walletId], references: [id])
-
-  @@index([userId, type])
-  @@index([walletId, createdAt])
-}
-
-model Service {
-  id          String            @id @default(uuid())
-  name        String
-  description String
-  price       Float
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @default(now()) @updatedAt
-  category    Category
-  image       String?
-  orders      Order[]
-  providers   ServiceProvider[]
-
 model Blog {
   id        String   @id
   title     String   @db.VarChar(255)
@@ -63,7 +16,6 @@ model Blog {
   readTime  Int
   createdAt DateTime @default(now())
   updatedAt DateTime
-
 }
 
 model Order {
@@ -85,23 +37,6 @@ model Order {
   paidAt            DateTime?
   razorpayPaymentId String?      @unique
   Partner           Partner?     @relation(fields: [partnerId], references: [id])
-  service           Service      @relation(fields: [serviceId], references: [id])
-  user              User         @relation(fields: [userId], references: [id])
-  transaction       Transaction?
-
-  @@index([userId, status])
-  @@index([partnerId, status])
-}
-
-model Wallet {
-  id           String        @id @default(cuid())
-  balance      Float         @default(0)
-  userId       String        @unique
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  transactions Transaction[]
-  user         User          @relation(fields: [userId], references: [id])
-  @@index([userId])
   Service           Service      @relation(fields: [serviceId], references: [id])
   User              User         @relation(fields: [userId], references: [id])
   Transaction       Transaction?
@@ -111,17 +46,18 @@ model Wallet {
 }
 
 model Partner {
-  id              String            @id
-  name            String
-  email           String            @unique
-  password        String
-  service         String[]
-  approved        Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  Order           Order[]
-  PartnerPincode  PartnerPincode[]
-  ServiceProvider ServiceProvider[]
+  id                      String                    @id
+  name                    String
+  email                   String                    @unique
+  password                String
+  service                 String[]
+  approved                Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  Order                   Order[]
+  PartnerPincode          PartnerPincode[]
+  PartnerRequestedService PartnerRequestedService[]
+  ServiceProvider         ServiceProvider[]
 }
 
 model PartnerPincode {
@@ -133,18 +69,25 @@ model PartnerPincode {
   @@unique([partnerId, pincode])
 }
 
+model PartnerRequestedService {
+  id          String               @id
+  name        String
+  description String?
+  partnerId   String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime
+  status      ServiceRequestStatus @default(PENDING)
+  Partner     Partner              @relation(fields: [partnerId], references: [id])
+
+  @@index([partnerId])
+  @@index([status])
+}
+
 model RequestedService {
   id   String @id
   name String
 }
 
-
-model PartnerRequestedService {
-  id          String  @id
-  name        String
-  description String?
-  status      Status  @default(PENDING)
-=======
 model Service {
   id              String            @id
   name            String
@@ -183,7 +126,6 @@ model Transaction {
 
   @@index([userId, type])
   @@index([walletId, createdAt])
-
 }
 
 model User {
@@ -213,13 +155,6 @@ model Wallet {
   User        User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
-}
-
-model PartnerRequestedService {
-  id          String  @id @default(cuid())
-  name        String
-  description String?
-  status      Status  @default(PENDING)
 }
 
 enum Category {
@@ -255,4 +190,10 @@ enum TransactionType {
   DEBIT
   REFERRAL_BONUS
   SIGNUP_BONUS
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
