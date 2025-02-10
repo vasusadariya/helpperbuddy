@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Get partner details
     const partner = await prisma.partner.findUnique({
       where: { email: session.user.email }
     });
@@ -29,22 +28,13 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Get services this partner provides
-    const serviceProviders = await prisma.serviceProvider.findMany({
-      where: { partnerId: partner.id },
-      select: { serviceId: true }
-    });
-
-    const serviceIds = serviceProviders.map(sp => sp.serviceId);
-
-    console.log("Fetching orders for services:", serviceIds);
-
-    // Get pending orders for these services
-    const pendingOrders = await prisma.order.findMany({
+    // Get accepted orders for this partner
+    const acceptedOrders = await prisma.order.findMany({
       where: {
-        serviceId: { in: serviceIds },
-        status: 'PENDING',
-        partnerId: null, // Not yet accepted by any partner
+        partnerId: partner.id,
+        status: {
+          in: ['ACCEPTED', 'COMPLETED']
+        }
       },
       include: {
         service: {
@@ -61,21 +51,25 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: [
+        {
+          status: 'asc'  // ACCEPTED orders first
+        },
+        {
+          updatedAt: 'desc'  // Most recent first
+        }
+      ]
     });
-
-    console.log("Found pending orders:", pendingOrders.length);
 
     return NextResponse.json({
       success: true,
       data: {
-        orders: pendingOrders.map(order => ({
+        orders: acceptedOrders.map(order => ({
           ...order,
           createdAt: order.createdAt.toISOString(),
           updatedAt: order.updatedAt.toISOString(),
-          date: order.date.toISOString()
+          date: order.date.toISOString(),
+          paidAt: order.paidAt?.toISOString() || null
         })),
         timestamp: currentUTCTime
       }
@@ -83,7 +77,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     const session = await getServerSession(authOptions);
-    console.error("[Pending Orders Error]:", {
+    console.error("[Partner Orders Error]:", {
       error,
       timestamp: currentUTCTime,
       user: session?.user?.email
@@ -91,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: false,
-      error: "Failed to fetch pending orders",
+      error: "Failed to fetch orders",
       details: error instanceof Error ? error.message : 'Unknown error',
       timestamp: currentUTCTime
     }, { status: 500 });

@@ -28,7 +28,7 @@ export async function GET() {
         partnerId: partner.id
       },
       include: {
-        service: true
+        Service: true
       }
     });
 
