@@ -20,7 +20,7 @@ export default function SearchBar() {
         setRequested(false);
         setLoading(true);
         try {
-            const res = await fetch('/api/services', {
+            const res = await fetch('/api/services/home-page', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
