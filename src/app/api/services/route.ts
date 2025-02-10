@@ -1,28 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
+export async function GET(req: NextRequest) {
     try {
-        const body = await request.json();
-        const query = body.query?.trim();
+        const searchParams = req.nextUrl.searchParams;
+        const query = searchParams.get('query') || '';
+        const category = searchParams.get('category');
 
-        if (!query || query.length === 0) {
-            const allServices = await prisma.service.findMany({
-                orderBy: { name: 'asc' },
+        let services;
+
+        if(query.length == 0 && !category) {
+            services = await prisma.$queryRaw`
+                SELECT *
+                FROM "Service"
+                ORDER BY numberoforders DESC;
+            `;
+        }
+        else if (query && category && category==='all') {
+            services = await prisma.$queryRaw`
+                SELECT *,  
+                similarity(name, ${query}) AS name_similarity, 
+                similarity(category::text, ${query}) AS category_similarity,
+                (0.7 * similarity(name, ${query}) + 0.3 * similarity(category::text, ${query})) AS overall_similarity
+                FROM "Service"
+                WHERE similarity(name, ${query}) > 0.05
+                OR similarity(category::text, ${query}) > 0.05
+                ORDER BY overall_similarity DESC
+                LIMIT 5;
+            `;
+        } else if (category && category !== 'all' && query.length == 0) {
+            services = await prisma.service.findMany({
+              where: { category: category as any },
             });
-            return NextResponse.json(allServices, { status: 200 });
+        } else if (category && category !== 'all' && query.length!=0) {
+            services = await prisma.$queryRaw`
+                SELECT *,  
+                similarity(name, ${query}) AS name_similarity, 
+                similarity(category::text, ${query}) AS category_similarity,
+                (0.7 * similarity(name, ${query}) + 0.3 * similarity(category::text, ${query})) AS overall_similarity
+                FROM "Service"
+                WHERE category::text = ${category} AND (similarity(name, ${query}) > 0.05
+                OR similarity(category::text, ${query}) > 0.05)
+                ORDER BY overall_similarity DESC
+                LIMIT 5;
+            `;
+        } else {
+            services = await prisma.service.findMany();
         }
 
-        const services = await prisma.$queryRaw`
-            SELECT *, similarity(name, ${query}) AS sml
-            FROM "Service"
-            where similarity(name, ${query})>0.1
-            ORDER BY sml DESC
-            LIMIT 5;
-        `;
         return NextResponse.json(services, { status: 200 });
     } catch (error) {
         console.error('Error fetching services:', error);
-        return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
