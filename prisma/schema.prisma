@@ -8,20 +8,20 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  createdAt    DateTime      @default(now())
-  password     String
-  referralCode String        @unique @default(cuid())
-  referredBy   String?
-  role         Role          @default(USER)
-  updatedAt    DateTime       @default(now()) @updatedAt
-  Order        Order[]
-  Transaction  Transaction[]
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  createdAt     DateTime      @default(now())
+  password      String
+  referralCode  String        @unique @default(cuid())
+  referredBy    String?
+  role          Role          @default(USER)
+  updatedAt     DateTime      @default(now()) @updatedAt
+  Order         Order[]
+  Transaction   Transaction[]
   referrer      User?         @relation("Referrals", fields: [referredBy], references: [id])
   referredUsers User[]        @relation("Referrals")
-  wallet       Wallet?
+  wallet        Wallet?
 }
 
 model Blog {
@@ -31,8 +31,8 @@ model Blog {
   image     String?
   author    String
   readTime  Int
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Order {
@@ -44,7 +44,7 @@ model Order {
   time              String
   remarks           String?
   createdAt         DateTime     @default(now())
-  updatedAt         DateTime      @default(now()) @updatedAt
+  updatedAt         DateTime     @default(now()) @updatedAt
   partnerId         String?
   amount            Float        @default(0)
   currency          String       @default("INR")
@@ -63,14 +63,14 @@ model Order {
 }
 
 model Partner {
-  id                      String                     @id @default(cuid())
+  id                      String                    @id @default(cuid())
   name                    String
   email                   String                    @unique
   password                String
   service                 String[]
   approved                Boolean                   @default(false)
   createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                 @default(now()) @updatedAt
+  updatedAt               DateTime                  @default(now()) @updatedAt
   Order                   Order[]
   partnerPincode          PartnerPincode[]
   partnerRequestedService PartnerRequestedService[]
@@ -87,12 +87,12 @@ model PartnerPincode {
 }
 
 model PartnerRequestedService {
-  id          String                @id @default(cuid())
+  id          String               @id @default(cuid())
   name        String
   description String?
   partnerId   String
   createdAt   DateTime             @default(now())
-  updatedAt   DateTime              @default(now()) @updatedAt
+  updatedAt   DateTime             @default(now()) @updatedAt
   status      ServiceRequestStatus @default(PENDING)
   Partner     Partner              @relation(fields: [partnerId], references: [id])
 
@@ -106,16 +106,16 @@ model RequestedService {
 }
 
 model Service {
-  id              String            @id @default(cuid())
-  name            String
-  description     String
-  price           Float
-  createdAt       DateTime          @default(now())
+  id          String            @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  createdAt   DateTime          @default(now())
   updatedAt   DateTime          @default(now()) @updatedAt
-  category        Category
-  image           String?
-  Order           Order[]
-  provider        ServiceProvider[]
+  category    Category
+  image       String?
+  Order       Order[]
+  provider    ServiceProvider[]
 }
 
 model ServiceProvider {
@@ -129,7 +129,7 @@ model ServiceProvider {
 }
 
 model Transaction {
-  id          String           @id @default(cuid())
+  id          String          @id @default(cuid())
   amount      Float
   type        TransactionType
   description String
@@ -145,20 +145,16 @@ model Transaction {
   @@index([walletId, createdAt])
 }
 
-
-
 model Wallet {
-  id          String        @id @default(cuid())
-  balance     Float         @default(0)
-  userId      String        @unique
-  createdAt   DateTime      @default(now())
+  id           String        @id @default(cuid())
+  balance      Float         @default(0)
+  userId       String        @unique
+  createdAt    DateTime      @default(now())
   updatedAt    DateTime      @default(now()) @updatedAt
   transactions Transaction[]
-  user        User          @relation(fields: [userId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
-
-  
 }
 
 enum Category {

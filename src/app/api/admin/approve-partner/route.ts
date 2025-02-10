@@ -1,3 +1,4 @@
+// app/api/admin/approve-partner/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendApprovalEmail } from "../../services/emailServices/route";
@@ -23,23 +24,57 @@ export async function PUT(request: NextRequest) {
     }
 
     if (approved) {
-      // If approving, just update the approval status
-      const partner = await prisma.partner.update({
-        where: { id: partnerId },
-        data: { approved },
-        select: {
-          name: true,
-          email: true,
-          service: true
+      // If approving, update in a transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Get partner details first
+        const partner = await tx.partner.findUnique({
+          where: { id: partnerId },
+          select: {
+            name: true,
+            email: true,
+            password: true,
+            service: true
+          }
+        });
+
+        if (!partner) {
+          throw new Error("Partner not found");
         }
+
+        // Check if user already exists with this email
+        const existingUser = await tx.user.findUnique({
+          where: { email: partner.email }
+        });
+
+        if (existingUser) {
+          throw new Error("User already exists with this email");
+        }
+
+        // Create user record
+        const user = await tx.user.create({
+          data: {
+            name: partner.name,
+            email: partner.email,
+            password: partner.password, // Already hashed from partner registration
+            role: 'PARTNER'
+          }
+        });
+
+        // Update partner approval status
+        const updatedPartner = await tx.partner.update({
+          where: { id: partnerId },
+          data: { approved: true }
+        });
+
+        return { partner: updatedPartner, user };
       });
 
       // Send approval email
       try {
         await sendApprovalEmail({
-          name: partner.name,
-          email: partner.email,
-          services: partner.service as string[]
+          name: result.partner.name,
+          email: result.partner.email,
+          services: result.partner.service as string[]
         });
         console.log("Approval email sent successfully");
       } catch (emailError) {
@@ -48,8 +83,10 @@ export async function PUT(request: NextRequest) {
       }
 
       return NextResponse.json({ 
-        message: "Partner approved successfully",
-        emailSent: true 
+        message: "Partner approved and user account created successfully",
+        emailSent: true,
+        userId: result.user.id,
+        partnerId: result.partner.id
       }, { status: 200 });
 
     } else {
@@ -79,9 +116,19 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error("Error updating partner approval:", error);
+    let errorMessage = "Internal Server Error";
+    let statusCode = 500;
+
+    if (error instanceof Error) {
+      if (error.message === "User already exists with this email") {
+        errorMessage = error.message;
+        statusCode = 400;
+      }
+    }
+
     return NextResponse.json({ 
-      error: "Internal Server Error", 
+      error: errorMessage,
       details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    }, { status: statusCode });
   }
 }
