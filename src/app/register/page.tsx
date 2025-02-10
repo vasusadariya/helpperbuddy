@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import React, { useState, useEffect } from "react";
 import { Category } from "@prisma/client";
 
@@ -15,6 +14,13 @@ interface CategoryServices {
   services: Service[];
 }
 
+interface PincodeValidation {
+  pincode: string;
+  isValid: boolean;
+  district?: string;
+  state?: string;
+}
+
 export default function PartnerRegister() {
   const [formData, setFormData] = useState({
     name: "",
@@ -26,15 +32,15 @@ export default function PartnerRegister() {
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [validatedPincodes, setValidatedPincodes] = useState<PincodeValidation[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const response = await fetch('/api/service-categories');
         const data: CategoryServices[] = await response.json();
-        // Flatten all services into a single array
-        const allServices = data.flatMap(category => category.services);
-        setServices(allServices);
+        setServices(data.flatMap(category => category.services));
       } catch (error) {
         console.error('Error fetching services:', error);
       }
@@ -42,22 +48,52 @@ export default function PartnerRegister() {
     fetchServices();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const validatePincode = async (pincode: string): Promise<PincodeValidation> => {
+    if (!/^\d{6}$/.test(pincode)) {
+      return { pincode, isValid: false };
+    }
+
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      
+      if (data[0].Status === "Success") {
+        const postOffice = data[0].PostOffice[0];
+        return {
+          pincode,
+          isValid: true,
+          district: postOffice.District,
+          state: postOffice.State
+        };
+      }
+      return { pincode, isValid: false };
+    } catch {
+      return { pincode, isValid: false };
+    }
   };
 
-  const handleServiceChange = (serviceName: string) => {
-    setSelectedServices(prev => {
-      if (prev.includes(serviceName)) {
-        return prev.filter(name => name !== serviceName);
-      } else {
-        return [...prev, serviceName];
-      }
-    });
+  const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, pincodes: value });
+
+    if (value) {
+      setIsValidating(true);
+      const pincodes = value.split(",").map(p => p.trim());
+      const validations = await Promise.all(pincodes.map(validatePincode));
+      setValidatedPincodes(validations);
+      setIsValidating(false);
+    } else {
+      setValidatedPincodes([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (validatedPincodes.some(p => !p.isValid)) {
+      alert("Please fix invalid pincodes before submitting");
+      return;
+    }
 
     const formattedData = {
       ...formData,
@@ -89,6 +125,14 @@ export default function PartnerRegister() {
     }
   };
 
+  const handleServiceChange = (serviceName: string) => {
+    setSelectedServices(prev => 
+      prev.includes(serviceName) 
+        ? prev.filter(name => name !== serviceName)
+        : [...prev, serviceName]
+    );
+  };
+
   const filteredServices = services.filter(service =>
     service.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -105,7 +149,7 @@ export default function PartnerRegister() {
                 type="text"
                 name="name"
                 value={formData.name}
-                onChange={handleChange}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -117,7 +161,7 @@ export default function PartnerRegister() {
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -131,7 +175,7 @@ export default function PartnerRegister() {
                 type="password"
                 name="password"
                 value={formData.password}
-                onChange={handleChange}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -144,12 +188,40 @@ export default function PartnerRegister() {
                 name="pincodes"
                 placeholder="Enter comma-separated pincodes"
                 value={formData.pincodes}
-                onChange={handleChange}
+                onChange={handlePincodeChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
             </div>
           </div>
+
+          {isValidating && (
+            <div className="text-blue-600">Validating pincodes...</div>
+          )}
+
+          {validatedPincodes.length > 0 && (
+            <div className="space-y-2">
+              {validatedPincodes.map((validation, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg ${
+                    validation.isValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                  }`}
+                >
+                  <span className="font-medium">{validation.pincode}</span>
+                  {validation.isValid ? (
+                    <span className="ml-2">
+                      ✓ Valid ({validation.district}, {validation.state})
+                    </span>
+                  ) : (
+                    <span className="ml-2">
+                      ✗ Invalid pincode
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="flex justify-between items-center">
