@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import OrderNotification from '@/components/OrderNotification';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import OrderNotification from "@/components/OrderNotification";
 
 interface Service {
   id: string;
@@ -21,25 +21,26 @@ export default function PartnerDashboard() {
   const [services, setServices] = useState<Service[]>([]);
   const [partnerServices, setPartnerServices] = useState<PartnerService[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [newService, setNewService] = useState('');
+  const [newService, setNewService] = useState("");
   const [loading, setLoading] = useState(true);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       try {
         // Fetch all available services
-        const servicesResponse = await fetch('/api/partner');
+        const servicesResponse = await fetch("/api/partner");
         const servicesData = await servicesResponse.json();
         setServices(servicesData);
 
         // Fetch partner's services
-        const partnerServicesResponse = await fetch('/api/partner/services');
+        const partnerServicesResponse = await fetch("/api/partner/services");
         const partnerServicesData = await partnerServicesResponse.json();
         setPartnerServices(partnerServicesData);
 
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         setLoading(false);
       }
     }
@@ -48,35 +49,44 @@ export default function PartnerDashboard() {
 
   const handleServiceSelection = (serviceName: string) => {
     setSelectedServices((prev: string[]) =>
-      prev.includes(serviceName) 
-        ? prev.filter((s) => s !== serviceName) 
+      prev.includes(serviceName)
+        ? prev.filter((s) => s !== serviceName)
         : [...prev, serviceName]
     );
   };
 
   const handleRequestService = async () => {
     if (!newService.trim()) {
-      alert('Please enter a service name');
+      alert("Please enter a service name");
+      return;
+    }
+
+    if (!description.trim()) {
+      alert("Please enter a service description");
       return;
     }
 
     try {
-      const response = await fetch('/api/partner', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceName: newService })
+      const response = await fetch("/api/partner", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceName: newService.trim(),
+          description: description.trim(),
+        }),
       });
 
       if (response.ok) {
-        alert('Service request submitted for admin approval');
-        setNewService('');
+        alert("Service request submitted for admin approval");
+        setNewService("");
+        setDescription("");
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to request service');
+        alert(data.error || "Failed to request service");
       }
     } catch (error) {
-      console.error('Error requesting service:', error);
-      alert('Failed to submit service request');
+      console.error("Error requesting service:", error);
+      alert("Failed to submit service request");
     }
   };
 
@@ -131,14 +141,41 @@ export default function PartnerDashboard() {
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Request New Service</h2>
           <div className="space-y-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newService}
-                onChange={(e) => setNewService(e.target.value)}
-                placeholder="Enter service name"
-                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+            <div className="flex flex-col gap-4">
+              <div>
+                <label
+                  htmlFor="serviceName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Service Name
+                </label>
+                <input
+                  id="serviceName"
+                  type="text"
+                  value={newService}
+                  onChange={(e) => setNewService(e.target.value)}
+                  placeholder="Enter service name"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="serviceDescription"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Description
+                </label>
+                <textarea
+                  id="serviceDescription"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter service description"
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                />
+              </div>
+
               <button
                 onClick={handleRequestService}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -146,8 +183,6 @@ export default function PartnerDashboard() {
                 Request
               </button>
             </div>
-
-            
           </div>
         </div>
       </div>

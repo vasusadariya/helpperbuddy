@@ -21,7 +21,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Service already requested' }, { status: 409 });
         }
 
-        // Add the requested service
         const newService = await prisma.requestedService.create({
             data: { name },
         });
