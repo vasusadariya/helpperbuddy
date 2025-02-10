@@ -36,25 +36,6 @@ type WebhookEvent = {
   };
 };
 
-type ResponseData = {
-  success: boolean;
-  data: {
-    message: string;
-    order: {
-      id: string;
-      status: string;
-      amount: number;
-      service: string;
-    };
-    paymentId: string;
-    timestamp: string;
-    referralBonus?: {
-      amount: number;
-      transaction: Transaction;
-    };
-  };
-};
-
 async function processReferralBonus(orderId: string): Promise<ReferralResult> {
   try {
     const orderWithDetails = await prisma.order.findUnique({
@@ -74,14 +55,44 @@ async function processReferralBonus(orderId: string): Promise<ReferralResult> {
 
     const referrerWallet = orderWithDetails?.user?.referrer?.wallet;
     const referrerId = orderWithDetails?.user?.referrer?.id;
+    const userId = orderWithDetails?.userId;
 
-    if (!referrerWallet || !referrerId) {
+    if (!referrerWallet || !referrerId || !userId) {
       console.log(`No valid referral chain found for order: ${orderId}`);
       return null;
     }
 
+    // Check if this is the user's first completed order
+    const previousCompletedOrders = await prisma.order.count({
+      where: {
+        userId: userId,
+        status: 'COMPLETED',
+        id: { not: orderId }
+      }
+    });
+
+    if (previousCompletedOrders > 0) {
+      console.log(`Not first order for user ${userId}, skipping referral bonus`);
+      return null;
+    }
+
+    // Check if referrer has already received bonus for this user
+    const existingBonus = await prisma.transaction.findFirst({
+      where: {
+        userId: referrerId,
+        type: 'REFERRAL_BONUS',
+        description: {
+          contains: `Referral bonus for user ${userId}`
+        }
+      }
+    });
+
+    if (existingBonus) {
+      console.log(`Referral bonus already paid to referrer ${referrerId} for user ${userId}`);
+      return null;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      // Update referrer's wallet
       const updatedWallet = await tx.wallet.update({
         where: { id: referrerWallet.id },
         data: {
@@ -89,26 +100,22 @@ async function processReferralBonus(orderId: string): Promise<ReferralResult> {
         }
       });
 
-      // Create bonus transaction
       const bonusTransaction = await tx.transaction.create({
         data: {
           amount: REFERRAL_BONUS_AMOUNT,
           type: 'REFERRAL_BONUS',
-          description: `Referral bonus for order #${orderId}`,
+          description: `Referral bonus for user ${userId}'s first order #${orderId}`,
           walletId: referrerWallet.id,
           userId: referrerId
         }
       });
 
-      return {
-        wallet: updatedWallet,
-        transaction: bonusTransaction
-      };
+      return { wallet: updatedWallet, transaction: bonusTransaction };
     });
 
-    console.log(`Referral bonus processed for order: ${orderId}`, {
-      walletId: result.wallet.id,
-      transactionId: result.transaction.id,
+    console.log(`Referral bonus processed for first-time order: ${orderId}`, {
+      referrerId,
+      userId,
       amount: REFERRAL_BONUS_AMOUNT
     });
     
@@ -128,12 +135,28 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get("x-razorpay-signature");
     const isTestMode = process.env.NODE_ENV === 'development';
     
-    if (!isTestMode && !signature) {
-      return NextResponse.json({
-        success: false,
-        error: "No signature provided",
-        timestamp: currentUTCTime
-      }, { status: 400 });
+    if (!isTestMode) {
+      if (!signature) {
+        return NextResponse.json({
+          success: false,
+          error: "No signature provided",
+          timestamp: currentUTCTime
+        }, { status: 400 });
+      }
+
+      // Verify signature
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+        .update(body)
+        .digest("hex");
+
+      if (signature !== expectedSignature) {
+        return NextResponse.json({
+          success: false,
+          error: "Invalid signature",
+          timestamp: currentUTCTime
+        }, { status: 400 });
+      }
     }
 
     const event = JSON.parse(body) as WebhookEvent;
@@ -144,11 +167,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (event.event === "payment.captured") {
-      const { id: paymentId, order_id: orderId, amount } = event.payload.payment.entity;
-      const amountInRupees = amount / 100;
+      const { id: paymentId, order_id: razorpayOrderId } = event.payload.payment.entity;
 
       const order = await prisma.order.findUnique({
-        where: { razorpayOrderId: orderId },
+        where: { razorpayOrderId },
         include: {
           service: true,
           user: true
@@ -156,7 +178,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (!order) {
-        console.error(`Order not found: ${orderId}`);
+        console.error(`Order not found: ${razorpayOrderId}`);
         return NextResponse.json({
           success: false,
           error: "Order not found",
@@ -169,6 +191,8 @@ export async function POST(req: NextRequest) {
           where: { id: order.id },
           data: { 
             status: "COMPLETED",
+            razorpayPaymentId: paymentId,
+            paidAt: new Date(currentUTCTime),
             updatedAt: new Date(currentUTCTime)
           }
         });
@@ -181,36 +205,33 @@ export async function POST(req: NextRequest) {
         };
       });
 
-      const responseData: ResponseData = {
+      return NextResponse.json({
         success: true,
         data: {
           message: "Payment processed successfully",
           order: {
             id: result.order.id,
             status: result.order.status,
-            amount: amountInRupees,
+            amount: order.remainingAmount,
             service: order.service.name
           },
           paymentId,
-          timestamp: currentUTCTime
+          timestamp: currentUTCTime,
+          ...(result.referralResult && {
+            referralBonus: {
+              amount: REFERRAL_BONUS_AMOUNT,
+              transaction: result.referralResult.transaction
+            }
+          })
         }
-      };
-
-      if (result.referralResult) {
-        responseData.data.referralBonus = {
-          amount: REFERRAL_BONUS_AMOUNT,
-          transaction: result.referralResult.transaction
-        };
-      }
-
-      return NextResponse.json(responseData);
+      });
     }
 
     if (event.event === "payment.failed") {
-      const { order_id: orderId, error_description } = event.payload.payment.entity;
+      const { order_id: razorpayOrderId, error_description } = event.payload.payment.entity;
       
-      await prisma.order.update({
-        where: { razorpayOrderId: orderId },
+      const order = await prisma.order.update({
+        where: { razorpayOrderId },
         data: { 
           status: "PENDING",
           updatedAt: new Date(currentUTCTime)
@@ -222,7 +243,7 @@ export async function POST(req: NextRequest) {
         data: {
           message: "Payment failed",
           error: error_description,
-          orderId,
+          orderId: order.id,
           timestamp: currentUTCTime
         }
       });

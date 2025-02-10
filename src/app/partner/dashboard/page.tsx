@@ -12,6 +12,20 @@ interface Service {
   category: string;
 }
 
+interface Order {
+  id: string;
+  service: {
+    name: string;
+  };
+  user: {
+    name: string;
+  };
+  date: string;
+  time: string;
+  status: string;
+  amount: number;
+}
+
 interface PartnerService {
   service: Service;
   partnerId: string;
@@ -20,7 +34,7 @@ interface PartnerService {
 export default function PartnerDashboard() {
   const [services, setServices] = useState<Service[]>([]);
   const [partnerServices, setPartnerServices] = useState<PartnerService[]>([]);
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [acceptedOrders, setAcceptedOrders] = useState<Order[]>([]);
   const [newService, setNewService] = useState("");
   const [loading, setLoading] = useState(true);
   const [description, setDescription] = useState("");
@@ -28,15 +42,24 @@ export default function PartnerDashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch all available services
-        const servicesResponse = await fetch("/api/partner");
-        const servicesData = await servicesResponse.json();
-        setServices(servicesData);
+        // Fetch all data in parallel
+        const [servicesRes, partnerServicesRes, ordersRes] = await Promise.all([
+          fetch("/api/partner"),
+          fetch("/api/partner/services"),
+          fetch("/api/partner/orders")
+        ]);
 
-        // Fetch partner's services
-        const partnerServicesResponse = await fetch("/api/partner/services");
-        const partnerServicesData = await partnerServicesResponse.json();
+        const [servicesData, partnerServicesData, ordersData] = await Promise.all([
+          servicesRes.json(),
+          partnerServicesRes.json(),
+          ordersRes.json()
+        ]);
+
+        setServices(servicesData);
         setPartnerServices(partnerServicesData);
+        if (ordersData.success) {
+          setAcceptedOrders(ordersData.data.orders);
+        }
 
         setLoading(false);
       } catch (error) {
@@ -46,14 +69,6 @@ export default function PartnerDashboard() {
     }
     fetchData();
   }, []);
-
-  const handleServiceSelection = (serviceName: string) => {
-    setSelectedServices((prev: string[]) =>
-      prev.includes(serviceName)
-        ? prev.filter((s) => s !== serviceName)
-        : [...prev, serviceName]
-    );
-  };
 
   const handleRequestService = async () => {
     if (!newService.trim()) {
@@ -100,10 +115,20 @@ export default function PartnerDashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Partner Dashboard</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Partner Dashboard</h1>
+        <div className="flex space-x-4">
+          <Link
+            href="/partner/profile"
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
+          >
+            Profile
+          </Link>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Column 1: Your Services */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Column 1: Active Services */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Your Services</h2>
           <div className="space-y-4">
@@ -131,60 +156,84 @@ export default function PartnerDashboard() {
           </div>
         </div>
 
-        {/* Column 2: Order Notifications */}
+        {/* Column 2: New Order Requests */}
+        <div className="bg-green-500">
+        <OrderNotification />
+        </div>
 
-          <h2 className="text-xl font-semibold mb-4">Recent Orders</h2>
-          <OrderNotification />
-
-
-        {/* Column 3: Request New Service */}
+        {/* Column 3: Accepted Orders */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Request New Service</h2>
+          <h2 className="text-xl font-semibold mb-4">Accepted Orders</h2>
           <div className="space-y-4">
-            <div className="flex flex-col gap-4">
-              <div>
-                <label
-                  htmlFor="serviceName"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Service Name
-                </label>
-                <input
-                  id="serviceName"
-                  type="text"
-                  value={newService}
-                  onChange={(e) => setNewService(e.target.value)}
-                  placeholder="Enter service name"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="serviceDescription"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Description
-                </label>
-                <textarea
-                  id="serviceDescription"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter service description"
-                  rows={3}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                />
-              </div>
-
-              <button
-                onClick={handleRequestService}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Request
-              </button>
-            </div>
+            {acceptedOrders.length === 0 ? (
+              <p className="text-gray-500">No accepted orders</p>
+            ) : (
+              acceptedOrders.map((order) => (
+                <div key={order.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{order.service.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        Customer: {order.user.name}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Date: {new Date(order.date).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Time: {order.time}
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="mt-2 pt-2 border-t">
+                    <p className="text-sm font-medium">
+                      Amount: ₹{order.amount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Request New Service Section */}
+      <div className="mt-8 bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">Request New Service</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Service Name
+            </label>
+            <input
+              type="text"
+              value={newService}
+              onChange={(e) => setNewService(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter service name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
+              placeholder="Enter service description"
+            />
+          </div>
+        </div>
+        <button
+          onClick={handleRequestService}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Request Service
+        </button>
       </div>
     </div>
   );
