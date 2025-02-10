@@ -1,146 +1,125 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { Category } from "@prisma/client";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 interface Service {
   id: string;
   name: string;
   description: string;
   price: number;
-  category: Category;
+  category: string;
+  image?: string;
 }
 
 export default function ServicesPage() {
-  const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [query, setQuery] = useState(searchParams.get('query') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchServices();
+    fetchCategories();
   }, []);
+
+  useEffect(() => {
+    fetchServices();
+  }, [query, category]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      const data = await res.json();
+      setCategories(['all', ...data]);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchServices = async () => {
     try {
-      const response = await fetch("/api/services/fetch-services");
-      const data = await response.json();
-      if (data.success) {
-        setServices(data.data.services);
-        // Extract unique categories
-        const uniqueCategories = ["ALL", ...new Set(data.data.services.map((s: Service) => s.category))] as string[];
-        setCategories(uniqueCategories);
-      }
-      setLoading(false);
+      const params = new URLSearchParams();
+      if (query) params.append('query', query);
+      if (category && category !== 'all') params.append('category', category);
+
+      const res = await fetch(`/api/services?${params.toString()}`);
+      const data = await res.json();
+      setServices(data);
     } catch (error) {
-      console.error("Error fetching services:", error);
-      setLoading(false);
+      console.error('Error fetching services:', error);
     }
   };
 
-  const handleBookService = async (serviceId: string) => {
-    if (!session) {
-      router.push("/api/auth/signin");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/orders/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ serviceId, userId: session?.user?.email }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        router.push(`/orders/${data.orderId}`);
-      } else {
-        alert("Failed to book the service. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error booking service:", error);
-      alert("An error occurred while booking the service. Please try again.");
-    }
+  // Handle search input change
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    updateURL({ query: value, category });
   };
 
-  const filteredServices = selectedCategory === "ALL" 
-    ? services 
-    : services.filter(service => service.category === selectedCategory);
-
-  const formatCategory = (category: string) => {
-    return category.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
+  // Handle category change
+  const handleCategoryClick = (selectedCategory: string) => {
+    setCategory(selectedCategory);
+    updateURL({ query, category: selectedCategory });
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
+  // Update URL parameters dynamically
+  const updateURL = ({ query, category }: { query: string; category: string }) => {
+    const params = new URLSearchParams();
+    if (query) params.set('query', query);
+    if (category && category !== 'all') params.set('category', category);
+    router.push(`/services?${params.toString()}`);
+  };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-100 p-6 space-y-4 fixedborder-r">
-        <h2 className="text-xl font-bold mb-6">Categories</h2>
-        {categories.map((category) => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={`w-full text-left px-4 py-2 rounded ${
-              selectedCategory === category
-                ? "bg-blue-600 text-white"
-                : "hover:bg-gray-200"
-            }`}
-          >
-            {category === "ALL" ? "All Services" : formatCategory(category)}
-          </button>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 p-8">
-        <h1 className="text-3xl font-bold mb-8">
-          {selectedCategory === "ALL" 
-            ? "All Services" 
-            : formatCategory(selectedCategory)}
-        </h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredServices.map((service) => (
-            <div
-              key={service.id}
-              className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
+    <div className="max-w-6xl mx-auto p-6 flex gap-6">
+      {/* Sidebar - Categories */}
+      <aside className="w-1/4 bg-white p-4 shadow rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Categories</h2>
+        <ul className="space-y-2">
+          {categories.map((cat) => (
+            <li
+              key={cat}
+              className={`cursor-pointer p-2 rounded-md ${
+                category === cat ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+              }`}
+              onClick={() => handleCategoryClick(cat)}
             >
-              <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-              <p className="text-gray-600 mb-4">{service.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-medium">₹{service.price.toFixed(2)}</span>
-                <button
-                  onClick={() => handleBookService(service.id)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                >
-                  Book Now
-                </button>
-              </div>
-              <div className="mt-4">
-                <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
-                  {formatCategory(service.category)}
-                </span>
-              </div>
-            </div>
+              {cat === 'all' ? 'All Products' : cat}
+            </li>
           ))}
-        </div>
+        </ul>
+      </aside>
+
+      {/* Main Content - Services */}
+      <div className="w-3/4 bg-white p-6 shadow rounded-lg">
+        {/* Search Bar */}
+        <input
+          type="text"
+          value={query}
+          onChange={handleSearch}
+          placeholder="Search services..."
+          className="w-full p-3 border border-gray-300 rounded-md mb-4"
+        />
+
+        {/* Services List */}
+        {services.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-6">
+            {services.map((service) => (
+              <li key={service.id} className="p-4 border rounded-lg">
+                <img src={service.image || 'https://via.placeholder.com/150'} alt={service.name} className="w-full h-40 object-cover rounded" />
+                <h3 className="text-lg font-semibold mt-2">{service.name}</h3>
+                <p className="text-gray-600">{service.description}</p>
+                <p className="text-blue-500 font-bold mt-1">${service.price}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">No services found.</p>
+        )}
       </div>
     </div>
   );
