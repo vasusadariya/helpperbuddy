@@ -49,7 +49,7 @@ export default function AddService() {
       setUploading(false);
     }
 
-    const res = await fetch('/api/admin/services/add-services', {
+    const res = await fetch('/api/admin/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description, price, image: imageUrl, category }),
@@ -57,13 +57,13 @@ export default function AddService() {
 
     if (res.ok) {
       edgestore.publicFiles.confirmUpload({ url: imageUrl });
-      if (params.get('from') === 'partner') {
-        setName('');
-        setDescription('');
-        setPrice(0);
-        setCategory('');
-        setFile(null);
+      setName('');
+      setDescription('');
+      setPrice(0);
+      setCategory('');
+      setFile(null);
 
+      if (params.get('from') === 'partner') {
         const confirmComplete = confirm('Mark the original PartnerRequestedService as COMPLETED?');
         
         if (confirmComplete) {
@@ -118,7 +118,6 @@ export default function AddService() {
         ))}
       </select>
 
-      {/* Image Upload */}
       <div className="mb-4">
         <SingleImageDropzone
           width={200}
@@ -128,7 +127,6 @@ export default function AddService() {
         />
       </div>
 
-      {/* Submit Button */}
       <button
         onClick={handleSubmit}
         disabled={uploading}

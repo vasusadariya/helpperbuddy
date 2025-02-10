@@ -26,7 +26,6 @@ export default function AdminBlogManager() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const { edgestore } = useEdgeStore();
 
-    // Fetch Blogs
     useEffect(() => {
         fetchBlogs();
     }, []);
@@ -44,7 +43,6 @@ export default function AdminBlogManager() {
         }
     };
 
-    // Create Blog
     const handleCreateBlog = async () => {
         if (!title || !content || !author || !file) return alert('Please fill all required fields');
 
@@ -86,7 +84,6 @@ export default function AdminBlogManager() {
         }
     };
 
-    // Delete Blog
     const handleDeleteBlog = async (id: string, image: string | undefined) => {
         if (!confirm('Are you sure?')) return;
 

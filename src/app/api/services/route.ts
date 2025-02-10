@@ -1,19 +1,28 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method === 'GET') {
-        const services = await prisma.service.findMany();
-        return res.json(services);
-    }
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const query = body.query?.trim();
 
-    if (req.method === 'POST') {
-        const { name, description, price, category, image } = req.body;
-        const newService = await prisma.service.create({
-            data: { name, description, price, category, image },
-        });
-        return res.status(201).json(newService);
-    }
+        if (!query || query.length === 0) {
+            const allServices = await prisma.service.findMany({
+                orderBy: { name: 'asc' },
+            });
+            return NextResponse.json(allServices, { status: 200 });
+        }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+        const services = await prisma.$queryRaw`
+            SELECT *, similarity(name, ${query}) AS sml
+            FROM "Service"
+            where similarity(name, ${query})>0.1
+            ORDER BY sml DESC
+            LIMIT 5;
+        `;
+        return NextResponse.json(services, { status: 200 });
+    } catch (error) {
+        console.error('Error fetching services:', error);
+        return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 });
+    }
 }

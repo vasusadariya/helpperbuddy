@@ -20,7 +20,7 @@ export default function DeleteServices() {
     }, []);
 
     const fetchServices = async (searchQuery = '') => {
-        const res = await fetch('/api/services/search', {
+        const res = await fetch('/api/services', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: searchQuery }),
