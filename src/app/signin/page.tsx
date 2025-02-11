@@ -11,6 +11,7 @@ interface CustomSession extends Session {
     email?: string | null;
     image?: string | null;
     role?: string;
+    services?: string[];  // Add services to the session type
   };
 }
 
@@ -25,7 +26,12 @@ export default function SignIn() {
     if (session.user.role === "USER") {
       router.push("/user/dashboard");
     } else if (session.user.role === "PARTNER") {
-      router.push("/partner/dashboard");
+      // Check if partner has any services
+      if (!session.user.services || session.user.services.length === 0) {
+        router.push("/partner/service-selection");
+      } else {
+        router.push("/partner/dashboard");
+      }
     } else if (session.user.role === "ADMIN") {
       router.push("/admin/dashboard");
     }
@@ -84,4 +90,3 @@ function LabelledInput({ label, type, onChange }: { label: string; type: string;
     </div>
   );
 }
-
