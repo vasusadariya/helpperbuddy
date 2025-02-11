@@ -92,7 +92,7 @@ export default function ServicesPage() {
       if (status === "loading") return;
       
       if (!session) {
-        router.push("/app/signin");
+        router.push("/signin");
         return;
       }
   
