@@ -1,427 +1,126 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { Category } from "@prisma/client";
-import { useRouter } from "next/navigation";
-import { format } from 'date-fns';
-import OrderWaitingNotification from '@/components/OrderWaitingNotification';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 interface Service {
   id: string;
   name: string;
   description: string;
   price: number;
-  category: Category;
+  category: string;
   image?: string;
 }
 
-interface BookingDetails {
-  date: string;
-  time: string;
-  remarks?: string;
-}
-
 export default function ServicesPage() {
-  const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  
-  // States for services and categories
+
+  const [query, setQuery] = useState(searchParams.get('query') || '');
+  const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // States for booking process
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
-  const [waitingOrderId, setWaitingOrderId] = useState<string | null>(null);
-  const [bookingInProgress, setBookingInProgress] = useState<string | null>(null);
-  
-  // Booking details state with default values
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    time: '10:00',
-    remarks: ''
-  });
-
-  const [waitingOrderData, setWaitingOrderData] = useState<{
-    orderId: string;
-    orderDetails: any;
-  } | null>(null);
-
-  // Fetch services on component mount
   useEffect(() => {
-    fetchServices();
+    fetchCategories();
   }, []);
 
-  // Fetch services function
+  useEffect(() => {
+    fetchServices();
+  }, [query, category]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      const data = await res.json();
+      setCategories(['all', ...data]); // 'All Products' option included
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
   const fetchServices = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch("/api/services/fetch-services");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        setServices(data.data.services);
-        const uniqueCategories = [
-          "ALL",
-          ...new Set(data.data.services.map((s: Service) => s.category))
-        ] as string[];
-        setCategories(uniqueCategories);
-      } else {
-        throw new Error(data.error || "Failed to fetch services");
-      }
+      const params = new URLSearchParams();
+      if (query) params.append('query', query);
+      if (category && category !== 'all') params.append('category', category);
+
+      const res = await fetch(`/api/services?${params.toString()}`);
+      const data = await res.json();
+      setServices(data);
     } catch (error) {
-      console.error("Error fetching services:", error);
-      setError(error instanceof Error ? error.message : "Failed to load services");
-    } finally {
-      setLoading(false);
+      console.error('Error fetching services:', error);
     }
   };
 
-    // Handle service booking
-    const handleBookService = (service: Service) => {
-      if (status === "loading") return;
-      
-      if (!session) {
-        router.push("/signin");
-        return;
-      }
-  
-      setSelectedService(service);
-      setIsModalOpen(true);
-      // Reset booking details to default values
-      setBookingDetails({
-        date: format(new Date(), 'yyyy-MM-dd'),
-        time: '10:00',
-        remarks: ''
-      });
-    };
-
-  // Handle service booking
-  const handleConfirmBooking = async () => {
-    if (!selectedService || !session?.user?.email) return;
-  
-    try {
-      setIsBooking(true);
-      setBookingInProgress(selectedService.id);
-      
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          serviceId: selectedService.id,
-          date: bookingDetails.date,
-          time: bookingDetails.time,
-          remarks: bookingDetails.remarks || ''
-        }),
-      });
-  
-      const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to book service");
-      }
-  
-      if (data.success) {
-        setWaitingOrderData({
-          orderId: data.data.orderId,
-          orderDetails: {
-            totalAmount: data.data.totalAmount,
-            walletAmount: data.data.walletAmount,
-            remainingAmount: data.data.remainingAmount,
-            razorpayOrderId: data.data.razorpayOrderId,
-            razorpayAmount: data.data.razorpayAmount,
-            serviceDetails: data.data.serviceDetails
-          }
-        });
-        handleCloseModal();
-      } else {
-        throw new Error(data.error || "Failed to book service");
-      }
-    } catch (error) {
-      console.error("Error booking service:", error);
-      setError(error instanceof Error ? error.message : "Failed to book service");
-    } finally {
-      setIsBooking(false);
-      setBookingInProgress(null);
-      setSelectedService(null);
-    }
+  // Handle search input change
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    updateURL({ query: value, category });
   };
 
-  const handleOrderAccepted = () => {
-    setWaitingOrderId(null);
-    // You might want to show a success message or redirect to orders page
+  // Handle category change
+  const handleCategoryClick = (selectedCategory: string) => {
+    setCategory(selectedCategory);
+    updateURL({ query, category: selectedCategory });
   };
 
-  // Validate date and time
-  const validateDateTime = (date: string, time: string): boolean => {
-    try {
-      const selectedDateTime = new Date(`${date}T${time}`);
-      const now = new Date();
-      
-      // Ensure date is not in the past
-      if (selectedDateTime < now) {
-        setError("Please select a future date and time");
-        return false;
-      }
-
-      // Ensure time is within business hours (8 AM to 8 PM)
-      const hour = selectedDateTime.getHours();
-      if (hour < 8 || hour >= 20) {
-        setError("Please select a time between 8 AM and 8 PM");
-        return false;
-      }
-
-      setError(null);
-      return true;
-    } catch (error) {
-      setError("Invalid date or time");
-      return false;
-    }
+  // Update URL parameters dynamically
+  const updateURL = ({ query, category }: { query: string; category: string }) => {
+    const params = new URLSearchParams();
+    if (query) params.set('query', query);
+    if (category && category !== 'all') params.set('category', category);
+    router.push(`/services?${params.toString()}`);
   };
-
-  // Handle booking submission
-  const handleBookingSubmit = async () => {
-    if (!validateDateTime(bookingDetails.date, bookingDetails.time)) {
-      return;
-    }
-    await handleConfirmBooking();
-  };
-
-  // Handle modal close
-  const handleCloseModal = () => {
-    setSelectedService(null);
-    setIsModalOpen(false);
-    setIsBooking(false);
-    setError(null);
-  };
-
-  // Filter services by category
-  const filteredServices = selectedCategory === "ALL"
-    ? services
-    : services.filter(service => service.category === selectedCategory);
-
-  // Format category name
-  const formatCategory = (category: string) => {
-    return category.split('_').map(word =>
-      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-    ).join(' ');
-  };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error && !isModalOpen) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center p-4">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button 
-            onClick={fetchServices}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-100 p-6 space-y-4 fixed h-full overflow-y-auto">
-        <h2 className="text-xl font-bold mb-6">Categories</h2>
-        {categories.map((category) => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={`w-full text-left px-4 py-2 rounded transition-colors ${
-              selectedCategory === category
-                ? "bg-blue-600 text-white"
-                : "hover:bg-gray-200"
-            }`}
-          >
-            {category === "ALL" ? "All Services" : formatCategory(category)}
-          </button>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 ml-64 p-8">
-        <h1 className="text-3xl font-bold mb-8">
-          {selectedCategory === "ALL"
-            ? "All Services"
-            : formatCategory(selectedCategory)}
-        </h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredServices.map((service) => (
-            <div
-              key={service.id}
-              className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
+    <div className="max-w-6xl mx-auto p-6 flex gap-6">
+      {/* Sidebar - Categories */}
+      <aside className="w-1/4 bg-white p-4 shadow rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Categories</h2>
+        <ul className="space-y-2">
+          {categories.map((cat) => (
+            <li
+              key={cat}
+              className={`cursor-pointer p-2 rounded-md ${
+                category === cat ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+              }`}
+              onClick={() => handleCategoryClick(cat)}
             >
-              {service.image && (
-                <div className="mb-4 h-48 overflow-hidden rounded-lg">
-                  <img
-                    src={service.image}
-                    alt={service.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-              <p className="text-gray-600 mb-4">{service.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-medium">₹{service.price.toFixed(2)}</span>
-                <button
-                  onClick={() => handleBookService(service)}
-                  disabled={bookingInProgress === service.id}
-                  className={`${
-                    bookingInProgress === service.id
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  } text-white px-4 py-2 rounded transition-colors`}
-                >
-                  {bookingInProgress === service.id ? "Booking..." : "Book Now"}
-                </button>
-              </div>
-              <div className="mt-4">
-                <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700">
-                  {formatCategory(service.category)}
-                </span>
-              </div>
-            </div>
+              {cat === 'all' ? 'All Products' : cat}
+            </li>
           ))}
-        </div>
+        </ul>
+      </aside>
+
+      {/* Main Content - Services */}
+      <div className="w-3/4 bg-white p-6 shadow rounded-lg">
+        {/* Search Bar */}
+        <input
+          type="text"
+          value={query}
+          onChange={handleSearch}
+          placeholder="Search services..."
+          className="w-full p-3 border border-gray-300 rounded-md mb-4"
+        />
+
+        {/* Services List */}
+        {services.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-6">
+            {services.map((service) => (
+              <li key={service.id} className="p-4 border rounded-lg">
+                <img src={service.image || 'https://via.placeholder.com/150'} alt={service.name} className="w-full h-40 object-cover rounded" />
+                <h3 className="text-lg font-semibold mt-2">{service.name}</h3>
+                <p className="text-gray-600">{service.description}</p>
+                <p className="text-blue-500 font-bold mt-1">${service.price}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">No services found.</p>
+        )}
       </div>
-
-      {/* Booking Modal */}
-      {selectedService && isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Book {selectedService.name}</h3>
-              <button
-                onClick={handleCloseModal}
-                className="text-gray-500 hover:text-gray-700"
-                disabled={isBooking}
-              >
-                ×
-              </button>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  value={bookingDetails.date}
-                  onChange={(e) => {
-                    setError(null);
-                    setBookingDetails(prev => ({
-                      ...prev,
-                      date: e.target.value
-                    }));
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={isBooking}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Time
-                </label>
-                <input
-                  type="time"
-                  value={bookingDetails.time}
-                  onChange={(e) => {
-                    setError(null);
-                    setBookingDetails(prev => ({
-                      ...prev,
-                      time: e.target.value
-                    }));
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={isBooking}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Remarks (Optional)
-                </label>
-                <textarea
-                  value={bookingDetails.remarks}
-                  onChange={(e) => setBookingDetails(prev => ({
-                    ...prev,
-                    remarks: e.target.value
-                  }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  disabled={isBooking}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <button
-                  onClick={handleBookingSubmit}
-                  disabled={isBooking}
-                  className={`flex-1 ${
-                    isBooking
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  } text-white px-4 py-2 rounded transition-colors`}
-                >
-                  {isBooking ? "Processing..." : "Confirm Booking"}
-                </button>
-                <button
-                  onClick={handleCloseModal}
-                  disabled={isBooking}
-                  className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/*waiting notification */}
-      {waitingOrderData && (
-  <OrderWaitingNotification 
-    orderId={waitingOrderData.orderId}
-    initialOrderData={waitingOrderData.orderDetails}
-    onOrderAccepted={() => setWaitingOrderData(null)}
-    onOrderCancelled={() => setWaitingOrderData(null)}
-  />
-)}
     </div>
   );
 }
