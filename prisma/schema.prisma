@@ -18,6 +18,7 @@ model User {
   referredBy    String?
   role          Role          @default(USER)
   updatedAt     DateTime      @default(now()) @updatedAt
+  phoneno       String?       @unique @db.VarChar(10)
   Order         Order[]
   Transaction   Transaction[]
   referrer      User?         @relation("Referrals", fields: [referredBy], references: [id])
@@ -40,6 +41,7 @@ model Blog {
 }
 
 model Order {
+
   id                 String       @id @default(cuid())
   userId             String
   serviceId          String
@@ -70,6 +72,7 @@ model Order {
   transaction        Transaction?
   review Review?
 
+
   @@index([partnerId, status])
   @@index([userId, status])
   @@index([pincode, status])
@@ -83,6 +86,7 @@ model Review {
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
+  
   order       Order    @relation(fields: [orderId], references: [id])
 }
 

@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { Session } from "next-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface CustomSession extends Session {
@@ -21,15 +21,45 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  if (session?.user?.role) {
-    if (session.user.role === "USER") {
-      router.push("/user/dashboard");
-    } else if (session.user.role === "PARTNER") {
-      router.push("/partner/dashboard");
-    } else if (session.user.role === "ADMIN") {
-      router.push("/admin/dashboard");
+  useEffect(() => {
+    const checkPartnerServices = async () => {
+      try {
+        const response = await fetch('/api/partner/services');
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            // Partner not found or no services
+            router.push("/partner/service-selection");
+            return;
+          }
+          throw new Error('Failed to fetch services');
+        }
+        
+        const partnerServices = await response.json();
+        
+        // If partner has no services, redirect to service selection
+        if (!partnerServices || partnerServices.length === 0) {
+          router.push("/partner/service-selection");
+        } else {
+          router.push("/partner/dashboard");
+        }
+      } catch (error) {
+        console.error("Error checking partner services:", error);
+        // In case of error, we'll redirect to service selection to be safe
+        router.push("/partner/service-selection");
+      }
+    };
+
+    if (session?.user?.role) {
+      if (session.user.role === "USER") {
+        router.push("/user/dashboard");
+      } else if (session.user.role === "PARTNER") {
+        checkPartnerServices();
+      } else if (session.user.role === "ADMIN") {
+        router.push("/admin/dashboard");
+      }
     }
-  }
+  }, [session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,4 +114,3 @@ function LabelledInput({ label, type, onChange }: { label: string; type: string;
     </div>
   );
 }
-

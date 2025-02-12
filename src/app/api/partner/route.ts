@@ -94,17 +94,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Received body:', body);
 
-    let { name, email, password, services, pincodes } = body;
+    let { name, email, password, pincodes, phoneno } = body;
 
-    if (!name || !email || !password || !services || !pincodes) {
+    // Check required fields
+    if (!name || !email || !password || !pincodes || !phoneno) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Ensure services is an array
-    const servicesArray = Array.isArray(services) ? services : services.split(',').map((s: string) => s.trim());
-    const pincodesArray = Array.isArray(pincodes) ? pincodes.map(p => p.trim()) : [pincodes.trim()];
+    // Validate phone number format
+    if (!/^\d{10}$/.test(phoneno)) {
+      return NextResponse.json({ error: 'Invalid phone number format' }, { status: 400 });
+    }
 
-    console.log('Processed services:', servicesArray);
+    // Process pincodes into array
+    const pincodesArray = Array.isArray(pincodes) ? pincodes.map(p => p.trim()) : [pincodes.trim()];
     console.log('Processed pincodes:', pincodesArray);
 
     // Check if partner already exists
@@ -121,13 +124,14 @@ export async function POST(request: NextRequest) {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await prisma.$transaction(async (tx) => {
-      // Create partner first
+      // Create partner
       const partner = await tx.partner.create({
         data: { 
           name, 
           email, 
           password: hashedPassword, 
-          service: servicesArray,  
+          service: [], // Initialize with empty service array
+          phoneno,
           approved: false
         }
       });
@@ -144,30 +148,6 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Get service IDs for the selected service names
-      const serviceRecords = await tx.service.findMany({
-        where: {
-          name: {
-            in: servicesArray
-          }
-        },
-        select: {
-          id: true
-        }
-      });
-
-      console.log('Found service records:', serviceRecords);
-
-      // Create ServiceProvider entries
-      if (serviceRecords.length > 0) {
-        await tx.serviceProvider.createMany({
-          data: serviceRecords.map(service => ({
-            partnerId: partner.id,
-            serviceId: service.id
-          }))
-        });
-      }
-
       return partner;
     });
 
@@ -176,7 +156,8 @@ export async function POST(request: NextRequest) {
         id: result.id, 
         name: result.name, 
         email: result.email, 
-        approved: result.approved 
+        approved: result.approved,
+        phoneno: result.phoneno
       },
       { status: 201 }
     );
