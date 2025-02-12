@@ -107,7 +107,7 @@ export default function PartnerRegister() {
     };
 
     try {
-      const response = await fetch("/api/partners", {
+      const response = await fetch("/api/partner", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formattedData),

@@ -28,6 +28,9 @@ export default function RootLayout({
 
     <html lang="en">
       <Providers>
+      <head>
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+      </head>
       <body
         className={`antialiased`}
       >

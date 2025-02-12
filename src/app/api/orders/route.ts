@@ -96,14 +96,45 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { serviceId, date, time, remarks } = body;
+    const { serviceId, date, time, remarks, address, pincode } = body;
 
     // Validate required fields
-    if (!serviceId || !date || !time) {
+    if (!serviceId || !date || !time || !address || !pincode) {
       return NextResponse.json({
         success: false,
         error: "Missing required fields",
-        received: { serviceId, date, time, remarks },
+        received: { serviceId, date, time, remarks, address, pincode },
+        timestamp: currentUTCTime
+      }, { status: 400 });
+    }
+
+    // Check for eligible partners in the area
+    const eligiblePartners = await prisma.partner.findMany({
+      where: {
+        approved: true,
+        AND: [
+          {
+            serviceProvider: {
+              some: {
+                serviceId: serviceId
+              }
+            }
+          },
+          {
+            partnerPincode: {
+              some: {
+                pincode: pincode
+              }
+            }
+          }
+        ]
+      }
+    });
+
+    if (eligiblePartners.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: "No service providers available in your area",
         timestamp: currentUTCTime
       }, { status: 400 });
     }
@@ -142,6 +173,8 @@ export async function POST(req: NextRequest) {
           date: new Date(date),
           time: time,
           remarks: remarks || "",
+          address : "",
+          pincode : "",
           amount: totalAmount,
           walletAmount: walletAmount,
           remainingAmount: remainingAmount,
@@ -206,6 +239,16 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Increment service order count
+      await tx.service.update({
+        where: { id: serviceId },
+        data: {
+          numberoforders: {
+            increment: 1
+          }
+        }
+      });
+
       return { order: updatedOrder, transaction, razorpayOrder };
     });
 
@@ -224,6 +267,9 @@ export async function POST(req: NextRequest) {
           name: service.name,
           description: service.description
         },
+        address: result.order.address,
+        pincode: result.order.pincode,
+        eligiblePartners: eligiblePartners.length,
         timestamp: currentUTCTime
       }
     });

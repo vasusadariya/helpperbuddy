@@ -11,6 +11,7 @@ model User {
   id            String        @id @default(cuid())
   name          String
   email         String        @unique
+  phoneno       String?       @unique @db.VarChar(10)
   createdAt     DateTime      @default(now())
   password      String
   referralCode  String        @unique @default(cuid())
@@ -32,76 +33,98 @@ model Blog {
   author    String
   readTime  Int
   createdAt DateTime @default(now())
-
   updatedAt DateTime @default(now()) @updatedAt
+  isActive  Boolean  @default(true)
+
+  @@index([isActive])
 }
 
 model Order {
-  id                String       @id @default(cuid())
-  userId            String
-  serviceId         String
-  status            Status       @default(PENDING)
-  date              DateTime
-  time              String
-  remarks           String?
-  createdAt         DateTime     @default(now())
-
-  updatedAt         DateTime     @default(now()) @updatedAt
-
-  partnerId         String?
-  amount            Float        @default(0)
-  currency          String       @default("INR")
-  razorpayOrderId   String?      @unique
-  remainingAmount   Float        @default(0)
-  walletAmount      Float        @default(0)
-  paidAt            DateTime?
-  razorpayPaymentId String?      @unique
-  Partner           Partner?     @relation(fields: [partnerId], references: [id])
-  service           Service      @relation(fields: [serviceId], references: [id])
-  user              User         @relation(fields: [userId], references: [id])
-  transaction       Transaction?
+  id                 String       @id @default(cuid())
+  userId             String
+  serviceId          String
+  status             Status       @default(PENDING)
+  date               DateTime
+  time               String
+  address            String
+  pincode            String
+  remarks            String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @default(now()) @updatedAt
+  partnerId          String?
+  amount             Float        @default(0)
+  currency           String       @default("INR")
+  razorpayOrderId    String?      @unique
+  remainingAmount    Float        @default(0)
+  walletAmount       Float        @default(0)
+  paidAt             DateTime?
+  razorpayPaymentId  String?      @unique
+  acceptedAt         DateTime?
+  startedAt          DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  paymentRequestedAt DateTime?
+  Partner            Partner?     @relation(fields: [partnerId], references: [id])
+  service            Service      @relation(fields: [serviceId], references: [id])
+  user               User         @relation(fields: [userId], references: [id])
+  transaction        Transaction?
+  review Review?
 
   @@index([partnerId, status])
   @@index([userId, status])
+  @@index([pincode, status])
+  @@index([serviceId, status])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  rating      Int      @db.SmallInt
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  order       Order    @relation(fields: [orderId], references: [id])
 }
 
 model Partner {
-
   id                      String                    @id @default(cuid())
-
   name                    String
   email                   String                    @unique
   password                String
   service                 String[]
   approved                Boolean                   @default(false)
   createdAt               DateTime                  @default(now())
-
   updatedAt               DateTime                  @default(now()) @updatedAt
+  phoneno                 String?                   @db.VarChar(10)
+  isActive                Boolean                   @default(true)
+  lastActiveAt            DateTime                  @default(now())
   Order                   Order[]
   partnerPincode          PartnerPincode[]
   partnerRequestedService PartnerRequestedService[]
   serviceProvider         ServiceProvider[]
 
+  @@index([approved, isActive])
 }
 
 model PartnerPincode {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   partnerId String
   pincode   String
-  Partner   Partner @relation(fields: [partnerId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  Partner   Partner  @relation(fields: [partnerId], references: [id])
 
   @@unique([partnerId, pincode])
+  @@index([pincode, isActive])
 }
 
 model PartnerRequestedService {
-
   id          String               @id @default(cuid())
-
   name        String
   description String?
   partnerId   String
   createdAt   DateTime             @default(now())
-
   updatedAt   DateTime             @default(now()) @updatedAt
   status      ServiceRequestStatus @default(PENDING)
   Partner     Partner              @relation(fields: [partnerId], references: [id])
@@ -125,18 +148,25 @@ model Service {
   category       Category
   image          String?
   numberoforders Int?              @default(0)
+  isActive       Boolean           @default(true)
   Order          Order[]
   provider       ServiceProvider[]
+
+  @@index([category, isActive])
 }
 
 model ServiceProvider {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   serviceId String
   partnerId String
-  Partner   Partner @relation(fields: [partnerId], references: [id])
-  Service   Service @relation(fields: [serviceId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  Partner   Partner  @relation(fields: [partnerId], references: [id])
+  Service   Service  @relation(fields: [serviceId], references: [id])
 
   @@unique([serviceId, partnerId])
+  @@index([partnerId, isActive])
 }
 
 model Transaction {
@@ -156,16 +186,15 @@ model Transaction {
   @@index([walletId, createdAt])
 }
 
-
 model Wallet {
   id           String        @id @default(cuid())
   balance      Float         @default(0)
   userId       String        @unique
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @default(now()) @updatedAt
+  lastCredited DateTime?
   transactions Transaction[]
   user         User          @relation(fields: [userId], references: [id])
-
 
   @@index([userId])
 }
@@ -194,8 +223,17 @@ enum Role {
 enum Status {
   PENDING
   ACCEPTED
+  IN_PROGRESS
+  SERVICE_COMPLETED
+  PAYMENT_REQUESTED
+  PAYMENT_COMPLETED
   COMPLETED
   CANCELLED
+}
+
+enum PaymentMode {
+  ONLINE
+  COD
 }
 
 enum TransactionType {

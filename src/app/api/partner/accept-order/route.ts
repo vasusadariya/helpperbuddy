@@ -19,45 +19,105 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { orderId } = body;
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Get partner details
-      const partner = await tx.partner.findUnique({
-        where: { email: session.user.email }
-      });
+    if (!orderId) {
+      return NextResponse.json({
+        success: false,
+        error: "Order ID is required",
+        timestamp: currentUTCTime
+      }, { status: 400 });
+    }
 
-      if (!partner) {
-        throw new Error("Partner not found");
+    // Get partner details
+    const partner = await prisma.partner.findUnique({
+      where: { email: session.user.email },
+      include: {
+        serviceProvider: true,
+        partnerPincode: true
       }
+    });
 
-      // Check if order is still available
-      const order = await tx.order.findFirst({
-        where: {
-          id: orderId,
-          status: 'PENDING',
-          partnerId: null
+    if (!partner || !partner.approved) {
+      return NextResponse.json({
+        success: false,
+        error: "Partner not found or not approved",
+        timestamp: currentUTCTime
+      }, { status: 403 });
+    }
+
+    // Try to accept the order using a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // First, check if the order is still available
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          service: true
         }
       });
 
       if (!order) {
+        throw new Error("Order not found");
+      }
+
+      if (order.status !== 'PENDING' || order.partnerId) {
         throw new Error("Order is no longer available");
       }
 
-      // Update order status and assign partner
+      // Verify partner eligibility
+      const isServiceProvider = partner.serviceProvider.some(
+        sp => sp.serviceId === order.serviceId
+      );
+      const servesLocation = partner.partnerPincode.some(
+        pp => pp.pincode === order.pincode
+      );
+
+      if (!isServiceProvider || !servesLocation) {
+        throw new Error("Partner not eligible for this order");
+      }
+
+      // Update the order
       const updatedOrder = await tx.order.update({
-        where: { id: orderId },
+        where: { 
+          id: orderId,
+          status: 'PENDING',  // Additional check
+          partnerId: null     // Ensure no other partner has accepted
+        },
         data: {
-          status: 'ACCEPTED',
-          partnerId: partner.id
+          partnerId: partner.id,
+          status: 'ACCEPTED'
+        },
+        include: {
+          service: true,
+          user: {
+            select: {
+              name: true,
+              email: true
+            }
+          }
         }
       });
 
       return updatedOrder;
     });
 
+    // Send notification to user (implement your notification system)
+    // await sendOrderAcceptedNotification(result.user.email, {
+    //   orderId: result.id,
+    //   serviceName: result.service.name,
+    //   partnerName: partner.name,
+    //   partnerPhone: partner.phoneno
+    // });
+
     return NextResponse.json({
       success: true,
       data: {
-        order: result,
+        orderId: result.id,
+        serviceName: result.service.name,
+        customerName: result.user.name,
+        address: result.address,
+        pincode: result.pincode,
+        date: result.date,
+        time: result.time,
+        amount: result.amount,
         timestamp: currentUTCTime
       }
     });
@@ -66,8 +126,7 @@ export async function POST(request: NextRequest) {
     console.error("Error accepting order:", error);
     return NextResponse.json({
       success: false,
-      error: "Failed to accept order",
-      details: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Failed to accept order",
       timestamp: currentUTCTime
     }, { status: 500 });
   }

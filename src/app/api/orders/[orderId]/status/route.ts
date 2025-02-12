@@ -1,98 +1,174 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../../auth/[...nextauth]/options";
+import { apiResponse } from '@/lib/utils/api-response';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { orderId: string } }
 ) {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
+  
   try {
-    const session = await getServerSession(authOptions);
+    // Run these promises in parallel
+    const [session, orderId] = await Promise.all([
+      getServerSession(authOptions),
+      Promise.resolve(params.orderId) // Convert sync param to promise for consistency
+    ]);
+
     if (!session?.user?.email) {
-      return NextResponse.json({
+      return apiResponse({
         success: false,
         error: "Unauthorized",
         timestamp: currentUTCTime
-      }, { status: 401 });
+      }, 401);
     }
 
+    if (!orderId) {
+      return apiResponse({
+        success: false,
+        error: "Order ID is required",
+        timestamp: currentUTCTime
+      }, 400);
+    }
+
+    // Fetch order with all necessary details
     const order = await prisma.order.findUnique({
-      where: { id: params.orderId },
+      where: { id: orderId },
       include: {
         service: {
           select: {
             name: true,
             price: true,
             category: true,
+            description: true
           }
         },
         Partner: {
           select: {
+            id: true,
             name: true,
             email: true,
+            phoneno: true
           }
         },
         user: {
           select: {
             name: true,
             email: true,
+            phoneno: true
+          }
+        },
+        transaction: {
+          select: {
+            id: true,
+            amount: true,
+            type: true,
+            createdAt: true
           }
         }
       }
     });
 
     if (!order) {
-      return NextResponse.json({
+      return apiResponse({
         success: false,
         error: "Order not found",
+        orderIdReceived: orderId,
         timestamp: currentUTCTime
-      }, { status: 404 });
+      }, 404);
     }
 
     // Check if user has permission to view this order
-    if (order.user.email !== session.user.email && order.Partner?.email !== session.user.email) {
-      return NextResponse.json({
+    const isCustomer = order.user.email === session.user.email;
+    const isPartner = order.Partner?.email === session.user.email;
+
+    if (!isCustomer && !isPartner) {
+      return apiResponse({
         success: false,
         error: "Unauthorized to view this order",
         timestamp: currentUTCTime
-      }, { status: 403 });
+      }, 403);
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: order.id,
-        status: order.status,
+    // Format order data
+    const orderData = {
+      id: order.id,
+      status: order.status,
+      paymentDetails: {
         amount: order.amount,
         remainingAmount: order.remainingAmount,
         walletAmount: order.walletAmount,
-        service: {
-          name: order.service.name,
-          price: order.service.price
-        },
-        partner: order.Partner ? {
-          name: order.Partner.name
-        } : null,
-        date: order.date.toISOString(),
+        currency: order.currency,
+        razorpayOrderId: order.razorpayOrderId,
+        razorpayPaymentId: order.razorpayPaymentId,
+        paidAt: order.paidAt?.toISOString(),
+      },
+      serviceDetails: {
+        name: order.service.name,
+        category: order.service.category,
+        price: order.service.price,
+        description: order.service.description
+      },
+      partnerDetails: order.Partner ? {
+        name: order.Partner.name,
+        phone: order.Partner.phoneno,
+        // Only include partner email for the partner themselves
+        email: isPartner ? order.Partner.email : undefined
+      } : null,
+      customerDetails: {
+        name: order.user.name,
+        // Only include customer details for the customer themselves
+        email: isCustomer ? order.user.email : undefined,
+        phone: isCustomer ? order.user.phoneno : undefined
+      },
+      orderDetails: {
+        date: order.date.toISOString().split('T')[0], // YYYY-MM-DD
         time: order.time,
-        timestamp: currentUTCTime
-      }
+        address: order.address,
+        pincode: order.pincode,
+        remarks: order.remarks
+      },
+      timestamps: {
+        created: order.createdAt.toISOString(),
+        updated: order.updatedAt.toISOString(),
+        accepted: order.acceptedAt?.toISOString(),
+        started: order.startedAt?.toISOString(),
+        completed: order.completedAt?.toISOString(),
+        cancelled: order.cancelledAt?.toISOString(),
+        paymentRequested: order.paymentRequestedAt?.toISOString()
+      },
+      transaction: order.transaction ? {
+        id: order.transaction.id,
+        amount: order.transaction.amount,
+        type: order.transaction.type,
+        createdAt: order.transaction.createdAt.toISOString()
+      } : null
+    };
+
+    return apiResponse({
+      success: true,
+      data: orderData,
+      timestamp: currentUTCTime
     });
 
   } catch (error) {
     console.error("[Order Status Error]:", {
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack
+      } : 'Unknown error',
       orderId: params.orderId,
-      error,
-      timestamp: currentUTCTime
+      timestamp: currentUTCTime,
+      user: (await getServerSession(authOptions))?.user?.email
     });
-    
-    return NextResponse.json({
+
+    return apiResponse({
       success: false,
       error: "Failed to fetch order status",
+      details: error instanceof Error ? error.message : 'Unknown error',
       timestamp: currentUTCTime
-    }, { status: 500 });
+    }, 500);
   }
 }

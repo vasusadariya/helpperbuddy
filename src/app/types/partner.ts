@@ -14,3 +14,18 @@ export interface PartnerResponse {
     approved: boolean;
     role: string;
 }
+
+export interface WaitingOrderData {
+  orderId: string;
+  orderDetails: {
+    totalAmount: number;
+    walletAmount: number;
+    remainingAmount: number;
+    razorpayOrderId?: string;
+    razorpayAmount: number;
+    serviceDetails: {
+      name: string;
+      description: string;
+    };
+  };
+}

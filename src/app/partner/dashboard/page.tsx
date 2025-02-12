@@ -16,15 +16,20 @@ interface Order {
   id: string;
   service: {
     name: string;
+    price: number;
   };
   user: {
     name: string;
+    email: string;
   };
   date: string;
   time: string;
   status: string;
   amount: number;
+  razorpayPaymentId?: string;
+  paidAt?: string;
 }
+
 
 interface PartnerService {
   service: Service;
@@ -39,36 +44,61 @@ export default function PartnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [description, setDescription] = useState("");
 
+  const fetchAcceptedOrders = async () => {
+    try {
+      const response = await fetch("/api/partner/orders");
+      const data = await response.json();
+      
+      if (data.success) {
+        setAcceptedOrders(data.data.orders);
+      } else {
+        setError(data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching accepted orders:", error);
+      setError("Failed to fetch accepted orders");
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch all data in parallel
-        const [servicesRes, partnerServicesRes, ordersRes] = await Promise.all([
+        const [servicesRes, partnerServicesRes] = await Promise.all([
           fetch("/api/partner"),
-          fetch("/api/partner/services"),
-          fetch("/api/partner/orders")
+          fetch("/api/partner/services")
         ]);
 
-        const [servicesData, partnerServicesData, ordersData] = await Promise.all([
+        const [servicesData, partnerServicesData] = await Promise.all([
           servicesRes.json(),
-          partnerServicesRes.json(),
-          ordersRes.json()
+          partnerServicesRes.json()
         ]);
 
         setServices(servicesData);
         setPartnerServices(partnerServicesData);
-        if (ordersData.success) {
-          setAcceptedOrders(ordersData.data.orders);
-        }
+        await fetchAcceptedOrders(); // Fetch accepted orders separately
 
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         setLoading(false);
+        setError("Failed to load dashboard data");
       }
     }
     fetchData();
+
+    // Set up polling for accepted orders
+    const interval = setInterval(fetchAcceptedOrders, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  const getOrderStatusDisplay = (order: Order) => {
+    if (order.status === 'ACCEPTED') {
+      return order.razorpayPaymentId 
+        ? { text: 'Payment Completed', className: 'bg-green-100 text-green-800' }
+        : { text: 'Waiting for Payment', className: 'bg-yellow-100 text-yellow-800' };
+    }
+    return { text: order.status, className: 'bg-blue-100 text-blue-800' };
+  };
 
   const handleRequestService = async () => {
     if (!newService.trim()) {
@@ -102,6 +132,55 @@ export default function PartnerDashboard() {
     } catch (error) {
       console.error("Error requesting service:", error);
       alert("Failed to submit service request");
+    }
+  };
+
+  // const getOrderStatusDisplay = (order: Order) => {
+  //   switch (order.status) {
+  //     case 'ACCEPTED':
+  //       return {
+  //         text: order.razorpayPaymentId ? 'Accepted' : 'Waiting for Payment',
+  //         className: order.razorpayPaymentId 
+  //           ? 'bg-green-100 text-green-800'
+  //           : 'bg-yellow-100 text-yellow-800'
+  //       };
+  //     case 'COMPLETED':
+  //       return {
+  //         text: 'Completed',
+  //         className: 'bg-blue-100 text-blue-800'
+  //       };
+  //     case 'CANCELLED':
+  //       return {
+  //         text: 'Cancelled',
+  //         className: 'bg-red-100 text-red-800'
+  //       };
+  //     default:
+  //       return {
+  //         text: order.status,
+  //         className: 'bg-gray-100 text-gray-800'
+  //       };
+  //   }
+  // };
+
+  const formatDateTime = (date: string, time: string) => {
+    try {
+      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+      const [hours, minutes] = time.split(':');
+      const timeDate = new Date();
+      timeDate.setHours(parseInt(hours), parseInt(minutes));
+      const formattedTime = timeDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      return { formattedDate, formattedTime };
+    } catch (error) {
+      console.error('Error formatting date/time:', error);
+      return { formattedDate: date, formattedTime: time };
     }
   };
 
@@ -161,14 +240,18 @@ export default function PartnerDashboard() {
         <OrderNotification />
         </div>
 
-        {/* Column 3: Accepted Orders */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Accepted Orders</h2>
-          <div className="space-y-4">
-            {acceptedOrders.length === 0 ? (
-              <p className="text-gray-500">No accepted orders</p>
-            ) : (
-              acceptedOrders.map((order) => (
+        {/* Accepted Orders Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">Accepted Orders</h2>
+        <div className="space-y-4">
+          {acceptedOrders.length === 0 ? (
+            <p className="text-gray-500">No accepted orders</p>
+          ) : (
+            acceptedOrders.map((order) => {
+              const { formattedDate, formattedTime } = formatDateTime(order.date, order.time);
+              const status = getOrderStatusDisplay(order);
+
+              return (
                 <div key={order.id} className="border rounded-lg p-4">
                   <div className="flex justify-between items-start">
                     <div>
@@ -177,26 +260,34 @@ export default function PartnerDashboard() {
                         Customer: {order.user.name}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Date: {new Date(order.date).toLocaleDateString()}
+                        Date: {formattedDate}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Time: {order.time}
+                        Time: {formattedTime}
                       </p>
                     </div>
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {order.status}
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${status.className}`}>
+                      {status.text}
                     </span>
                   </div>
                   <div className="mt-2 pt-2 border-t">
-                    <p className="text-sm font-medium">
-                      Amount: ₹{order.amount.toFixed(2)}
-                    </p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium">
+                        Amount: ₹{order.amount.toFixed(2)}
+                      </p>
+                      {order.paidAt && (
+                        <p className="text-xs text-gray-500">
+                          Paid on: {new Date(order.paidAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              );
+            })
+          )}
         </div>
+      </div>
       </div>
 
       {/* Request New Service Section */}
@@ -237,4 +328,8 @@ export default function PartnerDashboard() {
       </div>
     </div>
   );
+}
+
+function setError(arg0: string) {
+  throw new Error("Function not implemented.");
 }
