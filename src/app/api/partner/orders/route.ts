@@ -52,26 +52,29 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: [
-        {
-          status: 'asc'  // ACCEPTED orders first
-        },
-        {
-          updatedAt: 'desc'  // Most recent first
-        }
+        { date: 'desc' },
+        { time: 'desc' }
       ]
     });
+
+    // Log for debugging
+    console.log("Found accepted orders:", acceptedOrders.length);
 
     return NextResponse.json({
       success: true,
       data: {
         orders: acceptedOrders.map(order => ({
-          ...order,
-          createdAt: order.createdAt.toISOString(),
-          updatedAt: order.updatedAt.toISOString(),
+          id: order.id,
+          service: order.service,
+          user: order.user,
           date: order.date.toISOString(),
+          time: order.time,
+          status: order.status,
+          amount: order.amount,
+          razorpayOrderId: order.razorpayOrderId,
+          razorpayPaymentId: order.razorpayPaymentId,
           paidAt: order.paidAt?.toISOString() || null
-        })),
-        timestamp: currentUTCTime
+        }))
       }
     });
 

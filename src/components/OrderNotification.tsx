@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 interface Order {
   id: string;
   service: {
     name: string;
     price: number;
+    category: string;
   };
   user: {
     name: string;
@@ -19,18 +21,20 @@ interface Order {
   status: string;
   amount: number;
   remarks?: string;
+  partnerId: string | null;
 }
 
 export default function OrderNotification() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user) {
       fetchPendingOrders();
-      // Poll for new orders every 10 seconds
-      const interval = setInterval(fetchPendingOrders, 10000);
+      const interval = setInterval(fetchPendingOrders, 5000); // Reduced to 5 seconds for better responsiveness
       return () => clearInterval(interval);
     }
   }, [session]);
@@ -38,18 +42,29 @@ export default function OrderNotification() {
   const fetchPendingOrders = async () => {
     try {
       const response = await fetch("/api/partner/pending-orders");
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
+      }
+
       const data = await response.json();
       if (data.success) {
-        setPendingOrders(data.data.orders);
+        // Filter out any orders that already have a partnerId
+        const availableOrders = data.data.orders.filter((order: Order) => !order.partnerId);
+        setPendingOrders(availableOrders);
+      } else {
+        throw new Error(data.error || 'Failed to fetch orders');
       }
     } catch (error) {
       console.error("Error fetching pending orders:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch orders");
     }
   };
 
   const acceptOrder = async (orderId: string) => {
     try {
       setIsAccepting(orderId);
+      setError(null);
+
       const response = await fetch("/api/partner/accept-order", {
         method: "POST",
         headers: {
@@ -59,34 +74,56 @@ export default function OrderNotification() {
       });
 
       const data = await response.json();
+
       if (data.success) {
-        // Remove the accepted order from the list
+        // Remove the accepted order from the local state
         setPendingOrders(orders => orders.filter(order => order.id !== orderId));
-        alert("Order accepted successfully!");
+        // Redirect to the order details page
+        // router.push(`/partner/orders/${orderId}`);
       } else {
-        // Order might have been taken by another partner
-        if (data.error === "Order no longer available") {
+        if (data.error === "Order is no longer available") {
+          // Remove the order from local state if it's no longer available
           setPendingOrders(orders => orders.filter(order => order.id !== orderId));
-          alert("This order has already been accepted by another partner");
+          setError("This order has already been accepted by another partner");
         } else {
-          alert(data.error || "Failed to accept order");
+          setError(data.error || "Failed to accept order");
         }
       }
     } catch (error) {
       console.error("Error accepting order:", error);
-      alert("Failed to accept order. Please try again.");
+      setError("Failed to accept order. Please try again.");
     } finally {
       setIsAccepting(null);
     }
   };
 
+  const formatTime = (timeString: string) => {
+    try {
+      const [hours, minutes] = timeString.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+      return format(date, 'hh:mm a');
+    } catch (error) {
+      return timeString;
+    }
+  };
+
   if (pendingOrders.length === 0) {
-    return null;
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <p className="text-center text-gray-600">No new orders available at the moment</p>
+      </div>
+    );
   }
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold mb-4">New Order Requests</h2>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          {error}
+        </div>
+      )}
       <div className="space-y-4">
         {pendingOrders.map((order) => (
           <div key={order.id} className="border rounded-lg p-4">
@@ -94,6 +131,7 @@ export default function OrderNotification() {
               <div>
                 <h3 className="font-medium text-lg">{order.service.name}</h3>
                 <p className="text-sm text-gray-600">Customer: {order.user.name}</p>
+                <p className="text-xs text-gray-500">Category: {order.service.category}</p>
               </div>
               <span className="text-lg font-semibold text-green-600">
                 ₹{order.amount.toFixed(2)}
@@ -104,13 +142,13 @@ export default function OrderNotification() {
               <div className="bg-gray-50 rounded p-2">
                 <p className="text-xs text-gray-500">Date</p>
                 <p className="text-sm font-medium">
-                  {format(new Date(order.date), 'MMM dd, yyyy')}
+                  {format(parseISO(order.date), 'MMM dd, yyyy')}
                 </p>
               </div>
               <div className="bg-gray-50 rounded p-2">
                 <p className="text-xs text-gray-500">Time</p>
                 <p className="text-sm font-medium">
-                  {format(new Date(`2000-01-01T${order.time}`), 'hh:mm a')}
+                  {formatTime(order.time)}
                 </p>
               </div>
             </div>
