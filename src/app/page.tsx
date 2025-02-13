@@ -18,12 +18,9 @@ export default function Home() {
   return (
     <div className="bg-black text-white">
       {/* Hero Section with Navbar Inside */}
+      <Navbar />
       <section className="relative bg-white text-black flex flex-col md:flex-row items-center px-6 md:px-10 py-20 min-h-[80vh] rounded-bl-[97px] rounded-br-[97px]">
         {/* Navbar inside Hero Section */}
-        <div className="absolute top-4 left-0 w-full z-10 px-6 md:px-10">
-          <Navbar />
-        </div>
-
         {/* Left Side */}
         <div className="md:w-1/2 text-center md:text-left mt-16 md:mt-20">
           <span className="bg-gray-200 text-sm px-4 py-1 rounded-full">

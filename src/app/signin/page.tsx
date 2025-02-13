@@ -4,6 +4,7 @@ import { signIn, useSession } from "next-auth/react";
 import { Session } from "next-auth";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface CustomSession extends Session {
   user: {
@@ -95,6 +96,9 @@ export default function SignIn() {
           >
             Sign in with Google
           </button>
+          <p className="pt-5">Don't have an account? <Link href="/signup" className="text-blue-600 hover:underline">
+             Sign up
+          </Link></p>
         </div>
       </div>
     </div>
