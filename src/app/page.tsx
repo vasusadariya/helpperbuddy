@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import HeroHeading from "@/components/HeroHeading";
 import SearchBar from '@/components/searchbar';
+import Footer from '@/components/Footer';
 
 export default function Home() {
   const { data: session } = useSession();
@@ -20,41 +21,26 @@ export default function Home() {
       {/* Hero Section with Navbar Inside */}
       <section className="relative bg-white text-black flex flex-col md:flex-row items-center px-6 md:px-10 py-20 min-h-[80vh] rounded-bl-[97px] rounded-br-[97px]">
         {/* Navbar inside Hero Section */}
-        <div className="absolute top-4 left-0 w-full z-10 px-6 md:px-10">
+        <div className="absolute top-0 left-0 w-full z-10">
           <Navbar />
         </div>
 
         {/* Left Side */}
-        <div className="md:w-1/2 text-center md:text-left mt-16 md:mt-20">
-          <span className="bg-gray-200 text-sm px-4 py-1 rounded-full">
-            🚀 Delivering eco-friendly and tailor-made solutions
-          </span>
-          {/* <h1 className="text-4xl md:text-6xl font-bold mt-4 leading-tight">
-          Reliable, Fast & Affordable Services
-          </h1> */}
-
+        <div className="md:w-1/2 text-center md:text-left mt-16 md:mt-10 z-10">
           <HeroHeading />
 
           <p className="text-gray-600 mt-4 max-w-md">
             delivering top-quality, eco-friendly solutions tailored to your needs. Our trusted team ensures your spaces are spotless, fresh, and well-maintained.
           </p>
           <h2 className="text-2xl md:text-xl font-bold mt-4 leading-tight">
-            Your Helper Buddy is Just a Click Away!
+            Reliable, Fast & Affordable Services
           </h2>
           <div className="mt-6 flex justify-center md:justify-start space-x-4">
-            <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-              onClick={() => router.push("/register")}>
-              Partner
-            </button>
-
-            <button className="relative bg-yellow-400 text-black px-6 py-3 rounded-full font-medium hover:bg-yellow-600 shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-              onClick={() => router.push("/signup")}>
-              Signup
-            </button>
-
-            <button className="relative border border-black px-6 py-3 rounded-full font-medium hover:bg-gray-300 hover:text-white shadow-[6px_6px_0px_black] hover:shadow-[4px_4px_0px_black] transition-all duration-200"
-              onClick={() => { router.push("/admin/partners") }}>
-              Admin
+            <button
+              className="relative px-4 py-2 rounded-full font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-900 bg-opacity-30 backdrop-blur-xl shadow-lg hover:scale-105 transition-all duration-200"
+              onClick={() => router.push("/services")}
+            >
+              Book Services
             </button>
           </div>
         </div>
@@ -62,13 +48,13 @@ export default function Home() {
         {/* Right Side */}
         <div className="md:w-1/2 mt-10 md:mt-0 flex justify-center relative">
           <div className="relative">
-            <Image
+            {/* <Image
               src="/image.png"
               alt="Hero"
               width={400}
               height={400}
               className="rounded-lg"
-            />
+            /> */}
             <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-yellow-400 rounded-full"></div>
           </div>
         </div>
@@ -100,6 +86,8 @@ export default function Home() {
         <h2>Search for a Service</h2>
         <SearchBar />
       </section>
+      <section className="bg-white p-10"> </section>
+      <Footer />
     </div>
   );
 }
