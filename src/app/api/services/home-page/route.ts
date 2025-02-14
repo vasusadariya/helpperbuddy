@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
             similarity(category::text, ${query}) AS category_similarity,
             (0.7 * similarity(name, ${query}) + 0.3 * similarity(category::text, ${query})) AS overall_similarity
             FROM "Service"
-            WHERE similarity(name, ${query}) > 0.05 
+            WHERE similarity(name, ${query}) > 0.1
             OR similarity(category::text, ${query}) > 0.1
             ORDER BY overall_similarity DESC
             LIMIT 5;
