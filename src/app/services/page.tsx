@@ -42,6 +42,7 @@ export default function ServicesPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [requested, setRequested] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
     date: format(new Date(), "yyyy-MM-dd"),
@@ -76,6 +77,23 @@ export default function ServicesPage() {
     }
   };
 
+  const requestService = async () => {
+    if (query.length < 3 || query.length > 50) return;
+    setRequested(true);
+
+    try {
+        await fetch('/api/services/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: query }),
+        });
+    } catch (error) {
+        console.error('Error requesting service:', error);
+    }
+};
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -106,11 +124,26 @@ export default function ServicesPage() {
     updateURL({ query, category: selectedCategory });
   };
 
+  useEffect(() => {
+    const handlePopState = () => {
+      router.replace('/services', { scroll: false });
+      
+      setQuery('');
+      setCategory('all');
+    };
+  
+    window.addEventListener('popstate', handlePopState);
+  
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [router]);
+
   const updateURL = ({ query, category }: { query: string; category: string }) => {
     const params = new URLSearchParams();
     if (query) params.set('query', query);
     if (category && category !== 'all') params.set('category', category);
-    router.push(`/services?${params.toString()}`);
+    router.replace(`/services?${params.toString()}`);
   };
 
   const addToCart = (service: Service) => {
@@ -317,7 +350,18 @@ export default function ServicesPage() {
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center">No services found.</p>
+          <div>
+            No results found.
+                            <button
+                                onClick={requestService}
+                                className={`block w-full mt-2 ${
+                                    requested ? "bg-green-500 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                                } text-white p-2 rounded-lg transition`}
+                                disabled={requested || query.length < 3 || query.length > 50}
+                            >
+                                {requested ? "Requested" : "Request Service"}
+                            </button>
+          </div>
         )}
       </main>
 
