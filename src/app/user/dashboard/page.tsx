@@ -317,13 +317,13 @@ export default function UserDashboard() {
                   <div className="flex items-center">
                     <div className={`p-2 rounded-full mr-3 ${
                       transaction.type === 'CREDIT' || transaction.type === 'REFERRAL_BONUS'
-                        ? 'bg-green-100'
-                        : 'bg-red-100'
+                        ?'bg-red-100'
+                        :'bg-green-100'
                     }`}>
                       {transaction.type === 'CREDIT' || transaction.type === 'REFERRAL_BONUS' ? (
-                        <ArrowUpRight className="w-4 h-4 text-green-600" />
+                        <ArrowUpRight className="w-4 h-4 text-red-600"/>
                       ) : (
-                        <ArrowDownRight className="w-4 h-4 text-red-600" />
+                        <ArrowDownRight className="w-4 h-4  text-green-600" />
                       )}
                     </div>
                     <div>
@@ -335,10 +335,10 @@ export default function UserDashboard() {
                   </div>
                   <p className={`font-medium ${
                     transaction.type === 'CREDIT' || transaction.type === 'REFERRAL_BONUS'
-                      ? 'text-green-600'
-                      : 'text-red-600'
+                      ? 'text-red-600'
+                      : 'text-green-600'
                   }`}>
-                    {transaction.type === 'CREDIT' || transaction.type === 'REFERRAL_BONUS' ? '+' : '-'}
+                    {transaction.type === 'CREDIT' || transaction.type === 'REFERRAL_BONUS' ? '-' : '+'}
                     ₹{Math.abs(transaction.amount).toFixed(2)}
                   </p>
                 </div>
