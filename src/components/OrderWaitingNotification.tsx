@@ -18,6 +18,7 @@ interface OrderStatus {
   };
   partner: {
     name: string;
+    phoneno?: string;  // Added partner phone number
   } | null;
   date: string;
   time: string;
@@ -37,11 +38,13 @@ interface OrderWaitingNotificationProps {
       name: string;
       description: string;
     };
+    date: string;
+    time: string;
   };
 }
 
 export default function OrderWaitingNotification({ 
-  orderId, 
+  orderId,
   onOrderAccepted,
   onOrderCancelled,
   initialOrderData 
@@ -49,74 +52,100 @@ export default function OrderWaitingNotification({
   const { data: session } = useSession();
   const [order, setOrder] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showAcceptedMessage, setShowAcceptedMessage] = useState(false);
+  const [dismissTimeout, setDismissTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Store order data in localStorage when received
+  // Initialize or load order data
   useEffect(() => {
-    if (initialOrderData) {
-      const orderData = {
-        id: orderId,
-        status: 'PENDING',
-        amount: initialOrderData.totalAmount,
-        remainingAmount: initialOrderData.remainingAmount,
-        walletAmount: initialOrderData.walletAmount,
-        razorpayOrderId: initialOrderData.razorpayOrderId,
-        razorpayAmount: initialOrderData.razorpayAmount,
-        service: {
-          name: initialOrderData.serviceDetails.name,
-          price: initialOrderData.totalAmount
-        },
-        partner: null,
-        date: new Date().toISOString(),
-        time: new Date().toTimeString().slice(0, 5)
-      };
-      localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
-    }
-  }, [initialOrderData, orderId]);
+    const initializeOrder = () => {
+      // Try to load from localStorage first
+      const savedOrder = localStorage.getItem(`order_${orderId}`);
+      if (savedOrder) {
+        setOrder(JSON.parse(savedOrder));
+        return;
+      }
 
-  // Load order data from localStorage on component mount
-  useEffect(() => {
-    const savedOrder = localStorage.getItem(`order_${orderId}`);
-    if (savedOrder) {
-      setOrder(JSON.parse(savedOrder));
-    }
-  }, [orderId]);
+      // If no saved order but we have initial data, create new order
+      if (initialOrderData) {
+        const newOrder: OrderStatus = {
+          id: orderId,
+          status: 'PENDING',
+          amount: initialOrderData.totalAmount,
+          remainingAmount: initialOrderData.remainingAmount,
+          walletAmount: initialOrderData.walletAmount,
+          razorpayOrderId: initialOrderData.razorpayOrderId,
+          razorpayAmount: initialOrderData.razorpayAmount,
+          service: {
+            name: initialOrderData.serviceDetails.name,
+            price: initialOrderData.totalAmount
+          },
+          partner: null,
+          date: initialOrderData.date,
+          time: initialOrderData.time
+        };
+        setOrder(newOrder);
+        localStorage.setItem(`order_${orderId}`, JSON.stringify(newOrder));
+      }
+    };
 
+    initializeOrder();
+  }, [orderId, initialOrderData]);
+
+  // Status polling
   useEffect(() => {
-    if (session?.user) {
-      checkOrderStatus();
-      const interval = setInterval(checkOrderStatus, 5000);
-      return () => clearInterval(interval);
-    }
+    let intervalId: NodeJS.Timeout;
+
+    const pollStatus = () => {
+      if (session?.user) {
+        checkOrderStatus();
+        intervalId = setInterval(checkOrderStatus, 5000);
+      }
+    };
+
+    pollStatus();
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      if (dismissTimeout) {
+        clearTimeout(dismissTimeout);
+      }
+    };
   }, [session, orderId]);
 
   const checkOrderStatus = async () => {
     try {
       const response = await fetch(`/api/orders/${orderId}/status`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch order status');
+      }
+
       const data = await response.json();
       
       if (data.success) {
-        setOrder(data.data);
-        localStorage.setItem(`order_${orderId}`, JSON.stringify(data.data));
+        const updatedOrder = data.data;
+        setOrder(updatedOrder);
+        localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrder));
         
-        if (data.data.status === 'ACCEPTED' || data.data.status === 'COMPLETED') {
-          setTimeout(() => {
+        if (updatedOrder.status === 'ACCEPTED' && !showAcceptedMessage) {
+          setShowAcceptedMessage(true);
+          // Set a timeout to dismiss the notification after 5 seconds
+          const timeoutId = setTimeout(() => {
             onOrderAccepted?.();
-            localStorage.removeItem(`order_${orderId}`);
-          }, 3000); // Show acceptance message for 3 seconds before removing
-        }
-        
-        if (data.data.status === 'CANCELLED') {
-          onOrderCancelled?.();
+          }, 5000);
+          setDismissTimeout(timeoutId);
+        } else if (updatedOrder.status === 'CANCELLED') {
           localStorage.removeItem(`order_${orderId}`);
+          onOrderCancelled?.();
         }
       } else {
-        setError(data.error);
+        setError(data.error || 'Failed to get order status');
       }
     } catch (error) {
       console.error("Error checking order status:", error);
-      setError("Failed to check order status");
+      setError(error instanceof Error ? error.message : "Failed to check order status");
     }
   };
 
@@ -125,6 +154,8 @@ export default function OrderWaitingNotification({
 
     try {
       setIsCancelling(true);
+      setError(null);
+
       const response = await fetch("/api/orders", {
         method: "PATCH",
         headers: {
@@ -137,6 +168,7 @@ export default function OrderWaitingNotification({
       });
 
       const data = await response.json();
+      
       if (data.success) {
         localStorage.removeItem(`order_${orderId}`);
         onOrderCancelled?.();
@@ -145,77 +177,23 @@ export default function OrderWaitingNotification({
       }
     } catch (error) {
       console.error("Error cancelling order:", error);
-      setError("Failed to cancel order. Please try again.");
+      setError(error instanceof Error ? error.message : "Failed to cancel order");
     } finally {
       setIsCancelling(false);
-    }
-  };
-
-  const handlePayment = async () => {
-    if (!order?.razorpayOrderId || isProcessingPayment) return;
-
-    setIsProcessingPayment(true);
-    
-    try {
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.razorpayAmount,
-        currency: "INR",
-        name: "Your Company Name",
-        description: `Payment for ${order.service.name}`,
-        order_id: order.razorpayOrderId,
-        handler: async (response: any) => {
-          try {
-            const result = await fetch("/api/orders", {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                orderId: orderId,
-                status: "COMPLETED",
-                razorpayPaymentId: response.razorpay_payment_id
-              }),
-            });
-
-            const data = await result.json();
-            if (data.success) {
-              checkOrderStatus();
-            } else {
-              throw new Error(data.error);
-            }
-          } catch (error) {
-            console.error("Payment verification failed:", error);
-            setError("Payment verification failed. Please contact support.");
-          }
-        },
-        prefill: {
-          email: session?.user?.email,
-          name: session?.user?.name,
-        },
-        theme: {
-          color: "#2563EB",
-        },
-      };
-
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error("Payment initiation failed:", error);
-      setError("Failed to initiate payment. Please try again.");
-    } finally {
-      setIsProcessingPayment(false);
     }
   };
 
   if (!order) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 w-96 border border-gray-200 animate-slide-up">
+    <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 w-96 border border-gray-200 animate-slide-up z-50">
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="font-medium text-lg">Service Booking Status</h3>
           <p className="text-sm text-gray-600">{order.service.name}</p>
+          <p className="text-xs text-gray-500">
+            {format(new Date(order.date), 'MMM dd, yyyy')} at {format(new Date(`2000-01-01T${order.time}`), 'hh:mm a')}
+          </p>
         </div>
         <div className="text-right">
           <span className="text-lg font-semibold text-green-600">
@@ -243,20 +221,6 @@ export default function OrderWaitingNotification({
               <span>Waiting for service provider...</span>
             </div>
 
-            {order.razorpayOrderId && order.remainingAmount > 0 && (
-              <button
-                onClick={handlePayment}
-                disabled={isProcessingPayment}
-                className={`w-full ${
-                  isProcessingPayment
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                } text-white px-4 py-2 rounded text-sm transition-colors mb-2`}
-              >
-                {isProcessingPayment ? "Processing..." : `Pay ₹${order.remainingAmount.toFixed(2)}`}
-              </button>
-            )}
-
             <button
               onClick={handleCancelOrder}
               disabled={isCancelling}
@@ -271,12 +235,38 @@ export default function OrderWaitingNotification({
           </>
         )}
 
-        {order.status === 'ACCEPTED' && (
-          <div className="text-green-600 flex items-center justify-center space-x-2">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span>Order accepted by {order.partner?.name}</span>
+        {order.status === 'ACCEPTED' && order.partner && (
+          <div className="space-y-3">
+            <div className="text-green-600 flex items-center justify-center space-x-2">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Order accepted!</span>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="font-medium mb-2">Service Provider Details</h4>
+              <div className="space-y-1 text-sm">
+                <p className="flex items-center">
+                  <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {order.partner.name}
+                </p>
+                {order.partner.phoneno && (
+                  <p className="flex items-center">
+                    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    {order.partner.phoneno}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-500 text-center">
+              This notification will close in a few seconds...
+            </p>
           </div>
         )}
       </div>

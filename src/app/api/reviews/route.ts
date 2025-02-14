@@ -1,0 +1,116 @@
+// src/app/api/reviews/route.ts
+import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/options";
+
+const prisma = new PrismaClient();
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { orderId, rating, description } = await req.json();
+
+    // Validate rating
+    if (!rating || rating < 1 || rating > 5) {
+      return NextResponse.json(
+        { error: "Rating must be between 1 and 5" },
+        { status: 400 }
+      );
+    }
+
+    // Verify order belongs to user and is completed
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        user: {
+          email: session.user.email
+        },
+        status: "COMPLETED"
+      }
+    });
+
+    if (!order) {
+      return NextResponse.json(
+        { error: "Order not found or not eligible for review" },
+        { status: 404 }
+      );
+    }
+
+    // Check if review already exists
+    const existingReview = await prisma.review.findUnique({
+      where: {
+        orderId
+      }
+    });
+
+    if (existingReview) {
+      return NextResponse.json(
+        { error: "Review already exists for this order" },
+        { status: 400 }
+      );
+    }
+
+    // Create review
+    const review = await prisma.review.create({
+      data: {
+        orderId,
+        rating,
+        description: description || ""
+      }
+    });
+
+    return NextResponse.json(review);
+  } catch (error) {
+    console.error("Review creation error:", error);
+    return NextResponse.json(
+      { error: "Failed to create review" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const orderId = searchParams.get("orderId");
+
+    const review = await prisma.review.findUnique({
+      where: {
+        orderId: orderId!
+      }
+    });
+
+    if (!review) {
+      return NextResponse.json(
+        { error: "Review not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(review);
+  } catch (error) {
+    console.error("Review fetch error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch review" },
+      { status: 500 }
+    );
+  }
+}

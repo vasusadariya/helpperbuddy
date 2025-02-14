@@ -6,7 +6,7 @@ export async function GET() {
     console.log("Fetching categories..."); // Debug log
 
     // Fetch enum values
-    const categories = await prisma.$queryRaw`
+    const categories: { category: string }[] = await prisma.$queryRaw`
       SELECT unnest(enum_range(NULL::"Category")) AS category;
     `;
     const categoryList = categories.map((c: { category: string }) => c.category);

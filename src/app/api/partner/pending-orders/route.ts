@@ -3,8 +3,12 @@ import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+const ORDER_WINDOW_HOURS = 48;
+
 export async function GET(request: NextRequest) {
-  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   try {
     const session = await getServerSession(authOptions);
@@ -17,78 +21,115 @@ export async function GET(request: NextRequest) {
     }
 
     // Get partner details
-    const partner = await prisma.partner.findUnique({
-      where: { email: session.user.email }
+    const partner = await prisma.partner.findFirst({
+      where: { 
+        email: session.user.email,
+        approved: true,
+        isActive: true
+      },
+      select: {
+        id: true,
+        serviceProvider: {
+          where: { isActive: true },
+          select: {
+            serviceId: true
+          }
+        },
+        partnerPincode: {
+          where: { isActive: true },
+          select: {
+            pincode: true
+          }
+        }
+      }
     });
 
     if (!partner) {
       return NextResponse.json({
         success: false,
-        error: "Partner not found",
+        error: "Partner not found or not approved",
         timestamp: currentUTCTime
       }, { status: 404 });
     }
 
-    // Get services this partner provides
-    const serviceProviders = await prisma.serviceProvider.findMany({
-      where: { partnerId: partner.id },
-      select: { serviceId: true }
-    });
+    const serviceIds = partner.serviceProvider.map(sp => sp.serviceId);
+    const pincodes = partner.partnerPincode.map(pp => pp.pincode);
 
-    const serviceIds = serviceProviders.map(sp => sp.serviceId);
-
-    console.log("Fetching orders for services:", serviceIds);
-
-    // Get pending orders for these services
+    // Get pending orders
     const pendingOrders = await prisma.order.findMany({
       where: {
-        serviceId: { in: serviceIds },
-        status: 'PENDING',
-        partnerId: null, // Not yet accepted by any partner
+        AND: [
+          { serviceId: { in: serviceIds } },
+          { pincode: { in: pincodes } },
+          { status: 'PENDING' },
+          { partnerId: null }
+        ]
       },
       include: {
         service: {
           select: {
             name: true,
+            category: true,
             price: true,
-            category: true
+            description: true
           }
         },
         user: {
           select: {
             name: true,
-            email: true
+            phoneno: true
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: [
+        { date: 'asc' },
+        { time: 'asc' }
+      ]
     });
 
-    console.log("Found pending orders:", pendingOrders.length);
+    // Format orders
+    const formattedOrders = pendingOrders.map(order => ({
+      id: order.id,
+      serviceDetails: {
+        name: order.service.name,
+        category: order.service.category,
+        price: order.service.price,
+        description: order.service.description
+      },
+      customerDetails: {
+        name: order.user.name,
+        phone: order.user.phoneno || 'Will be shared after acceptance'
+      },
+      orderDetails: {
+        date: order.date.toISOString().split('T')[0],
+        time: order.time,
+        address: order.address,
+        pincode: order.pincode,
+        amount: order.amount,
+        remarks: order.remarks || null
+      },
+      timestamps: {
+        created: order.createdAt.toISOString(),
+        updated: order.updatedAt.toISOString()
+      }
+    }));
+
+    // Update last active timestamp
+    await prisma.partner.update({
+      where: { id: partner.id },
+      data: { lastActiveAt: new Date() }
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        orders: pendingOrders.map(order => ({
-          ...order,
-          createdAt: order.createdAt.toISOString(),
-          updatedAt: order.updatedAt.toISOString(),
-          date: order.date.toISOString()
-        })),
+        orders: formattedOrders,
         timestamp: currentUTCTime
       }
     });
 
   } catch (error) {
-    const session = await getServerSession(authOptions);
-    console.error("[Pending Orders Error]:", {
-      error,
-      timestamp: currentUTCTime,
-      user: session?.user?.email
-    });
-
+    console.error("[Pending Orders Error]:", error);
     return NextResponse.json({
       success: false,
       error: "Failed to fetch pending orders",

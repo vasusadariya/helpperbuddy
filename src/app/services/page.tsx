@@ -1,7 +1,12 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession } from "next-auth/react";
+import { toast, Toaster } from "react-hot-toast";
+import { format } from "date-fns";
+import CheckoutModal from "@/components/CheckoutModal";
+import { validateDateTime } from '@/lib/utils/validation';
 
 interface Service {
   id: string;
@@ -9,63 +14,43 @@ interface Service {
   description: string;
   price: number;
   category: string;
-  numberoforders: number;
   image?: string;
 }
 
-// Debounce helper function
-function debounce<T extends (...args: any[]) => void>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+interface CartItem extends Service {
+  quantity: number;
+}
 
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
+interface BookingDetails {
+  date: string;
+  time: string;
+  address: string;
+  phoneNo: string;
+  pincode: string;
+  remarks: string;
 }
 
 export default function ServicesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
 
   const [query, setQuery] = useState(searchParams.get('query') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [requested, setRequested] = useState<boolean>(false);
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  // Debounced fetch services
-  const debouncedFetchServices = useCallback(
-    debounce(async (searchQuery: string, searchCategory: string) => {
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.append('query', searchQuery);
-        if (searchCategory && searchCategory !== 'all') params.append('category', searchCategory);
-
-        const res = await fetch(`/api/services?${params.toString()}`);
-        const data = await res.json();
-        setServices(data);
-        setIsSearching(false);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        setIsSearching(false);
-      }
-    }, 500), // 500ms delay
-    []
-  );
-
-  // Update services when query or category changes
-  useEffect(() => {
-    setIsSearching(true);
-    debouncedFetchServices(query, category);
-  }, [query, category, debouncedFetchServices]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState<BookingDetails>({
+    date: format(new Date(), "yyyy-MM-dd"),
+    time: "10:00",
+    address: "",
+    phoneNo: "",
+    pincode: "",
+    remarks: ""
+  });
 
   const fetchCategories = async () => {
     try {
@@ -77,114 +62,367 @@ export default function ServicesPage() {
     }
   };
 
-  // Debounced URL update
-  const debouncedUpdateURL = useCallback(
-    debounce(({ query, category }: { query: string; category: string }) => {
+  const fetchServices = async () => {
+    try {
       const params = new URLSearchParams();
-      if (query) params.set('query', query);
-      if (category && category !== 'all') params.set('category', category);
-      router.push(`/services?${params.toString()}`);
-    }, 500),
-    [router]
-  );
+      if (query) params.append('query', query);
+      if (category && category !== 'all') params.append('category', category);
 
-  // Handle search input change
+      const res = await fetch(`/api/services?${params.toString()}`);
+      const data = await res.json();
+      setServices(data);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    fetchServices();
+  }, [query, category]);
+
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
-    debouncedUpdateURL({ query: value, category });
+    updateURL({ query: value, category });
   };
 
-  // Handle category change
   const handleCategoryClick = (selectedCategory: string) => {
     setCategory(selectedCategory);
-    debouncedUpdateURL({ query, category: selectedCategory });
+    updateURL({ query, category: selectedCategory });
   };
 
-  const requestService = async () => {
-    if (query.length < 3 || query.length > 50) return;
-    setRequested(true);
+  const updateURL = ({ query, category }: { query: string; category: string }) => {
+    const params = new URLSearchParams();
+    if (query) params.set('query', query);
+    if (category && category !== 'all') params.set('category', category);
+    router.push(`/services?${params.toString()}`);
+  };
 
-    try {
-        await fetch('/api/services/request', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name: query }),
-        });
-    } catch (error) {
-        console.error('Error requesting service:', error);
+  const addToCart = (service: Service) => {
+    setCart(currentCart => {
+      const existingItem = currentCart.find(item => item.id === service.id);
+      if (existingItem) {
+        return currentCart.map(item =>
+          item.id === service.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...currentCart, { ...service, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const removeFromCart = (serviceId: string) => {
+    setCart(currentCart => currentCart.filter(item => item.id !== serviceId));
+  };
+
+  const updateQuantity = (serviceId: string, newQuantity: number) => {
+    if (newQuantity < 1) {
+      removeFromCart(serviceId);
+      return;
     }
-};
+    setCart(currentCart =>
+      currentCart.map(item =>
+        item.id === serviceId ? { ...item, quantity: newQuantity } : item
+      )
+    );
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleCheckout = async () => {
+    if (!session) {
+      toast.error('Please sign in to continue');
+      router.push('/signin');
+      return;
+    }
+  
+    // Validate all required fields first
+    if (!bookingDetails.address.trim()) {
+      toast.error('Please provide a delivery address');
+      return;
+    }
+  
+    if (!bookingDetails.phoneNo.trim()) {
+      toast.error('Please provide a phone number');
+      return;
+    }
+  
+    if (!bookingDetails.pincode.trim()) {
+      toast.error('Please provide a pincode');
+      return;
+    }
+  
+    // Validate phone number format
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(bookingDetails.phoneNo)) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+  
+    // Validate pincode format
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincodeRegex.test(bookingDetails.pincode)) {
+      toast.error('Please enter a valid 6-digit pincode');
+      return;
+    }
+  
+    if (!validateDateTime(bookingDetails.date, bookingDetails.time)) {
+      return; // validateDateTime function already shows toast messages
+    }
+  
+    setIsProcessing(true);
+    try {
+      // Format the date correctly
+      const bookingDate = new Date(`${bookingDetails.date}T${bookingDetails.time}`);
+  
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: cart[0].id,
+          date: bookingDate.toISOString(), // Send as ISO string
+          time: bookingDetails.time,
+          address: bookingDetails.address,
+          pincode: bookingDetails.pincode,
+          remarks: bookingDetails.remarks,
+          amount: cartTotal,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Failed to create order');
+      }
+  
+      if (data.success) {
+        setIsCheckoutModalOpen(false);
+        setIsCartOpen(false);
+        
+        toast.success('Finding the best partner for your service...');
+        clearCart();
+        
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        router.push(`/user/dashboard`);
+      } else {
+        throw new Error(data.error || 'Failed to create order');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+  
+  // Handle specific error cases
+  const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+  
+  if (errorMessage.includes('No service providers available')) {
+    toast.error('No service providers are currently available in your area. Please try again later.');
+  } else if (errorMessage.includes('Network')) {
+    toast.error('Network error. Please check your internet connection.');
+  } else if (errorMessage.includes('date')) {
+    toast.error('Invalid booking date or time. Please select a valid date and time.');
+  } else if (errorMessage.includes('pincode')) {
+    toast.error('Service not available in this pincode area.');
+  } else if (errorMessage.includes('slots')) {
+    toast.error('Selected time slot is no longer available. Please choose another time.');
+  } else {
+    toast.error(errorMessage);
+  }
+} finally {
+  setIsProcessing(false);
+}
+  };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 flex gap-6">
-      {/* Sidebar - Categories */}
-      <aside className="w-1/4 bg-white p-4 shadow rounded-lg">
+    <div className="flex min-h-screen">
+      <Toaster position="top-center" />
+
+      {/* Categories Sidebar */}
+      <aside className="w-64 bg-white p-4 shadow-lg fixed h-full">
         <h2 className="text-xl font-semibold mb-4">Categories</h2>
         <ul className="space-y-2">
           {categories.map((cat) => (
             <li
               key={cat}
-              className={`cursor-pointer p-2 rounded-md ${category === cat ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
-                }`}
+              className={`cursor-pointer p-2 rounded-md ${
+                category === cat ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+              }`}
               onClick={() => handleCategoryClick(cat)}
             >
-              {cat === 'all' ? 'All Products' : cat}
+              {cat === 'all' ? 'All Services' : cat}
             </li>
           ))}
         </ul>
       </aside>
 
-      {/* Main Content - Services */}
-      <div className="w-3/4 bg-white p-6 shadow rounded-lg">
-        {/* Search Bar with Loading State */}
-        <div className="relative">
+      {/* Main Content */}
+      <main className="flex-1 ml-64 p-6">
+        {/* Search Bar */}
+        <div className="mb-6">
           <input
             type="text"
             value={query}
             onChange={handleSearch}
             placeholder="Search services..."
-            className="w-full p-3 border border-gray-300 rounded-md mb-4"
+            className="w-full p-3 border border-gray-300 rounded-md"
           />
-          {isSearching && (
-            <div className="absolute right-3 top-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-            </div>
-          )}
         </div>
 
-        {/* Services List */}
+        {/* Services Grid */}
         {services.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service) => (
-              <li key={service.id} className="p-4 border rounded-lg">
+              <div key={service.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                 <img
                   src={service.image || 'https://via.placeholder.com/150'}
                   alt={service.name}
-                  className="w-full h-40 object-cover rounded"
+                  className="w-full h-48 object-cover"
                 />
-                <h3 className="text-lg font-semibold mt-2">{service.name}</h3>
-                <p className="text-gray-600">{service.description}</p>
-                <p className="text-blue-500 font-bold mt-1">${service.price}</p>
-              </li>
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold mb-2">{service.name}</h3>
+                  <p className="text-gray-600 mb-4">{service.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-bold">₹{service.price.toFixed(2)}</span>
+                    <button
+                      onClick={() => addToCart(service)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
-          <p>
-            No results found.
-            <button
-              onClick={requestService}
-              className={`block w-full mt-2 ${requested ? "bg-green-500 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-                } text-white p-2 rounded-lg transition`}
-              disabled={requested || query.length < 3 || query.length > 50}
-            >
-              {requested ? "Requested" : "Request Service"}
-            </button>
-          </p>
+          <p className="text-gray-500 text-center">No services found.</p>
         )}
-      </div>
+      </main>
+
+      {/* Cart Sidebar */}
+      <aside className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 ${
+        isCartOpen ? 'translate-x-0' : 'translate-x-full'
+      }`}>
+        <div className="p-4 h-full flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Cart ({cartItemCount})</h2>
+            <button
+              onClick={() => setIsCartOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ×
+            </button>
+          </div>
+
+          {cart.length > 0 ? (
+            <>
+              <div className="flex-1 overflow-y-auto">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 p-2 border-b">
+                    <img
+                      src={item.image || 'https://via.placeholder.com/50'}
+                      alt={item.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-semibold">{item.name}</h3>
+                      <p className="text-sm text-gray-600">₹{item.price.toFixed(2)}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="px-2 bg-gray-100 rounded"
+                      >
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="px-2 bg-gray-100 rounded"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between mb-4">
+                  <span className="font-semibold">Total:</span>
+                  <span className="font-bold">₹{cartTotal.toFixed(2)}</span>
+                </div>
+                <button
+                  onClick={() => setIsCheckoutModalOpen(true)}
+                  className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 mb-2"
+                >
+                  Checkout
+                </button>
+                <button
+                  onClick={clearCart}
+                  className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
+                >
+                  Clear Cart
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-gray-500">Your cart is empty</p>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Cart Toggle Button */}
+      <button
+        onClick={() => setIsCartOpen(true)}
+        className="fixed bottom-4 right-4 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600"
+      >
+        🛒 {cartItemCount > 0 && <span className="ml-1">{cartItemCount}</span>}
+      </button>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutModalOpen}
+        isProcessing={isProcessing}
+        bookingDetails={bookingDetails}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        onConfirm={handleCheckout}
+        setBookingDetails={setBookingDetails}
+      />
+
+      {/* Processing Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-lg">Connecting you to a partner...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

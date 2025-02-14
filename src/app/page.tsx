@@ -1,20 +1,20 @@
-"use client";
+"use client"
 
 import Navbar from "@/components/Navbar";
-import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import HeroHeading from "@/components/HeroHeading";
 import SearchBar from '@/components/searchbar';
 import Footer from '@/components/Footer';
+import HeroSection from "@/components/HeroSection"
+import ServicesSection from "@/components/ServicesSection"
+import TestimonialsSection from "@/components/TestimonialsSection"
+import HowItWorksSection from "@/components/HowItWorksSection"
+import CTASection from "@/components/CTASection"
 
 export default function Home() {
-  const { data: session } = useSession();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    signOut();
-  };
+  const { data: session } = useSession()
+  const router = useRouter()
 
   return (
     <div className="bg-black text-white">
@@ -89,5 +89,6 @@ export default function Home() {
       <section className="bg-white p-10"> </section>
       <Footer />
     </div>
-  );
+  )
 }
+

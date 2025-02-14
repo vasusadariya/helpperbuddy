@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./provider";
 import Navbar from "@/components/Navbar";
+import { CartProvider } from "./context/CartContext";
+import { Toaster } from "react-hot-toast";
+
+<Toaster position="top-center" />
 
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
@@ -28,11 +32,16 @@ export default function RootLayout({
 
     <html lang="en">
       <Providers>
+      <head>
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+      </head>
       <body
         className={`antialiased`}
       >
       
-        {children}
+      <CartProvider>
+          {children}
+        </CartProvider>
       </body>
       </Providers>
     </html>
