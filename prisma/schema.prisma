@@ -18,7 +18,6 @@ model User {
   referredBy    String?
   role          Role          @default(USER)
   updatedAt     DateTime      @default(now()) @updatedAt
-  phoneno       String?       @unique @db.VarChar(10)
   Order         Order[]
   Transaction   Transaction[]
   referrer      User?         @relation("Referrals", fields: [referredBy], references: [id])
