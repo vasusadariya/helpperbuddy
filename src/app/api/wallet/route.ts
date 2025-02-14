@@ -194,7 +194,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        wallet,
+        wallet : {
+          balance: wallet?.balance || 0,
+          transactions: wallet?.transactions || []
+        },
         timestamp: currentUTCTime
       }
     }, { status: 200 })

@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./provider";
 import Navbar from "@/components/Navbar";
+import { CartProvider } from "./context/CartContext";
+import { Toaster } from "react-hot-toast";
+
+<Toaster position="top-center" />
 
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
@@ -35,7 +39,9 @@ export default function RootLayout({
         className={`antialiased`}
       >
       
-        {children}
+      <CartProvider>
+          {children}
+        </CartProvider>
       </body>
       </Providers>
     </html>
