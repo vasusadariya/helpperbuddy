@@ -18,7 +18,6 @@ model User {
   referredBy    String?
   role          Role          @default(USER)
   updatedAt     DateTime      @default(now()) @updatedAt
-  phoneno       String?       @unique @db.VarChar(10)
   Order         Order[]
   Transaction   Transaction[]
   referrer      User?         @relation("Referrals", fields: [referredBy], references: [id])
@@ -41,7 +40,6 @@ model Blog {
 }
 
 model Order {
-
   id                 String       @id @default(cuid())
   userId             String
   serviceId          String
@@ -69,9 +67,8 @@ model Order {
   Partner            Partner?     @relation(fields: [partnerId], references: [id])
   service            Service      @relation(fields: [serviceId], references: [id])
   user               User         @relation(fields: [userId], references: [id])
+  review             Review?
   transaction        Transaction?
-  review Review?
-
 
   @@index([partnerId, status])
   @@index([userId, status])
@@ -86,8 +83,7 @@ model Review {
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
-  
-  order       Order    @relation(fields: [orderId], references: [id])
+  r           Order    @relation(fields: [orderId], references: [id])
 }
 
 model Partner {
@@ -153,6 +149,7 @@ model Service {
   image          String?
   numberoforders Int?              @default(0)
   isActive       Boolean           @default(true)
+  threshold      Decimal?          @default(2) @db.Decimal
   Order          Order[]
   provider       ServiceProvider[]
 

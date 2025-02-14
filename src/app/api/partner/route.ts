@@ -5,6 +5,185 @@ import { getServerSession } from "next-auth";
 import { PrismaClient } from "@prisma/client";
 import { authOptions } from "../auth/[...nextauth]/options";
 
+export async function GET(request: NextRequest) {
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({
+        success: false,
+        error: "Unauthorized",
+        timestamp: currentUTCTime
+      }, { status: 401 });
+    }
+
+    // Get partner with all related data
+    const partner = await prisma.partner.findFirst({
+      where: { 
+        email: session.user.email,
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneno: true,
+        approved: true,
+        isActive: true,
+        lastActiveAt: true,
+        serviceProvider: {
+          where: { 
+            isActive: true 
+          },
+          select: {
+            Service: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                category: true,
+                description: true,
+                isActive: true
+              }
+            }
+          }
+        },
+        partnerPincode: {
+          where: { 
+            isActive: true 
+          },
+          select: {
+            id: true,
+            pincode: true,
+            createdAt: true
+          }
+        },
+        partnerRequestedService: {
+          where: {
+            status: 'PENDING'
+          },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            status: true,
+            createdAt: true
+          }
+        },
+        Order: {
+          take: 5,
+          orderBy: {
+            createdAt: 'desc'
+          },
+          select: {
+            id: true,
+            status: true,
+            date: true,
+            time: true,
+            amount: true,
+            service: {
+              select: {
+                name: true,
+                category: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!partner) {
+      return NextResponse.json({
+        success: false,
+        error: "Partner not found or not active",
+        timestamp: currentUTCTime
+      }, { status: 404 });
+    }
+
+    // Format the response with safe access
+    const response = {
+      profile: {
+        id: partner.id,
+        name: partner.name,
+        email: partner.email,
+        phone: partner.phoneno || null,
+        approved: partner.approved,
+        isActive: partner.isActive,
+        lastActive: partner.lastActiveAt
+      },
+      services: partner.serviceProvider
+        .filter(sp => sp.Service !== null)
+        .map(sp => ({
+          id: sp.Service.id,
+          name: sp.Service.name,
+          price: sp.Service.price,
+          category: sp.Service.category,
+          description: sp.Service.description,
+          isActive: sp.Service.isActive
+        })),
+      serviceAreas: partner.partnerPincode.map(pp => ({
+        id: pp.id,
+        pincode: pp.pincode,
+        addedAt: pp.createdAt
+      })),
+      pendingServiceRequests: partner.partnerRequestedService.map(prs => ({
+        id: prs.id,
+        name: prs.name,
+        description: prs.description || null,
+        status: prs.status,
+        requestedAt: prs.createdAt
+      })),
+      recentOrders: partner.Order
+        .filter(order => order.service !== null)
+        .map(order => ({
+          id: order.id,
+          serviceName: order.service.name,
+          category: order.service.category,
+          status: order.status,
+          date: order.date.toISOString().split('T')[0],
+          time: order.time,
+          amount: order.amount
+        })),
+      meta: {
+        totalServices: partner.serviceProvider.length,
+        totalServiceAreas: partner.partnerPincode.length,
+        pendingRequests: partner.partnerRequestedService.length,
+        timestamp: currentUTCTime
+      }
+    };
+
+    // Update last active timestamp
+    await prisma.partner.update({
+      where: { id: partner.id },
+      data: { lastActiveAt: new Date() }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: response
+    });
+
+  } catch (error) {
+    console.error("[Partner Profile Error]:", {
+      timestamp: currentUTCTime,
+      user: session?.user?.email,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack
+      } : 'Unknown error'
+    });
+
+    return NextResponse.json({
+      success: false,
+      error: "Failed to fetch partner profile",
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: currentUTCTime
+    }, { status: 500 });
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
