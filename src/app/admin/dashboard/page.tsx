@@ -1,97 +1,169 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+// app/admin/dashboard/page.tsx
+'use client';
 
-export default function AdminDashboard() {
-    const [pendingAdmins, setPendingAdmins] = useState<{ id: string; name: string; email: string }[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [processing, setProcessing] = useState<string | null>(null);
-    const router = useRouter();
-    useEffect(() => {
-        async function fetchPendingAdmins() {
-            try {
-                const res = await fetch("/api/admin");
-                if (!res.ok) throw new Error("Failed to fetch pending admins");
+import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-                const data = await res.json();
-                setPendingAdmins(data.users || []);
-            } catch (err) {
-                setError("Error loading pending admins.");
-            } finally {
-                setLoading(false);
-            }
-        }
+interface DashboardStats {
+  totalUsers: number;
+  totalOrders: number;
+  totalRevenue: number;
+  monthlySales: Array<{
+    month: string;
+    orders: number;
+    revenue: number;
+  }>;
+  userGrowth: Array<{
+    month: string;
+    users: number;
+  }>;
+  salesByCategory: Array<{
+    category: string;
+    sales: number;
+    revenue: number;
+  }>;
+}
 
-        fetchPendingAdmins();
-    }, []);
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FDB462', '#B3DE69', '#BC80BD', '#FB8072'];
 
-    async function handleAction(userId: string, action: "approve" | "reject") {
-        setProcessing(userId);
+export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-        try {
-            const res = await fetch("/api/admin/make-admin", {
-                method: "POST",
-                body: JSON.stringify({ userId, action }),
-                headers: { "Content-Type": "application/json" },
-            });
-
-            if (!res.ok) throw new Error(`Failed to ${action} admin`);
-
-            setPendingAdmins(pendingAdmins.filter((user) => user.id !== userId));
-        } catch (err) {
-            alert(`Error: Could not ${action} admin.`);
-        } finally {
-            setProcessing(null);
-        }
+  useEffect(() => {
+    async function fetchStats() {
+      const res = await fetch('/api/admin/dashboard-stats');
+      const data = await res.json();
+      setStats(data);
     }
+    fetchStats();
+  }, []);
+
+  if (!stats) return <div>Loading...</div>;
+
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value, name }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
 
     return (
-        <div>
-        <div className="max-w-3xl mx-auto p-6 bg-white shadow-md rounded-lg">
-            <h1 className="text-2xl font-bold mb-4">Admin Requests</h1>
-
-            {loading && <p>Loading pending admins...</p>}
-            {error && <p className="text-red-500">{error}</p>}
-
-            {pendingAdmins.length === 0 && !loading && (
-                <p className="text-gray-500">No pending admin requests.</p>
-            )}
-
-            {pendingAdmins.length > 0 && (
-                <ul className="space-y-4">
-                    {pendingAdmins.map((user) => (
-                        <li key={user.id} className="flex justify-between items-center p-3 border rounded-lg">
-                            <span>{user.name} ({user.email})</span>
-                            <div className="space-x-2">
-                                <button 
-                                    onClick={() => handleAction(user.id, "approve")}
-                                    disabled={processing === user.id}
-                                    className={`px-4 py-2 text-white rounded-lg ${
-                                        processing === user.id ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-                                    }`}
-                                >
-                                    {processing === user.id ? "Approving..." : "Approve"}
-                                </button>
-                                <button 
-                                    onClick={() => handleAction(user.id, "reject")}
-                                    disabled={processing === user.id}
-                                    className={`px-4 py-2 text-white rounded-lg ${
-                                        processing === user.id ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
-                                    }`}
-                                >
-                                    {processing === user.id ? "Rejecting..." : "Reject"}
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg"
-                onClick={() => router.push("/admin/partners")}>
-                Go to Partners Approval
-            </button>
-        </div>
-    </div>
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+      >
+        {`${name} (${(percent * 100).toFixed(0)}%)`}
+      </text>
     );
+  };
+
+  const onPieEnter = (_: any, index: number) => {
+    setActiveIndex(index);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Existing cards grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{stats.totalUsers}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{stats.totalOrders}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">₹{stats.totalRevenue.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Existing Line Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Sales Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <LineChart
+                width={500}
+                height={300}
+                data={stats.monthlySales}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="orders" stroke="#8884d8" />
+                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#82ca9d" />
+              </LineChart>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* New Pie Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales by Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] flex justify-center">
+              <PieChart width={400} height={300}>
+                <Pie
+                  data={stats.salesByCategory}
+                  cx={200}
+                  cy={150}
+                  labelLine={false}
+                  label={renderCustomizedLabel}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="sales"
+                  onMouseEnter={onPieEnter}
+                >
+                  {stats.salesByCategory.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {stats.salesByCategory.map((entry, index) => (
+                <div key={entry.category} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="text-sm">
+                    {entry.category}: ₹{entry.revenue.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
