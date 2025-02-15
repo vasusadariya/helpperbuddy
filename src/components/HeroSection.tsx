@@ -1,58 +1,63 @@
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { motion } from 'framer-motion';
+"use client";
+
+import { motion } from "framer-motion";
+import { ArrowRight, Home, Briefcase, Wind } from "lucide-react";
 
 export default function HeroSection() {
-  const router = useRouter();
-
   return (
-    <section className="relative bg-gradient-to-r from-blue-50 to-indigo-100 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
-        <div className="md:flex md:items-center md:space-x-8">
-          <motion.div 
-            className="md:w-1/2"
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-white to-gray-50">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.8 }}
+            className="space-y-6"
           >
-            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
-              Your Trusted Helper for a Cleaner, Happier Home
+            <h1 className="text-5xl md:text-6xl font-bold text-black">
+              Professional Cleaning
+              <span className="text-primary block mt-2">At Your Doorstep</span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Experience top-quality, eco-friendly cleaning solutions tailored to your needs. Let us take care of your space while you focus on what matters most.
+            <p className="text-lg text-gray-600 max-w-xl">
+              Experience the finest cleaning services across India. We bring professional
+              expertise to your homes, offices, and AC units.
             </p>
-            <div className="space-x-4">
-              <button
-                onClick={() => router.push("/book")}
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:-translate-y-1"
-              >
-                Book Now
-              </button>
-              <button
-                onClick={() => router.push("/services")}
-                className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg shadow-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:-translate-y-1"
-              >
-                Our Services
-              </button>
-            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-black text-white px-8 py-4 rounded-full flex items-center gap-2 text-lg font-semibold hover:bg-gray-800 transition-colors"
+            >
+              Book Now <ArrowRight className="w-5 h-5" />
+            </motion.button>
           </motion.div>
-          <motion.div 
-            className="mt-10 md:mt-0 md:w-1/2"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Image
-              src="/hero-image.jpg"
-              alt="Happy family in a clean home"
-              width={600}
-              height={400}
-              className="rounded-lg shadow-2xl"
-            />
-          </motion.div>
+
+          <div className="relative">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+              className="grid grid-cols-2 gap-4"
+            >
+              {[
+                { icon: Home, label: "Home Cleaning", color: "bg-blue-100" },
+                { icon: Briefcase, label: "Office Cleaning", color: "bg-green-100" },
+                { icon: Wind, label: "AC Cleaning", color: "bg-purple-100" },
+              ].map((service, index) => (
+                <motion.div
+                  key={index}
+                  whileHover={{ y: -5 }}
+                  className={`${service.color} p-6 rounded-2xl ${
+                    index === 2 ? "col-span-2" : ""
+                  }`}
+                >
+                  <service.icon className="w-10 h-10 mb-3" />
+                  <h3 className="font-semibold">{service.label}</h3>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent"></div>
     </section>
   );
 }
