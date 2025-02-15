@@ -170,14 +170,14 @@ export default function Navbar() {
                   Sign Up
                 </button>
               </Link>
-              <Link href="/partner">
+              <Link href="/register">
                 <button className="w-full px-4 py-2 text-white bg-gray-800 rounded-md transition-all hover:bg-gray-900">
                   Register as Partner
                 </button>
               </Link>
             </div>
           </div>
-        )}``
+        )}
       </div>
     </motion.nav>
   );

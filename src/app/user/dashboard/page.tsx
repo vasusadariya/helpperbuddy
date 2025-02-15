@@ -110,53 +110,71 @@ export default function UserDashboard() {
         setIsLoading(true);
         setError(null);
 
+        // Fetch orders with proper error handling
         const ordersResponse = await fetch('/api/user/orders?limit=5');
+        if (!ordersResponse.ok) {
+          const errorData = await ordersResponse.json().catch(() => null);
+          throw new Error(
+            errorData?.error || 
+            `Failed to fetch orders: ${ordersResponse.status} ${ordersResponse.statusText}`
+          );
+        }
+        
         const ordersData: OrdersResponse = await ordersResponse.json();
+        if (!ordersData?.success || !ordersData?.data) {
+          throw new Error(ordersData?.data?.error || 'Invalid order data received');
+        }
 
-        // Fetch wallet data
+        // Fetch wallet data with proper error handling
         const walletResponse = await fetch('/api/wallet');
+        if (!walletResponse.ok) {
+          const errorData = await walletResponse.json().catch(() => null);
+          throw new Error(
+            errorData?.error || 
+            `Failed to fetch wallet: ${walletResponse.status} ${walletResponse.statusText}`
+          );
+        }
+
         const walletData: WalletResponse = await walletResponse.json();
-
-        if (ordersResponse.ok && ordersData.success) {
-          const orders = ordersData.data.orders || [];
-          setRecentOrders(orders);
-
-          const completedOrders = orders.filter(
-            (order) => order.status === 'COMPLETED'
-          );
-
-          const pendingOrders = orders.filter(
-            (order) => order.status === 'PENDING'
-          );
-
-          const totalRating = completedOrders.reduce(
-            (sum, order) => sum + (order.review?.rating || 0),
-            0
-          );
-
-          setStats({
-            totalOrders: ordersData.data.pagination.total,
-            completedOrders: completedOrders.length,
-            pendingOrders: pendingOrders.length,
-            averageRating: completedOrders.length
-              ? +(totalRating / completedOrders.length).toFixed(1)
-              : 0,
-          });
-        } else {
-          throw new Error(ordersData.data?.error || 'Failed to fetch orders');
+        if (!walletData?.success || !walletData?.data) {
+          throw new Error(walletData?.data?.error || 'Invalid wallet data received');
         }
 
-        if (walletResponse.ok && walletData.success) {
-          setWalletData({
-            balance: walletData.data.wallet.balance,
-            transactions: walletData.data.wallet.transactions || [],
-          });
-        } else {
-          throw new Error(walletData.data?.error || 'Failed to fetch wallet data');
-        }
+        // Process orders data
+        const orders = ordersData.data.orders || [];
+        setRecentOrders(orders);
+
+        const completedOrders = orders.filter(
+          (order) => order.status === 'COMPLETED'
+        );
+
+        const pendingOrders = orders.filter(
+          (order) => order.status === 'PENDING'
+        );
+
+        const totalRating = completedOrders.reduce(
+          (sum, order) => sum + (order.review?.rating || 0),
+          0
+        );
+
+        setStats({
+          totalOrders: ordersData.data.pagination.total,
+          completedOrders: completedOrders.length,
+          pendingOrders: pendingOrders.length,
+          averageRating: completedOrders.length
+            ? +(totalRating / completedOrders.length).toFixed(1)
+            : 0,
+        });
+
+        // Process wallet data
+        setWalletData({
+          balance: walletData.data.wallet.balance,
+          transactions: walletData.data.wallet.transactions || [],
+        });
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        setError(error instanceof Error ? error.message : 'An error occurred');
+        setError(error instanceof Error ? error.message : 'An unexpected error occurred');
       } finally {
         setIsLoading(false);
       }

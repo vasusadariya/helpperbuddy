@@ -24,8 +24,8 @@ export default function HowItWorksSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.2 }}
             >
-              <div className="bg-blue-100 rounded-full p-6 mb-4">
-                <step.icon className="h-12 w-12 text-blue-600" />
+              <div className="bg-gray-100 rounded-full p-6 mb-4">
+                <step.icon className="h-12 w-12 text-gray-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">{step.title}</h3>
               <p className="text-gray-600">{step.description}</p>
