@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
             date: true,
             time: true,
             amount: true,
-            Service: {
+            service: {
               select: {
                 name: true,
                 category: true
@@ -136,11 +136,11 @@ export async function GET(request: NextRequest) {
         requestedAt: prs.createdAt
       })),
       recentOrders: partner.Order
-        .filter(order => order.Service !== null)
+        .filter(order => order.service !== null)
         .map(order => ({
           id: order.id,
-          serviceName: order.Service.name,
-          category: order.Service.category,
+          serviceName: order.service.name,
+          category: order.service.category,
           status: order.status,
           date: order.date.toISOString().split('T')[0],
           time: order.time,

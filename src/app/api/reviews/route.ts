@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        User: {
+        user: {
           email: session.user.email
         },
         status: "COMPLETED"

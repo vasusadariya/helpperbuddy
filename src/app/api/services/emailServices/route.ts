@@ -144,13 +144,13 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
         id: data.orderId,
       },
       include: {
-        User: true,
+        user: true,
         Partner: true,
-        Service: true,
+        service: true,
       },
     });
 
-    if (!order || !order.Partner || !order.User) {
+    if (!order || !order.Partner || !order.user) {
       throw new Error('Order, partner, or user details not found');
     }
 
@@ -176,10 +176,10 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
       process.env.EMAILJS_SERVICE_ID!,
       process.env.EMAILJS_ORDER_ACCEPTED_TEMPLATE_ID!,
       {
-        to_name: order.User.name,
-        to_email: order.User.email,
+        to_name: order.user.name,
+        to_email: order.user.email,
         order_id: order.id,
-        service_name: order.Service.name,
+        service_name: order.service.name,
         service_date: formattedDate,
         service_time: order.time,
         service_address: order.address,

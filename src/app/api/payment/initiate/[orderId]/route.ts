@@ -31,7 +31,7 @@ export async function GET(
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
-        Wallet: true
+        wallet: true
       }
     });
 
@@ -50,7 +50,7 @@ export async function GET(
           userId: user.id,
         },
         include: {
-          Service: {
+          service: {
             select: {
               name: true,
               description: true,
@@ -68,7 +68,7 @@ export async function GET(
     }
 
     // Calculate amounts
-    const walletBalance = user.Wallet?.balance ?? 0;
+    const walletBalance = user.wallet?.balance ?? 0;
     const totalAmount = order.amount;
     const walletAmount = Math.min(walletBalance, totalAmount); // Use wallet amount up to total amount
     const remainingAmount = totalAmount - walletAmount; // Calculate remaining after wallet deduction
@@ -121,8 +121,8 @@ export async function GET(
         razorpayAmount: razorpayOrder ? remainingAmount * 100 : 0, // in paise
         razorpayKeyId: process.env.RAZORPAY_KEY_ID,
         serviceDetails: {
-          name: order.Service.name,
-          description: order.Service.description ?? "",
+          name: order.service.name,
+          description: order.service.description ?? "",
         },
         timestamp: currentUTCTime
       }

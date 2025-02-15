@@ -18,7 +18,7 @@ async function ensureWalletExists(userId: string) {
                 id: crypto.randomUUID(),
                 userId,
                 balance: SIGNUP_BONUS,
-                Transaction: {
+                transaction: {
                     create: {
                         id: crypto.randomUUID(),
                         amount: SIGNUP_BONUS,

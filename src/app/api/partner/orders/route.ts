@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
         }
       },
       include: {
-        Service: {
+        service: {
           select: {
             name: true,
             price: true,
             category: true
           }
         },
-        User: {
+        user: {
           select: {
             name: true,
             email: true,
@@ -72,8 +72,8 @@ export async function GET(request: NextRequest) {
       data: {
         orders: acceptedOrders.map(order => ({
           id: order.id,
-          service: order.Service,
-          user: order.User,
+          service: order.service,
+          user: order.user,
           date: order.date.toISOString(),
           time: order.time,
           status: order.status,
