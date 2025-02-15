@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         isActive: true,
         AND: [
           {
-            serviceProvider: {
+            ServiceProvider: {
               some: {
                 serviceId: serviceId,
                 isActive: true,
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
             },
           },
           {
-            partnerPincode: {
+            PartnerPincode: {
               some: {
                 pincode: pincode,
                 isActive: true,
@@ -95,13 +95,13 @@ export async function GET(req: NextRequest) {
         // profileImage: true,
         isActive: true,
         lastActiveAt: true,
-        partnerPincode: {
+        PartnerPincode: {
           where: { isActive: true },
           select: {
             pincode: true
           }
         },
-        serviceProvider: {
+        ServiceProvider: {
           where: { isActive: true },
           select: {
             Service: {
@@ -133,10 +133,10 @@ export async function GET(req: NextRequest) {
     //   profileImage: partner.profileImage,
       isActive: partner.isActive,
       lastActiveAt: partner.lastActiveAt?.toISOString() ?? null,
-      serviceAreas: partner.partnerPincode.map(pp => ({
+      serviceAreas: partner.PartnerPincode.map(pp => ({
         pincode: pp.pincode
       })),
-      services: partner.serviceProvider.map(sp => ({
+      services: partner.ServiceProvider.map(sp => ({
         name: sp.Service.name,
         category: sp.Service.category
       }))

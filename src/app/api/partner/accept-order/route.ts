@@ -78,11 +78,11 @@ export async function POST(request: NextRequest) {
         isActive: true
       },
       include: {
-        serviceProvider: {
+        ServiceProvider: {
           where: { isActive: true },
           include: { Service: true }
         },
-        partnerPincode: {
+        PartnerPincode: {
           where: { isActive: true }
         }
       }
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: {
-          service: true,
-          user: true
+          Service: true,
+          User: true
         }
       });
 
@@ -123,11 +123,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Validate partner can service this order
-      const canService = partner.serviceProvider.some(sp => 
+      const canService = partner.ServiceProvider.some(sp => 
         sp.serviceId === order.serviceId && sp.isActive
       );
       
-      const canServiceArea = partner.partnerPincode.some(pp => 
+      const canServiceArea = partner.PartnerPincode.some(pp => 
         pp.pincode === order.pincode && pp.isActive
       );
 
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
           acceptedAt: new Date()
         },
         include: {
-          service: {
+          Service: {
             select: {
               name: true,
               price: true,
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
               description: true
             }
           },
-          user: {
+          User: {
             select: {
               name: true,
               email: true,

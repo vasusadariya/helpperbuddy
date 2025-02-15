@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         phoneno: true,
         createdAt: true,
         referralCode: true,
-        wallet: true
+        Wallet: true
       }
     });
 
@@ -53,8 +53,16 @@ export async function POST(request: NextRequest) {
     const assignedRole = isAdminPattern ? "PENDING_ADMIN" : "USER";
 
     const hashedPassword = await hash(password, 10);
+    const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const user = await prisma.user.create({
-      data: { name, email, phoneno, password: hashedPassword, role: assignedRole },
+      data: {
+        name,
+        email,
+        phoneno,
+        password: hashedPassword,
+        role: assignedRole,
+        referralCode
+      },
     });
 
     console.log("User created successfully:", user);

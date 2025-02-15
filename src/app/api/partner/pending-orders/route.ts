@@ -29,13 +29,13 @@ export async function GET(request: NextRequest) {
       },
       select: {
         id: true,
-        serviceProvider: {
+        ServiceProvider: {
           where: { isActive: true },
           select: {
             serviceId: true
           }
         },
-        partnerPincode: {
+        PartnerPincode: {
           where: { isActive: true },
           select: {
             pincode: true
@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
-    const serviceIds = partner.serviceProvider.map(sp => sp.serviceId);
-    const pincodes = partner.partnerPincode.map(pp => pp.pincode);
+    const serviceIds = partner.ServiceProvider.map(sp => sp.serviceId);
+    const pincodes = partner.PartnerPincode.map(pp => pp.pincode);
 
     // Get pending orders
     const pendingOrders = await prisma.order.findMany({
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         ]
       },
       include: {
-        service: {
+        Service: {
           select: {
             name: true,
             category: true,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
             description: true
           }
         },
-        user: {
+        User: {
           select: {
             name: true,
             phoneno: true
@@ -91,14 +91,14 @@ export async function GET(request: NextRequest) {
     const formattedOrders = pendingOrders.map(order => ({
       id: order.id,
       serviceDetails: {
-        name: order.service.name,
-        category: order.service.category,
-        price: order.service.price,
-        description: order.service.description
+        name: order.Service.name,
+        category: order.Service.category,
+        price: order.Service.price,
+        description: order.Service.description
       },
       customerDetails: {
-        name: order.user.name,
-        phone: order.user.phoneno || 'Will be shared after acceptance'
+        name: order.User.name,
+        phone: order.User.phoneno || 'Will be shared after acceptance'
       },
       orderDetails: {
         date: order.date.toISOString().split('T')[0],

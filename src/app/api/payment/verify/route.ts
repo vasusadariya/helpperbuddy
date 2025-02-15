@@ -33,12 +33,12 @@ export async function POST(req: NextRequest) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        user: {
+        User: {
           email: session.user.email
         }
       },
       include: {
-        service: {
+        Service: {
           select: {
             name: true
           }
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         message: "Payment verified successfully",
         orderId,
         paymentId: razorpayPaymentId,
-        serviceName: order.service.name,
+        serviceName: order.Service.name,
         timestamp: currentUTCTime
       }
     });
