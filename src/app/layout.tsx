@@ -19,7 +19,7 @@ function RootLayoutClient({
     // Force the loader to stay for at least 2 seconds
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 3200);
+    }, 10);
 
     return () => clearTimeout(timer);
   }, []);

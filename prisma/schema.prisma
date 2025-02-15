@@ -200,6 +200,20 @@ model Wallet {
   @@index([userId])
 }
 
+model ContactMessage {
+  id        String   @id
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model system_config {
+  variable_name  String   @id
+  variable_value Int
+  updatedAt      DateTime
+}
+
 enum Category {
   AC_SERVICE
   BATHROOM_KITCHEN_CLEANING
