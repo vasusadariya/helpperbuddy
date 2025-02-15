@@ -6,11 +6,6 @@ import { useRouter } from "next/navigation";
 import HeroHeading from "@/components/HeroHeading";
 import SearchBar from '@/components/searchbar';
 import Footer from '@/components/Footer';
-import HeroSection from "@/components/HeroSection"
-import ServicesSection from "@/components/ServicesSection"
-import TestimonialsSection from "@/components/TestimonialsSection"
-import HowItWorksSection from "@/components/HowItWorksSection"
-import CTASection from "@/components/CTASection"
 
 export default function Home() {
   const { data: session } = useSession()
@@ -18,11 +13,11 @@ export default function Home() {
 
   return (
     <div className="bg-black text-white">
+      <Navbar />
       {/* Hero Section with Navbar Inside */}
       <section className="relative bg-white text-black flex flex-col md:flex-row items-center px-6 md:px-10 py-20 min-h-[80vh] rounded-bl-[97px] rounded-br-[97px]">
         {/* Navbar inside Hero Section */}
         <div className="absolute top-0 left-0 w-full z-10">
-          <Navbar />
         </div>
 
         {/* Left Side */}
@@ -54,8 +49,7 @@ export default function Home() {
               width={400}
               height={400}
               className="rounded-lg"
-            /> */}
-            <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-yellow-400 rounded-full"></div>
+            /> */}  
           </div>
         </div>
       </section>
@@ -81,12 +75,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <section>
-        <h2>Search for a Service</h2>
-        <SearchBar />
-      </section>
-      <section className="bg-white p-10"> </section>
       <Footer />
     </div>
   )
