@@ -39,8 +39,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log("Received request at /api/users");
+
+    if (!request.body) {
+      console.log("Request body is null or undefined");
+      return NextResponse.json({ error: "Request body is missing" }, { status: 400 });
+    }
+
     const body = await request.json();
     console.log("Request body:", body);
+
+    if (!body || typeof body !== "object") {
+      console.log("Invalid JSON format");
+      return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
+    }
 
     const { name, email, phoneno, password } = body;
 
@@ -54,6 +65,7 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hash(password, 10);
     const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -61,7 +73,7 @@ export async function POST(request: NextRequest) {
         phoneno,
         password: hashedPassword,
         role: assignedRole,
-        referralCode
+        referralCode,
       },
     });
 
@@ -72,6 +84,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Error in /api/users:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

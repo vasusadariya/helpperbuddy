@@ -18,46 +18,57 @@ export default function PartnerRegister() {
   });
 
   const [validatedPincodes, setValidatedPincodes] = useState<PincodeValidation[]>([]);
-  const [isValidating, setIsValidating] = useState(false);
+const [isValidating, setIsValidating] = useState(false);
 
-  const validatePincode = async (pincode: string): Promise<PincodeValidation> => {
-    if (!/^\d{6}$/.test(pincode)) {
-      return { pincode, isValid: false };
+const validatePincode = async (pincode: string): Promise<PincodeValidation> => {
+  // Strictly allow only 6-digit numeric pincodes
+  if (!/^\d{6}$/.test(pincode)) {
+    return { pincode, isValid: false };
+  }
+
+  try {
+    const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+    const data = await response.json();
+
+    if (data[0]?.Status === "Success") {
+      const postOffice = data[0].PostOffice?.[0];
+      return postOffice
+        ? {
+            pincode,
+            isValid: true,
+            district: postOffice.District,
+            state: postOffice.State,
+          }
+        : { pincode, isValid: false };
     }
 
-    try {
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-      const data = await response.json();
-      
-      if (data[0].Status === "Success") {
-        const postOffice = data[0].PostOffice[0];
-        return {
-          pincode,
-          isValid: true,
-          district: postOffice.District,
-          state: postOffice.State
-        };
-      }
-      return { pincode, isValid: false };
-    } catch {
-      return { pincode, isValid: false };
-    }
-  };
+    return { pincode, isValid: false };
+  } catch {
+    return { pincode, isValid: false };
+  }
+};
 
-  const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFormData({ ...formData, pincodes: value });
+const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  setFormData({ ...formData, pincodes: value });
 
-    if (value) {
-      setIsValidating(true);
-      const pincodes = value.split(",").map(p => p.trim());
-      const validations = await Promise.all(pincodes.map(validatePincode));
-      setValidatedPincodes(validations);
-      setIsValidating(false);
-    } else {
-      setValidatedPincodes([]);
-    }
-  };
+  if (value) {
+    setIsValidating(true);
+    
+    // Split, trim, and filter only valid 6-digit pincodes
+    const pincodes = value
+      .split(",")
+      .map(p => p.trim())
+      .filter(p => /^\d{6}$/.test(p)); // Only keep valid 6-digit numbers
+
+    const validations = await Promise.all(pincodes.map(validatePincode));
+    setValidatedPincodes(validations);
+    setIsValidating(false);
+  } else {
+    setValidatedPincodes([]);
+  }
+};
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
