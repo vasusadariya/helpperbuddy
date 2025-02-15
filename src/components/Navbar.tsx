@@ -144,7 +144,7 @@ export default function Navbar() {
                 Sign Up
               </motion.button>
             </Link>
-            <Link href="/partner">
+            <Link href="/register">
               <motion.button whileHover={{ scale: 1.05 }} className="px-4 py-2 text-white bg-gray-800 rounded-md transition-all hover:bg-gray-900">
                 Register as Partner
               </motion.button>
