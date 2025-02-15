@@ -23,196 +23,199 @@ type ReferralResult = {
 } | null
 
 type WebhookEvent = {
-  event: string
+  event: string;
   payload: {
     payment: {
       entity: {
-        id: string
-        order_id: string
-        amount: number
-        currency: string
-        status: string
-        error_description?: string
-      }
-    }
-  }
+        id: string;
+        order_id: string;
+        amount: number;
+        currency: string;
+        status: string;
+        error_description?: string;
+      };
+    };
+  };
+};
+
+// Helper function to get formatted UTC time
+function getCurrentUTCTime(): string {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
-// Helper function to add retry mechanism
+// Helper function for retrying operations
 async function withRetry<T>(
   operation: () => Promise<T>,
-  retries = MAX_RETRIES
+  retries = MAX_RETRIES,
+  operationName = "Database operation"
 ): Promise<T> {
+  const currentUTCTime = getCurrentUTCTime();
   try {
-    return await operation()
+    return await operation();
   } catch (error) {
+    console.error(`[${currentUTCTime}] ${operationName} failed:`, error);
     if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
-      return withRetry(operation, retries - 1)
+      console.log(`[${currentUTCTime}] Retrying ${operationName}. Attempts remaining: ${retries}`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return withRetry(operation, retries - 1, operationName);
     }
-    throw error
+    throw error;
   }
 }
 
-async function processReferralBonus(orderId: string): Promise<ReferralResult> {
-  try {
-    const orderWithDetails = await withRetry(() => 
-      prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          user: {
-            include: {
-              referrer: {
-                include: {
-                  wallet: true
-                }
-              }
-            }
-          }
-        }
-      })
-    )
-
-    const referrerWallet = orderWithDetails?.user?.referrer?.wallet
-    const referrerId = orderWithDetails?.user?.referrer?.id
-    const userId = orderWithDetails?.userId
-
-    if (!referrerWallet || !referrerId || !userId) {
-      console.log(`No valid referral chain found for order: ${orderId}`)
-      return null
-    }
-
-    // Check if this is the user's first completed order
-    const previousCompletedOrders = await withRetry(() =>
-      prisma.order.count({
-        where: {
-          userId: userId,
-          status: 'COMPLETED',
-          id: { not: orderId }
-        }
-      })
-    )
-
-    if (previousCompletedOrders > 0) {
-      console.log(`Not first order for user ${userId}, skipping referral bonus`)
-      return null
-    }
-
-    // Check if referrer has already received bonus for this user
-    const existingBonus = await withRetry(() =>
-      prisma.transaction.findFirst({
-        where: {
-          userId: referrerId,
-          type: 'REFERRAL_BONUS',
-          description: {
-            contains: `Referral bonus for user ${userId}`
-          }
-        }
-      })
-    )
-
-    if (existingBonus) {
-      console.log(`Referral bonus already paid to referrer ${referrerId} for user ${userId}`)
-      return null
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const updatedWallet = await tx.wallet.update({
-        where: { id: referrerWallet.id },
-        data: {
-          balance: { increment: REFERRAL_BONUS_AMOUNT }
-        }
-      })
-
-      const bonusTransaction = await tx.transaction.create({
-        data: {
-          amount: REFERRAL_BONUS_AMOUNT,
-          type: 'REFERRAL_BONUS',
-          description: `Referral bonus for user ${userId}'s first order #${orderId}`,
-          walletId: referrerWallet.id,
-          userId: referrerId
-        }
-      })
-
-      return { wallet: updatedWallet, transaction: bonusTransaction }
-    })
-
-    console.log(`Referral bonus processed for first-time order: ${orderId}`, {
-      referrerId,
-      userId,
-      amount: REFERRAL_BONUS_AMOUNT
-    })
-    
-    return result
-
-  } catch (error) {
-    console.error(`Error processing referral bonus for order ${orderId}:`, error)
-    return null
-  }
-}
 
 export async function POST(req: NextRequest) {
-  const currentUTCTime = new Date().toISOString()
+  const currentUTCTime = getCurrentUTCTime();
   
   try {
-    const body = await req.text()
-    const signature = req.headers.get("x-razorpay-signature")
-    const isTestMode = process.env.NODE_ENV === 'development'
+    const body = await req.text();
+    const signature = req.headers.get("x-razorpay-signature");
+    const isTestMode = process.env.NODE_ENV === 'development';
     
+    // Signature verification (skip in dev mode)
     if (!isTestMode) {
       if (!signature) {
+        console.error(`[${currentUTCTime}] Webhook signature missing`);
         return NextResponse.json({
           success: false,
           error: "No signature provided",
           timestamp: currentUTCTime
-        }, { status: 400 })
+        }, { status: 400 });
       }
 
-      // Verify signature
       const expectedSignature = crypto
         .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
         .update(body)
-        .digest("hex")
+        .digest("hex");
 
       if (signature !== expectedSignature) {
+        console.error(`[${currentUTCTime}] Invalid webhook signature`);
         return NextResponse.json({
           success: false,
           error: "Invalid signature",
           timestamp: currentUTCTime
-        }, { status: 400 })
+        }, { status: 400 });
       }
     }
 
-    const event = JSON.parse(body) as WebhookEvent
-    console.log("Webhook event received:", {
+    const event = JSON.parse(body) as WebhookEvent;
+    console.log(`[${currentUTCTime}] Webhook event received:`, {
       event_type: event.event,
-      timestamp: currentUTCTime,
       order_id: event.payload?.payment?.entity?.order_id
-    })
+    });
 
     if (event.event === "payment.captured") {
-      const { id: paymentId, order_id: razorpayOrderId } = event.payload.payment.entity
+      const { id: paymentId, order_id: razorpayOrderId } = event.payload.payment.entity;
 
-      const order = await withRetry(() =>
-        prisma.order.findUnique({
+      const order = await withRetry(
+        () => prisma.order.findUnique({
           where: { razorpayOrderId },
           include: {
             service: true,
-            user: true
+            user: {
+              include: {
+                wallet: true,
+                referrer: {
+                  include: {
+                    wallet: true
+                  }
+                }
+              }
+            }
           }
-        })
-      )
+        }),
+        MAX_RETRIES,
+        "Fetch order for payment processing"
+      );
 
       if (!order) {
-        console.error(`Order not found: ${razorpayOrderId}`)
+        console.error(`[${currentUTCTime}] Order not found: ${razorpayOrderId}`);
         return NextResponse.json({
           success: false,
           error: "Order not found",
           timestamp: currentUTCTime
-        }, { status: 404 })
+        }, { status: 404 });
       }
 
+      console.log(`[${currentUTCTime}] Processing payment for order: ${order.id}`);
+
       const result = await prisma.$transaction(async (tx) => {
+        const userWallet = order.user.wallet;
+        const totalAmount = order.amount;
+        const walletAmount = order.walletAmount || 0;
+
+        // Process wallet payment if wallet amount was used
+        if (userWallet && walletAmount > 0) {
+          console.log(`[${currentUTCTime}] Processing wallet payment:`, {
+            orderId: order.id,
+            walletBalance: userWallet.balance,
+            walletAmount,
+            totalAmount
+          });
+
+          // Update wallet balance
+          await tx.wallet.update({
+            where: { id: userWallet.id },
+            data: {
+              balance: { decrement: walletAmount }
+            }
+          });
+
+          // Create wallet transaction
+          await tx.transaction.create({
+            data: {
+              amount: walletAmount,
+              type: "DEBIT",
+              description: `Wallet payment for ${order.service.name}`,
+              walletId: userWallet.id,
+              userId: order.userId,
+              orderId: order.id
+            }
+          });
+        }
+
+        // Check if this is user's first completed order
+        const previousCompletedOrders = await tx.order.count({
+          where: {
+            userId: order.userId,
+            status: "COMPLETED",
+            id: { not: order.id }
+          }
+        });
+
+        // Process referral bonus if this is the first completed order
+        let referralBonus = null;
+        if (previousCompletedOrders === 0 && order.user.referrer?.wallet) {
+          const referrerWallet = order.user.referrer.wallet;
+
+          // Update referrer's wallet balance
+          await tx.wallet.update({
+            where: { id: referrerWallet.id },
+            data: {
+              balance: { increment: REFERRAL_BONUS_AMOUNT }
+            }
+          });
+
+          // Create referral bonus transaction
+          referralBonus = await tx.transaction.create({
+            data: {
+              amount: REFERRAL_BONUS_AMOUNT,
+              type: "REFERRAL_BONUS",
+              description: `Referral bonus for ${order.user.name || order.user.email}'s first order`,
+              walletId: referrerWallet.id,
+              userId: order.user.referrer.id,
+              orderId: order.id
+            }
+          });
+
+          console.log(`[${currentUTCTime}] Referral bonus processed:`, {
+            referrerId: order.user.referrer.id,
+            amount: REFERRAL_BONUS_AMOUNT,
+            transactionId: referralBonus.id
+          });
+        }
+
+        // Complete the order
         const updatedOrder = await tx.order.update({
           where: { id: order.id },
           data: { 
@@ -221,15 +224,16 @@ export async function POST(req: NextRequest) {
             paidAt: new Date(currentUTCTime),
             updatedAt: new Date(currentUTCTime)
           }
-        })
-
-        const referralResult = await processReferralBonus(order.id)
+        });
 
         return {
           order: updatedOrder,
-          referralResult
-        }
-      })
+          walletAmount,
+          referralBonus
+        };
+      });
+
+      console.log(`[${currentUTCTime}] Payment processing completed for order: ${order.id}`);
 
       return NextResponse.json({
         success: true,
@@ -238,34 +242,35 @@ export async function POST(req: NextRequest) {
           order: {
             id: result.order.id,
             status: result.order.status,
-            amount: order.remainingAmount,
+            totalAmount: order.amount,
+            walletAmount: result.walletAmount,
+            remainingAmount: order.remainingAmount,
             service: order.service.name
           },
-          paymentId,
           timestamp: currentUTCTime,
-          ...(result.referralResult && {
+          ...(result.referralBonus && {
             referralBonus: {
               amount: REFERRAL_BONUS_AMOUNT,
-              transaction: result.referralResult.transaction
+              transaction: result.referralBonus
             }
           })
         }
-      })
+      });
     }
 
-    // Handle other event types
+    // Handle other webhook events
     return NextResponse.json({
       success: true,
       message: `Webhook event ${event.event} received but not processed`,
       timestamp: currentUTCTime
-    })
+    });
 
   } catch (error) {
-    console.error('Webhook processing error:', error)
+    console.error(`[${currentUTCTime}] Webhook processing error:`, error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Internal server error',
       timestamp: currentUTCTime
-    }, { status: 500 })
+    }, { status: 500 });
   }
 }

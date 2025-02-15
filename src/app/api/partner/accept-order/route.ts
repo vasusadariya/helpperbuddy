@@ -8,6 +8,40 @@ interface OrderAcceptanceEmailData {
   orderId: string;
 }
 
+interface ServiceData {
+  name: string;
+  category: string;
+  price: number;
+  description: string | null;
+}
+
+interface UserData {
+  name: string | null;
+  email: string;
+  phoneno: string | null;
+}
+
+interface PartnerData {
+  name: string;
+  email: string;
+  phoneno: string | null;
+  profileImage: string | null;
+}
+
+interface OrderWithRelations {
+  id: string;
+  service: ServiceData;
+  user: UserData;
+  partner: PartnerData;
+  date: Date;
+  time: string;
+  address: string;
+  pincode: string;
+  amount: number;
+  remarks: string | null;
+  status: string;
+  acceptedAt: Date | null;
+}
 
 export async function POST(request: NextRequest) {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -103,10 +137,10 @@ export async function POST(request: NextRequest) {
 
       // Update the order
       const updatedOrder = await tx.order.update({
-        where: { 
+        where: {
           id: orderId,
-          status: 'PENDING',  // Extra safety check
-          partnerId: null     // Extra safety check
+          status: 'PENDING',
+          partnerId: null
         },
         data: {
           partnerId: partner.id,
@@ -128,16 +162,24 @@ export async function POST(request: NextRequest) {
               email: true,
               phoneno: true
             }
+          },
+          Partner: {
+            select: {
+              name: true,
+              email: true,
+              phoneno: true,
+              // profileImage: true
+            }
           }
         }
-      });
-
+      }) as unknown as OrderWithRelations;
+    
       // Update partner's last active timestamp
       await tx.partner.update({
         where: { id: partner.id },
         data: { lastActiveAt: new Date() }
       });
-
+    
       return updatedOrder;
     });
 
@@ -154,15 +196,21 @@ export async function POST(request: NextRequest) {
     const response = {
       id: result.id,
       serviceDetails: {
-        name: result.service.name,
-        category: result.service.category,
-        price: result.service.price,
-        description: result.service.description
+        name: result.service?.name ?? 'Service Name Not Available',
+        category: result.service?.category ?? 'Category Not Available',
+        price: result.service?.price ?? 0,
+        description: result.service?.description ?? null
       },
       customerDetails: {
-        name: result.user.name,
-        email: result.user.email,
-        phone: result.user.phoneno || 'Not provided'
+        name: result.user?.name ?? 'Name Not Available',
+        email: result.user?.email ?? 'Email Not Available',
+        phone: result.user?.phoneno ?? 'Not provided'
+      },
+      partnerDetails: {
+        name: result.partner?.name ?? 'Partner Name Not Available',
+        email: result.partner?.email ?? 'Partner Email Not Available',
+        phone: result.partner?.phoneno ?? 'Not provided',
+        profileImage: result.partner?.profileImage ?? null
       },
       orderDetails: {
         date: result.date.toISOString().split('T')[0],
@@ -170,16 +218,17 @@ export async function POST(request: NextRequest) {
         address: result.address,
         pincode: result.pincode,
         amount: result.amount,
-        remarks: result.remarks || null,
+        remarks: result.remarks ?? null,
         status: result.status,
-        acceptedAt: result.acceptedAt?.toISOString()
+        acceptedAt: result.acceptedAt?.toISOString() ?? null
       },
       emailNotification: {
         sent: emailResult.success,
         error: emailResult.success ? null : emailResult.error
-      }
+      },
+      timestamp: currentUTCTime
     };
-
+    
     return NextResponse.json({
       success: true,
       data: {

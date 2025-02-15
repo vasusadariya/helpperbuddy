@@ -1,13 +1,48 @@
 import { toast } from 'react-hot-toast';
 
-export const validateDateTime = (date: string, time: string): boolean => {
+interface ServiceThreshold {
+  threshold: number;
+  name?: string;
+}
+
+// Helper to format time for display
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+}
+
+export const validateDateTime = (
+  date: string, 
+  time: string,
+  service: ServiceThreshold
+): boolean => {
   try {
     const selectedDateTime = new Date(`${date}T${time}`);
     const now = new Date();
+    const threshold = Number(service.threshold);
 
     // Check if the date and time are valid
     if (isNaN(selectedDateTime.getTime())) {
       toast.error("Please enter a valid date and time");
+      return false;
+    }
+
+    // Calculate minimum allowed booking time (now + threshold hours)
+    const minimumBookingTime = new Date(now);
+    minimumBookingTime.setHours(minimumBookingTime.getHours() + threshold);
+
+    // Check if booking time meets threshold requirement
+    if (selectedDateTime < minimumBookingTime) {
+      const serviceName = service.name ? `${service.name} ` : '';
+      const formattedThreshold = formatTime(minimumBookingTime);
+      
+      toast.error(
+        `${serviceName}requires ${threshold} hours advance booking. ` +
+        `Earliest available time is ${formattedThreshold}`
+      );
       return false;
     }
 
@@ -22,10 +57,23 @@ export const validateDateTime = (date: string, time: string): boolean => {
       return false;
     }
 
-    // Check service hours
+    // Check service hours (8 AM to 8 PM)
     const hour = selectedDateTime.getHours();
     if (hour < 8 || hour >= 20) {
       toast.error("Our service hours are between 8:00 AM and 8:00 PM");
+      return false;
+    }
+
+    // Check if selected time falls within service hours considering threshold
+    const serviceEndTime = new Date(selectedDateTime);
+    serviceEndTime.setHours(20, 0, 0, 0); // 8 PM
+    const serviceEndTimeWithThreshold = new Date(serviceEndTime.getTime() - (threshold * 60 * 60 * 1000));
+
+    if (selectedDateTime > serviceEndTimeWithThreshold) {
+      const lastBookingTime = formatTime(serviceEndTimeWithThreshold);
+      toast.error(
+        `Booking too close to closing time. Last booking time for this service is ${lastBookingTime}`
+      );
       return false;
     }
 
@@ -39,7 +87,74 @@ export const validateDateTime = (date: string, time: string): boolean => {
 
     return true;
   } catch (error) {
+    console.error('DateTime validation error:', error);
     toast.error("Please select a valid date and time");
     return false;
   }
+};
+
+// Helper function to get the next available time slot considering multiple services
+export const getNextAvailableTimeSlot = (services: ServiceThreshold[]): Date => {
+  const now = new Date();
+  const nextSlot = new Date(now);
+  
+  // Find the maximum threshold hours among all services
+  const maxThresholdHours = Math.max(...services.map(s => Number(s.threshold)));
+
+  // Add maximum threshold hours to current time
+  nextSlot.setHours(nextSlot.getHours() + maxThresholdHours);
+
+  // If outside service hours (8 AM - 8 PM), adjust to next day
+  if (nextSlot.getHours() < 8) {
+    nextSlot.setHours(8, 0, 0, 0);
+  } else if (nextSlot.getHours() >= 20) {
+    nextSlot.setDate(nextSlot.getDate() + 1);
+    nextSlot.setHours(8, 0, 0, 0);
+  }
+
+  return nextSlot;
+};
+
+// Helper function to validate time for multiple services
+export const validateDateTimeForServices = (
+  date: string,
+  time: string,
+  services: ServiceThreshold[]
+): boolean => {
+  // Check each service's threshold
+  for (const service of services) {
+    if (!validateDateTime(date, time, service)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+// Helper function to get earliest available time considering all services
+export const getEarliestAvailableTime = (services: ServiceThreshold[]): string => {
+  const nextSlot = getNextAvailableTimeSlot(services);
+  return formatTime(nextSlot);
+};
+
+// Helper function to check if time needs to be updated based on thresholds
+export const shouldUpdateTime = (
+  selectedDate: string,
+  selectedTime: string,
+  services: ServiceThreshold[]
+): boolean => {
+  const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+  const nextAvailable = getNextAvailableTimeSlot(services);
+  return selectedDateTime < nextAvailable;
+};
+
+// Helper function to format threshold messages
+export const getThresholdMessage = (services: ServiceThreshold[]): string => {
+  if (services.length === 0) return '';
+  
+  if (services.length === 1) {
+    return `Requires ${services[0].threshold} hours advance booking`;
+  }
+
+  const maxThreshold = Math.max(...services.map(s => s.threshold));
+  return `Multiple services selected. Maximum advance booking requirement is ${maxThreshold} hours`;
 };
