@@ -111,10 +111,10 @@ export async function POST(req: NextRequest) {
         () => prisma.order.findUnique({
           where: { razorpayOrderId },
           include: {
-            service: true,
-            user: {
+            Service: true,
+            User: {
               include: {
-                wallet: true,
+                Wallet: true,
                 referrer: {
                   include: {
                     wallet: true
@@ -140,7 +140,17 @@ export async function POST(req: NextRequest) {
       console.log(`[${currentUTCTime}] Processing payment for order: ${order.id}`);
 
       const result = await prisma.$transaction(async (tx) => {
-        const userWallet = order.user.wallet;
+        const orderWithUser = await tx.order.findUnique({
+          where: { id: order.id },
+          include: {
+            User: {
+              include: {
+                Wallet: true
+              }
+            }
+          }
+        });
+        const userWallet = orderWithUser?.User?.Wallet;
         const totalAmount = order.amount;
         const walletAmount = order.walletAmount || 0;
 
@@ -166,7 +176,7 @@ export async function POST(req: NextRequest) {
             data: {
               amount: walletAmount,
               type: "DEBIT",
-              description: `Wallet payment for ${order.service.name}`,
+              description: `Wallet payment for ${order.serviceId.name}`,
               walletId: userWallet.id,
               userId: order.userId,
               orderId: order.id
@@ -203,7 +213,7 @@ export async function POST(req: NextRequest) {
               type: "REFERRAL_BONUS",
               description: `Referral bonus for ${order.user.name || order.user.email}'s first order`,
               walletId: referrerWallet.id,
-              userId: order.user.referrer.id,
+              userId: order.User.referrer.id,
               orderId: order.id
             }
           });

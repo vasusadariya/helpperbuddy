@@ -15,10 +15,12 @@ async function ensureWalletExists(userId: string) {
     if (!existingWallet) {
         await prisma.wallet.create({
             data: {
+                id: crypto.randomUUID(),
                 userId,
                 balance: SIGNUP_BONUS,
-                transactions: {
+                Transaction: {
                     create: {
+                        id: crypto.randomUUID(),
                         amount: SIGNUP_BONUS,
                         type: "SIGNUP_BONUS",
                         description: "Welcome bonus",
@@ -104,10 +106,12 @@ export const authOptions = {
                 // If new user (not in DB), create a new user
                 const newUser = await prisma.user.create({
                     data: {
+                        id: crypto.randomUUID(),
                         email: profile.email,
                         name: profile.name,
                         role: "USER", // Always create as USER, handle admin status separately
                         password: profile.password, // Set a default or random password
+                        referralCode: Math.random().toString(36).substring(7),
                     },
                 });
 

@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        service: true,
-        transaction: true,
+        Service: true,
+        Transaction: true,
         Partner: true,
       },
       orderBy: {
@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
         isActive: true,
         AND: [
           {
-            serviceProvider: {
+            ServiceProvider: {
               some: {
                 serviceId: serviceId,
                 isActive: true,
@@ -279,7 +279,7 @@ export async function POST(req: NextRequest) {
             },
           },
           {
-            partnerPincode: {
+            PartnerPincode: {
               some: {
                 pincode: pincode,
                 isActive: true,
@@ -322,8 +322,12 @@ export async function POST(req: NextRequest) {
       // Create order
       const order = await tx.order.create({
         data: {
-          userId: user.id,
-          serviceId: serviceId,
+          Service: {
+            connect: { id: serviceId }
+          },
+          User: {
+            connect: { id: user.id }
+          },
           date: bookingDateTime,
           time: time,
           remarks: remarks || "",
@@ -334,7 +338,7 @@ export async function POST(req: NextRequest) {
           remainingAmount: totalAmount,
           status: "PENDING",
         },
-        include: { service: true, user: true },
+        include: { Service: true, User: true },
       });
     
         // Create Razorpay order for full amount
@@ -503,7 +507,7 @@ export async function PATCH(req: NextRequest) {
 
     const currentOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { service: true },
+      include: { Service: true },
     });
 
     if (!currentOrder) {

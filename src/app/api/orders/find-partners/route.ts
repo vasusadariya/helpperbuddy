@@ -32,14 +32,14 @@ export async function POST(request: NextRequest) {
         approved: true,
         AND: [
           {
-            serviceProvider: {
+            ServiceProvider: {
               some: {
                 serviceId: serviceId
               }
             }
           },
           {
-            partnerPincode: {
+            PartnerPincode: {
               some: {
                 pincode: pincode
               }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         phoneno: true,
-        serviceProvider: {
+        ServiceProvider: {
           where: {
             serviceId: serviceId
           },
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
             Service: true
           }
         },
-        partnerPincode: {
+        PartnerPincode: {
           where: {
             pincode: pincode
           }
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
           id: partner.id,
           name: partner.name,
           phoneno: partner.phoneno,
-          service: partner.serviceProvider[0]?.Service
+          service: partner.ServiceProvider[0]?.Service
         }))
       }
     });

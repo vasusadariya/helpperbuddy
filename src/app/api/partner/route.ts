@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         approved: true,
         isActive: true,
         lastActiveAt: true,
-        serviceProvider: {
+        ServiceProvider: {
           where: { 
             isActive: true 
           },
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        partnerPincode: {
+        PartnerPincode: {
           where: { 
             isActive: true 
           },
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
             createdAt: true
           }
         },
-        partnerRequestedService: {
+        PartnerRequestedService: {
           where: {
             status: 'PENDING'
           },
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
             date: true,
             time: true,
             amount: true,
-            service: {
+            Service: {
               select: {
                 name: true,
                 category: true
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
         isActive: partner.isActive,
         lastActive: partner.lastActiveAt
       },
-      services: partner.serviceProvider
+      services: partner.ServiceProvider
         .filter(sp => sp.Service !== null)
         .map(sp => ({
           id: sp.Service.id,
@@ -123,12 +123,12 @@ export async function GET(request: NextRequest) {
           description: sp.Service.description,
           isActive: sp.Service.isActive
         })),
-      serviceAreas: partner.partnerPincode.map(pp => ({
+      serviceAreas: partner.PartnerPincode.map(pp => ({
         id: pp.id,
         pincode: pp.pincode,
         addedAt: pp.createdAt
       })),
-      pendingServiceRequests: partner.partnerRequestedService.map(prs => ({
+      pendingServiceRequests: partner.PartnerRequestedService.map(prs => ({
         id: prs.id,
         name: prs.name,
         description: prs.description || null,
@@ -136,20 +136,20 @@ export async function GET(request: NextRequest) {
         requestedAt: prs.createdAt
       })),
       recentOrders: partner.Order
-        .filter(order => order.service !== null)
+        .filter(order => order.Service !== null)
         .map(order => ({
           id: order.id,
-          serviceName: order.service.name,
-          category: order.service.category,
+          serviceName: order.Service.name,
+          category: order.Service.category,
           status: order.status,
           date: order.date.toISOString().split('T')[0],
           time: order.time,
           amount: order.amount
         })),
       meta: {
-        totalServices: partner.serviceProvider.length,
-        totalServiceAreas: partner.partnerPincode.length,
-        pendingRequests: partner.partnerRequestedService.length,
+        totalServices: partner.ServiceProvider.length,
+        totalServiceAreas: partner.PartnerPincode.length,
+        pendingRequests: partner.PartnerRequestedService.length,
         timestamp: currentUTCTime
       }
     };

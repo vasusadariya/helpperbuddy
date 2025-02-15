@@ -37,7 +37,7 @@ export async function GET(
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        service: {
+        Service: {
           select: {
             name: true,
             price: true,
@@ -53,14 +53,14 @@ export async function GET(
             phoneno: true
           }
         },
-        user: {
+        User: {
           select: {
             name: true,
             email: true,
             phoneno: true
           }
         },
-        transaction: {
+        Transaction: {
           select: {
             id: true,
             amount: true,
@@ -81,7 +81,7 @@ export async function GET(
     }
 
     // Check if user has permission to view this order
-    const isCustomer = order.user.email === session.user.email;
+    const isCustomer = order.User.email === session.user.email;
     const isPartner = order.Partner?.email === session.user.email;
 
     if (!isCustomer && !isPartner) {
@@ -106,10 +106,10 @@ export async function GET(
         paidAt: order.paidAt?.toISOString(),
       },
       serviceDetails: {
-        name: order.service.name,
-        category: order.service.category,
-        price: order.service.price,
-        description: order.service.description
+        name: order.Service.name,
+        category: order.Service.category,
+        price: order.Service.price,
+        description: order.Service.description
       },
       partnerDetails: order.Partner ? {
         name: order.Partner.name,
@@ -118,10 +118,10 @@ export async function GET(
         email: isPartner ? order.Partner.email : undefined
       } : null,
       customerDetails: {
-        name: order.user.name,
+        name: order.User.name,
         // Only include customer details for the customer themselves
-        email: isCustomer ? order.user.email : undefined,
-        phone: isCustomer ? order.user.phoneno : undefined
+        email: isCustomer ? order.User.email : undefined,
+        phone: isCustomer ? order.User.phoneno : undefined
       },
       orderDetails: {
         date: order.date.toISOString().split('T')[0], // YYYY-MM-DD
@@ -139,11 +139,11 @@ export async function GET(
         cancelled: order.cancelledAt?.toISOString(),
         paymentRequested: order.paymentRequestedAt?.toISOString()
       },
-      transaction: order.transaction ? {
-        id: order.transaction.id,
-        amount: order.transaction.amount,
-        type: order.transaction.type,
-        createdAt: order.transaction.createdAt.toISOString()
+      transaction: order.Transaction ? {
+        id: order.Transaction.id,
+        amount: order.Transaction.amount,
+        type: order.Transaction.type,
+        createdAt: order.Transaction.createdAt.toISOString()
       } : null
     };
 

@@ -144,13 +144,13 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
         id: data.orderId,
       },
       include: {
-        user: true,
+        User: true,
         Partner: true,
-        service: true,
+        Service: true,
       },
     });
 
-    if (!order || !order.Partner || !order.user) {
+    if (!order || !order.Partner || !order.User) {
       throw new Error('Order, partner, or user details not found');
     }
 
@@ -176,10 +176,10 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
       process.env.EMAILJS_SERVICE_ID!,
       process.env.EMAILJS_ORDER_ACCEPTED_TEMPLATE_ID!,
       {
-        to_name: order.user.name,
-        to_email: order.user.email,
+        to_name: order.User.name,
+        to_email: order.User.email,
         order_id: order.id,
-        service_name: order.service.name,
+        service_name: order.Service.name,
         service_date: formattedDate,
         service_time: order.time,
         service_address: order.address,
@@ -288,7 +288,7 @@ export async function sendNewOrderToEligiblePartners(data: NewOrderNotificationD
         isActive: true,
         AND: [
           {
-            serviceProvider: {
+            ServiceProvider: {
               some: {
                 serviceId: data.serviceId,
                 isActive: true
@@ -296,7 +296,7 @@ export async function sendNewOrderToEligiblePartners(data: NewOrderNotificationD
             }
           },
           {
-            partnerPincode: {
+            PartnerPincode: {
               some: {
                 pincode: data.pincode,
                 isActive: true
