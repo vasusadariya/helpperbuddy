@@ -1,25 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
+interface ExtendedSession extends Session {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role: string;
+  };
+}
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
+import { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Search, MapPin, ShoppingBag, Menu, X, User } from 'lucide-react';
 
 interface ServiceResult {
-  id: string;
   name: string;
   price: number;
   description: string;
 }
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
 
   const isAuthenticated = !!session;
-  const userRole = session?.user?.role; // Assuming NextAuth session has `user.role`
+  const userRole = session?.user?.role; 
 
   const [scrolling, setScrolling] = useState(false);
   const [query, setQuery] = useState<string>('');
