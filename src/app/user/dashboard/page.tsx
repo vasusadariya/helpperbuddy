@@ -137,6 +137,7 @@ export default function UserDashboard() {
         setIsLoading(true);
         setError(null);
 
+
         // Fetch orders with partner details and wallet data in parallel
         const [ordersResponse, walletResponse] = await Promise.all([
           fetch("/api/user/orders?limit=5&include=partner"), // Add include=partner to get partner details
@@ -206,10 +207,46 @@ export default function UserDashboard() {
           throw new Error(
             walletData.data?.error || "Failed to fetch wallet data"
           );
+
         }
+
+        // Process orders data
+        const orders = ordersData.data.orders || [];
+        setRecentOrders(orders);
+
+        const completedOrders = orders.filter(
+          (order) => order.status === 'COMPLETED'
+        );
+
+        const pendingOrders = orders.filter(
+          (order) => order.status === 'PENDING'
+        );
+
+        const totalRating = completedOrders.reduce(
+          (sum, order) => sum + (order.review?.rating || 0),
+          0
+        );
+
+        setStats({
+          totalOrders: ordersData.data.pagination.total,
+          completedOrders: completedOrders.length,
+          pendingOrders: pendingOrders.length,
+          averageRating: completedOrders.length
+            ? +(totalRating / completedOrders.length).toFixed(1)
+            : 0,
+        });
+
+        // Process wallet data
+        setWalletData({
+          balance: walletData.data.wallet.balance,
+          transactions: walletData.data.wallet.transactions || [],
+        });
+
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        setError(error instanceof Error ? error.message : "An error occurred");
+
+        setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+
       } finally {
         setIsLoading(false);
       }
@@ -466,6 +503,7 @@ export default function UserDashboard() {
                   No transactions yet
                 </p>
               )}
+
             </div>
           </div>
         </div>

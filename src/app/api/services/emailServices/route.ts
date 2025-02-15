@@ -112,7 +112,7 @@ export const sendApprovalEmail = async (partnerData: {
   email: string;
   services: string[];
 }) => {
-  if (!partnerData || !partnerData.name || !partnerData.email || !partnerData.services) {
+  if (!partnerData || !partnerData.name || !partnerData.email ) {
     return { success: false, error: 'Invalid partner data provided' };
   }
 
@@ -125,7 +125,6 @@ export const sendApprovalEmail = async (partnerData: {
       {
         to_name: partnerData.name,
         to_email: partnerData.email,
-        services: partnerData.services.join(', '),
         login_url: `${process.env.NEXT_PUBLIC_BASE_URL}/signin`,
       }
     );
