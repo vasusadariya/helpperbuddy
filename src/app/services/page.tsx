@@ -1,18 +1,19 @@
-'use client';
+"use client";
 
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast, Toaster } from "react-hot-toast";
 import { format } from "date-fns";
 import CheckoutModal from "@/components/CheckoutModal";
-import { validateDateTime } from '@/lib/utils/validation';
+import { validateDateTime,validateDateTimeForServices } from "@/lib/utils/validation";
 
 interface Service {
   id: string;
   name: string;
   description: string;
   price: number;
+  threshold: number;
   category: string;
   image?: string;
 }
@@ -20,6 +21,17 @@ interface Service {
 interface CartItem extends Service {
   quantity: number;
 }
+
+// interface CheckoutModalProps {
+//   isOpen: boolean;
+//   isProcessing: boolean;
+//   bookingDetails: BookingDetails;
+//   onClose: () => void;
+//   onConfirm: () => void;
+//   setBookingDetails: (details: BookingDetails) => void;
+//   service?: CartItem;
+//   cartServices: CartItem[];
+// }
 
 interface BookingDetails {
   date: string;
@@ -35,8 +47,13 @@ export default function ServicesPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const [query, setQuery] = useState(searchParams.get('query') || '');
-  const [category, setCategory] = useState(searchParams.get('category') || 'all');
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  // const [cartServices, setCartServices] = useState<Service[]>([]);
+
+  const [query, setQuery] = useState(searchParams.get("query") || "");
+  const [category, setCategory] = useState(
+    searchParams.get("category") || "all"
+  );
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -49,30 +66,30 @@ export default function ServicesPage() {
     address: "",
     phoneNo: "",
     pincode: "",
-    remarks: ""
+    remarks: "",
   });
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/categories');
+      const res = await fetch("/api/categories");
       const data = await res.json();
-      setCategories(['all', ...data]);
+      setCategories(["all", ...data]);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error("Error fetching categories:", error);
     }
   };
 
   const fetchServices = async () => {
     try {
       const params = new URLSearchParams();
-      if (query) params.append('query', query);
-      if (category && category !== 'all') params.append('category', category);
+      if (query) params.append("query", query);
+      if (category && category !== "all") params.append("category", category);
 
       const res = await fetch(`/api/services?${params.toString()}`);
       const data = await res.json();
       setServices(data);
     } catch (error) {
-      console.error('Error fetching services:', error);
+      console.error("Error fetching services:", error);
     }
   };
 
@@ -85,14 +102,14 @@ export default function ServicesPage() {
   }, [query, category]);
 
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
+    const savedCart = localStorage.getItem("cart");
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
+    localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,18 +123,24 @@ export default function ServicesPage() {
     updateURL({ query, category: selectedCategory });
   };
 
-  const updateURL = ({ query, category }: { query: string; category: string }) => {
+  const updateURL = ({
+    query,
+    category,
+  }: {
+    query: string;
+    category: string;
+  }) => {
     const params = new URLSearchParams();
-    if (query) params.set('query', query);
-    if (category && category !== 'all') params.set('category', category);
+    if (query) params.set("query", query);
+    if (category && category !== "all") params.set("category", category);
     router.push(`/services?${params.toString()}`);
   };
 
   const addToCart = (service: Service) => {
-    setCart(currentCart => {
-      const existingItem = currentCart.find(item => item.id === service.id);
+    setCart((currentCart) => {
+      const existingItem = currentCart.find((item) => item.id === service.id);
       if (existingItem) {
-        return currentCart.map(item =>
+        return currentCart.map((item) =>
           item.id === service.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
@@ -129,7 +152,9 @@ export default function ServicesPage() {
   };
 
   const removeFromCart = (serviceId: string) => {
-    setCart(currentCart => currentCart.filter(item => item.id !== serviceId));
+    setCart((currentCart) =>
+      currentCart.filter((item) => item.id !== serviceId)
+    );
   };
 
   const updateQuantity = (serviceId: string, newQuantity: number) => {
@@ -137,8 +162,8 @@ export default function ServicesPage() {
       removeFromCart(serviceId);
       return;
     }
-    setCart(currentCart =>
-      currentCart.map(item =>
+    setCart((currentCart) =>
+      currentCart.map((item) =>
         item.id === serviceId ? { ...item, quantity: newQuantity } : item
       )
     );
@@ -148,111 +173,146 @@ export default function ServicesPage() {
     setCart([]);
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity,0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = async () => {
     if (!session) {
-      toast.error('Please sign in to continue');
-      router.push('/signin');
+      toast.error("Please sign in to continue");
+      router.push("/signin");
       return;
     }
-  
+
     // Validate all required fields first
     if (!bookingDetails.address.trim()) {
-      toast.error('Please provide a delivery address');
+      toast.error("Please provide a delivery address");
       return;
     }
-  
+
     if (!bookingDetails.phoneNo.trim()) {
-      toast.error('Please provide a phone number');
+      toast.error("Please provide a phone number");
       return;
     }
-  
+
     if (!bookingDetails.pincode.trim()) {
-      toast.error('Please provide a pincode');
+      toast.error("Please provide a pincode");
       return;
     }
-  
+
     // Validate phone number format
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(bookingDetails.phoneNo)) {
-      toast.error('Please enter a valid 10-digit phone number');
+      toast.error("Please enter a valid 10-digit phone number");
       return;
     }
-  
+
     // Validate pincode format
     const pincodeRegex = /^[0-9]{6}$/;
     if (!pincodeRegex.test(bookingDetails.pincode)) {
-      toast.error('Please enter a valid 6-digit pincode');
+      toast.error("Please enter a valid 6-digit pincode");
       return;
     }
-  
-    if (!validateDateTime(bookingDetails.date, bookingDetails.time)) {
-      return; // validateDateTime function already shows toast messages
+
+    // Validate date and time based on cart items
+    if (cart.length === 0) {
+      toast.error("Your cart is empty");
+      return;
     }
-  
+
+    if (cart.length === 1) {
+      // Single service validation
+      if (
+        !validateDateTime(bookingDetails.date, bookingDetails.time, {
+          threshold: cart[0].threshold,
+          name: cart[0].name,
+        })
+      ) {
+        return;
+      }
+    } else {
+      // Multiple services validation
+      const servicesWithThreshold = cart.map((service) => ({
+        threshold: service.threshold,
+        name: service.name,
+      }));
+
+      if (!validateDateTimeForServices(bookingDetails.date,bookingDetails.time,servicesWithThreshold)) {
+        return;
+      }
+    }
+
     setIsProcessing(true);
     try {
       // Format the date correctly
-      const bookingDate = new Date(`${bookingDetails.date}T${bookingDetails.time}`);
-  
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          serviceId: cart[0].id,
-          date: bookingDate.toISOString(), // Send as ISO string
-          time: bookingDetails.time,
-          address: bookingDetails.address,
-          pincode: bookingDetails.pincode,
-          remarks: bookingDetails.remarks,
-          amount: cartTotal,
-        }),
-      });
-  
-      const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.error || data.details || 'Failed to create order');
-      }
-  
-      if (data.success) {
+      const bookingDate = new Date(
+        `${bookingDetails.date}T${bookingDetails.time}`
+      );
+
+      // Create an order for each service in the cart
+      const orderPromises = cart.map((item) =>
+        fetch("/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            serviceId: item.id,
+            date: bookingDate.toISOString(),
+            time: bookingDetails.time,
+            address: bookingDetails.address,
+            pincode: bookingDetails.pincode,
+            remarks: bookingDetails.remarks,
+            amount: item.price * item.quantity,
+          }),
+        })
+      );
+
+      const responses = await Promise.all(orderPromises);
+      const results = await Promise.all(responses.map((r) => r.json()));
+
+      // Check if all orders were successful
+      const allSuccessful = results.every((result) => result.success);
+
+      if (allSuccessful) {
         setIsCheckoutModalOpen(false);
         setIsCartOpen(false);
-        
-        toast.success('Finding the best partner for your service...');
+        toast.success("Finding the best partner for your service...");
         clearCart();
-        
-        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         router.push(`/user/dashboard`);
       } else {
-        throw new Error(data.error || 'Failed to create order');
+        throw new Error("Failed to create one or more orders");
       }
     } catch (error) {
-      console.error('Checkout error:', error);
-  
-  // Handle specific error cases
-  const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-  
-  if (errorMessage.includes('No service providers available')) {
-    toast.error('No service providers are currently available in your area. Please try again later.');
-  } else if (errorMessage.includes('Network')) {
-    toast.error('Network error. Please check your internet connection.');
-  } else if (errorMessage.includes('date')) {
-    toast.error('Invalid booking date or time. Please select a valid date and time.');
-  } else if (errorMessage.includes('pincode')) {
-    toast.error('Service not available in this pincode area.');
-  } else if (errorMessage.includes('slots')) {
-    toast.error('Selected time slot is no longer available. Please choose another time.');
-  } else {
-    toast.error(errorMessage);
-  }
-} finally {
-  setIsProcessing(false);
-}
+      console.error("Checkout error:", error);
+
+      // Handle specific error cases
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+
+      if (errorMessage.includes("No service providers available")) {
+        toast.error(
+          "No service providers are currently available in your area. Please try again later."
+        );
+      } else if (errorMessage.includes("Network")) {
+        toast.error("Network error. Please check your internet connection.");
+      } else if (errorMessage.includes("date")) {
+        toast.error(
+          "Invalid booking date or time. Please select a valid date and time."
+        );
+      } else if (errorMessage.includes("pincode")) {
+        toast.error("Service not available in this pincode area.");
+      } else if (errorMessage.includes("slots")) {
+        toast.error(
+          "Selected time slot is no longer available. Please choose another time."
+        );
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -267,11 +327,13 @@ export default function ServicesPage() {
             <li
               key={cat}
               className={`cursor-pointer p-2 rounded-md ${
-                category === cat ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                category === cat
+                  ? "bg-blue-500 text-white"
+                  : "hover:bg-gray-100"
               }`}
               onClick={() => handleCategoryClick(cat)}
             >
-              {cat === 'all' ? 'All Services' : cat}
+              {cat === "all" ? "All Services" : cat}
             </li>
           ))}
         </ul>
@@ -294,9 +356,12 @@ export default function ServicesPage() {
         {services.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service) => (
-              <div key={service.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div
+                key={service.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden"
+              >
                 <img
-                  src={service.image || 'https://via.placeholder.com/150'}
+                  src={service.image || "https://via.placeholder.com/150"}
                   alt={service.name}
                   className="w-full h-48 object-cover"
                 />
@@ -304,7 +369,9 @@ export default function ServicesPage() {
                   <h3 className="text-lg font-semibold mb-2">{service.name}</h3>
                   <p className="text-gray-600 mb-4">{service.description}</p>
                   <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold">₹{service.price.toFixed(2)}</span>
+                    <span className="text-xl font-bold">
+                      ₹{service.price.toFixed(2)}
+                    </span>
                     <button
                       onClick={() => addToCart(service)}
                       className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -322,9 +389,11 @@ export default function ServicesPage() {
       </main>
 
       {/* Cart Sidebar */}
-      <aside className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 ${
-        isCartOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}>
+      <aside
+        className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 ${
+          isCartOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
         <div className="p-4 h-full flex flex-col">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Cart ({cartItemCount})</h2>
@@ -340,26 +409,35 @@ export default function ServicesPage() {
             <>
               <div className="flex-1 overflow-y-auto">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 p-2 border-b">
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2 p-2 border-b"
+                  >
                     <img
-                      src={item.image || 'https://via.placeholder.com/50'}
+                      src={item.image || "https://via.placeholder.com/50"}
                       alt={item.name}
                       className="w-12 h-12 object-cover rounded"
                     />
                     <div className="flex-1">
                       <h3 className="font-semibold">{item.name}</h3>
-                      <p className="text-sm text-gray-600">₹{item.price.toFixed(2)}</p>
+                      <p className="text-sm text-gray-600">
+                        ₹{item.price.toFixed(2)}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() =>
+                          updateQuantity(item.id, item.quantity - 1)
+                        }
                         className="px-2 bg-gray-100 rounded"
                       >
                         -
                       </button>
                       <span>{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() =>
+                          updateQuantity(item.id, item.quantity + 1)
+                        }
                         className="px-2 bg-gray-100 rounded"
                       >
                         +
@@ -412,6 +490,7 @@ export default function ServicesPage() {
         onClose={() => setIsCheckoutModalOpen(false)}
         onConfirm={handleCheckout}
         setBookingDetails={setBookingDetails}
+        cartServices={cart}
       />
 
       {/* Processing Overlay */}

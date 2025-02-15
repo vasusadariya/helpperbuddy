@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import Razorpay from "razorpay";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { awardReferralBonus } from "../refferals/route";
 import { sendNewOrderToEligiblePartners } from "../services/emailServices/route";
@@ -198,15 +198,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const {
-      serviceId,
-      date,
-      time,
-      remarks = "",
-      address,
-      pincode,
-      amount,
-    } = body;
+    const { serviceId, date, time, remarks = "", address, pincode } = body;
 
     // Validate required fields
     if (!serviceId || !date || !time || !address || !pincode) {
@@ -256,6 +248,22 @@ export async function POST(req: NextRequest) {
 
     const bookingDateTime = new Date(date);
 
+    // Get service details
+    const service = await prisma.service.findUnique({
+      where: { id: serviceId },
+    });
+
+    if (!service) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Service not found",
+          timestamp: currentUTCTime,
+        },
+        { status: 404 }
+      );
+    }
+
     // Check for eligible partners
     const eligiblePartners = await prisma.partner.findMany({
       where: {
@@ -300,30 +308,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const service = await prisma.service.findUnique({
-      where: { id: serviceId },
-    });
+    
 
-    if (!service) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Service not found",
-          timestamp: currentUTCTime,
-        },
-        { status: 404 }
-      );
-    }
+    
+    const totalAmount = service.price;
 
-    // Get user's wallet
+    // Get wallet balance before transaction
     const wallet = await prisma.wallet.findUnique({
       where: { userId: user.id },
     });
-
-    // Calculate amounts
-    const totalAmount = service.price;
-    const walletAmount = wallet ? Math.min(wallet.balance, totalAmount) : 0;
-    const remainingAmount = totalAmount - walletAmount;
 
     const result = await prisma.$transaction(async (tx) => {
       // Create order
@@ -337,100 +330,30 @@ export async function POST(req: NextRequest) {
           address: address,
           pincode: pincode,
           amount: totalAmount,
-          walletAmount: walletAmount,
-          remainingAmount: remainingAmount,
+          walletAmount: 0, // Will be updated during payment
+          remainingAmount: totalAmount,
           status: "PENDING",
         },
         include: { service: true, user: true },
       });
-
-      let notificationResult;
-      try {
-        // Provide empty string or omit the phone field if not available:
-        notificationResult = await sendNewOrderToEligiblePartners({
+    
+        // Create Razorpay order for full amount
+      const razorpayOrder = await razorpay.orders.create({
+        amount: Math.round(totalAmount * 100),
+        currency: "INR",
+        receipt: `order_rcpt_${order.id}`,
+        notes: {
           orderId: order.id,
-          serviceId: order.serviceId,
-          serviceName: order.service.name,
-          date: order.date,
-          time: order.time,
-          address: order.address,
-          pincode: order.pincode,
-          amount: order.amount,
-          // phone: order.user.phoneno,
-          customer: {
-            name: order.user.name,
-          },
-        });
-        console.log("Notification result:", notificationResult);
-      } catch (emailError) {
-        console.error("Error sending partner notifications:", emailError);
-        notificationResult = {
-          success: false,
-          error:
-            emailError instanceof Error
-              ? emailError.message
-              : "Failed to send notifications",
-          partnersCount: 0,
-        };
-      }
-
-      let transaction = null;
-      let razorpayOrder = null;
-
-      // Handle wallet payment
-      if (walletAmount > 0 && wallet) {
-        await tx.wallet.update({
-          where: { userId: user.id },
-          data: {
-            balance: { decrement: walletAmount },
-          },
-        });
-
-        transaction = await tx.transaction.create({
-          data: {
-            amount: walletAmount,
-            type: "DEBIT",
-            description: `Payment for ${service.name}`,
-            walletId: wallet.id,
-            userId: user.id,
-            orderId: order.id,
-          },
-        });
-      }
-
-      // Create Razorpay order if needed
-      if (remainingAmount > 0) {
-        razorpayOrder = await razorpay.orders.create({
-          amount: Math.round(remainingAmount * 100),
-          currency: "INR",
-          receipt: `order_rcpt_${order.id}`,
-          notes: {
-            orderId: order.id,
-            serviceId: serviceId,
-            userId: user.id,
-          },
-        });
-
-        await tx.order.update({
-          where: { id: order.id },
-          data: { razorpayOrderId: razorpayOrder.id },
-        });
-      } else {
-        // Mark order as completed if wallet covers full amount
-        await tx.order.update({
-          where: { id: order.id },
-          data: {
-            status: "COMPLETED",
-            paidAt: new Date(),
-          },
-        });
-
-        try {
-          await awardReferralBonus(user.id);
-        } catch (bonusError) {
-          console.error("Error awarding referral bonus:", bonusError);
-        }
-      }
+          serviceId: serviceId,
+          userId: user.id,
+        },
+      });
+    
+        // Update order with Razorpay order ID
+      const updatedOrder = await tx.order.update({
+        where: { id: order.id },
+        data: { razorpayOrderId: razorpayOrder.id },
+      });
 
       // Increment service order count
       await tx.service.update({
@@ -439,72 +362,112 @@ export async function POST(req: NextRequest) {
       });
 
       return {
-        order,
-        transaction,
+        order: updatedOrder,
         razorpayOrder,
-        notificationSent: notificationResult?.success ?? false,
       };
+    }, {
+      timeout: 10000,
+      maxWait: 15000,
     });
 
+      // try {
+      //   await awardReferralBonus(user.id);
+      // } catch (bonusError) {
+      //   console.error("Error awarding referral bonus:", bonusError);
+      // }
+    
+      // Send notifications outside transaction
+      let notificationResult;
+      try {
+        notificationResult = await sendNewOrderToEligiblePartners({
+          orderId: result.order.id,
+          serviceId: serviceId,
+          serviceName: service.name,
+          date: bookingDateTime,
+          time: time,
+          address: address,
+          pincode: pincode,
+          amount: totalAmount,
+          customer: {
+            name: user.name,
+          },
+        });
+        console.log(`Order ${result.order.id} notification results:`, notificationResult);
+      } catch (emailError) {
+        console.error(`Error sending notifications for order ${result.order.id}:`, emailError);
+        notificationResult = {
+          success: false,
+          error: emailError instanceof Error ? emailError.message : "Failed to send notifications",
+          partnersCount: 0,
+        };
+      }
+    
+      // Return success response
     return NextResponse.json({
       success: true,
       data: {
         orderId: result.order.id,
         totalAmount,
-        walletAmount,
-        remainingAmount,
-        razorpayOrderId: result.razorpayOrder?.id,
-        razorpayAmount:
-          remainingAmount > 0 ? Math.round(remainingAmount * 100) : 0,
+        walletBalance: wallet?.balance || 0,
+        razorpayOrderId: result.razorpayOrder.id,
+        razorpayAmount: Math.round(totalAmount * 100),
         status: result.order.status,
-        walletTransaction: result.transaction,
+        razorpayKeyId: process.env.RAZORPAY_KEY_ID,
         serviceDetails: {
-          // Use the order's included service to avoid any scope issues
-          name: result.order.service?.name || "",
-          description: result.order.service?.description || "",
+          name: service.name,
+          description: service.description || "",
         },
         bookingDetails: {
           date: bookingDateTime.toISOString().split("T")[0],
           time: time,
-          address: result.order.address,
-          pincode: result.order.pincode,
+          address: address,
+          pincode: pincode,
         },
         eligiblePartners: eligiblePartners.length,
-        notificationStatus: result.notificationSent ?? false,
+        notificationStatus: notificationResult?.success ?? false,
         timestamp: currentUTCTime,
       },
     });
+
   } catch (error) {
-    console.error("arre yaar:", error);
-
-    const errorResponse = {
-      success: false,
-      error: "Failed to create order",
-      details: error instanceof Error ? error.message : "Unknown error",
+    console.error("Error creating order:", {
       timestamp: currentUTCTime,
-    };
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
 
-    if (error instanceof Error) {
-      console.error("Error stack:", error.stack);
-    }
-
-    // Specific error handling for Razorpay errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      const typedError = error as { code: string; description?: string };
-      if (typedError.code === 'ayya') {
+    // Handle Prisma transaction timeout
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2024') {
         return NextResponse.json({
           success: false,
-          error: "Invalid argument type in payment processing",
-          details: typedError.description || "Payment processing failed",
-          timestamp: currentUTCTime
-        }, { status: 400 });
+          error: "Transaction timeout",
+          details: "Order processing took too long. Please try again.",
+          timestamp: currentUTCTime,
+        }, { status: 408 });
       }
     }
 
-    return NextResponse.json(errorResponse, { status: 500 });
+    // Handle Razorpay errors
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return NextResponse.json({
+        success: false,
+        error: "Payment gateway error",
+        details: (error as any).description || "Error processing payment",
+        timestamp: currentUTCTime,
+      }, { status: 400 });
+    }
+
+    // Default error response
+    return NextResponse.json({
+      success: false,
+      error: "Failed to create order",
+      details: error instanceof Error ? error.message : "Unknown error occurred",
+      timestamp: currentUTCTime,
+    }, { status: 500 });
   }
 }
-
+  
 export async function PATCH(req: NextRequest) {
   const currentUTCTime = new Date()
     .toISOString()

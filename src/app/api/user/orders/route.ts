@@ -12,12 +12,53 @@ interface PaginationParams {
   status?: Status;
 }
 
+interface OrderResponse {
+  id: string;
+  service: {
+    name: string;
+    price: number;
+    category: string;
+  };
+  Partner?: {
+    id: string;
+    name: string;
+    email: string;
+    phoneno: string | null;
+    isActive: boolean;
+    lastActiveAt: string | null;
+  } | null;
+  status: Status;
+  date: string;
+  time: string;
+  address: string;
+  pincode: string;
+  amount: number;
+  remainingAmount: number;
+  walletAmount: number;
+  remarks: string | null;
+  razorpayPaymentId: string | null;
+  paidAt: string | null;
+  review: {
+    id: string;
+    rating: number;
+    description: string | null;
+    createdAt: string;
+  } | null;
+  acceptedAt: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export async function GET(req: NextRequest) {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
+  let session
   try {
     // Get session
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json({
@@ -35,23 +76,16 @@ export async function GET(req: NextRequest) {
     };
 
     const status = searchParams.get("status");
-    if (status) {
-      // Validate status is a valid enum value
-      if (Object.values(Status).includes(status as Status)) {
-        params.status = status as Status;
-      }
+    if (status && Object.values(Status).includes(status as Status)) {
+      params.status = status as Status;
     }
 
     const skip = (params.page - 1) * params.limit;
 
     // Get user
     const user = await prisma.user.findUnique({
-      where: {
-        email: session.user.email
-      },
-      select: {
-        id: true
-      }
+      where: { email: session.user.email },
+      select: { id: true }
     });
 
     if (!user) {
@@ -82,9 +116,12 @@ export async function GET(req: NextRequest) {
           },
           Partner: {
             select: {
+              id: true,
               name: true,
               email: true,
-              phoneno: true
+              phoneno: true,
+              isActive: true,
+              lastActiveAt: true
             }
           },
           review: {
@@ -96,29 +133,29 @@ export async function GET(req: NextRequest) {
             }
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: params.limit
       }),
-      prisma.order.count({
-        where: whereClause
-      })
+      prisma.order.count({ where: whereClause })
     ]);
 
-    // Format orders to ensure no null values
-    const formattedOrders = orders.map(order => ({
+    // Format orders
+    const formattedOrders: OrderResponse[] = orders.map(order => ({
+      // assignedAt: order.assignedAt?.toISOString() ?? null,
       id: order.id,
       service: {
         name: order.service?.name ?? 'Service Unavailable',
         price: order.service?.price ?? 0,
         category: order.service?.category ?? 'Uncategorized'
       },
-      partner: order.Partner ? {
+      Partner: order.Partner ? {
+        id: order.Partner.id,
         name: order.Partner.name,
         email: order.Partner.email,
-        phone: order.Partner.phoneno ?? 'Not provided'
+        phoneno: order.Partner.phoneno,
+        isActive: order.Partner.isActive,
+        lastActiveAt: order.Partner.lastActiveAt?.toISOString() ?? null
       } : null,
       status: order.status,
       date: order.date.toISOString().split('T')[0],
@@ -126,19 +163,23 @@ export async function GET(req: NextRequest) {
       address: order.address,
       pincode: order.pincode,
       amount: order.amount,
-      remarks: order.remarks ?? null,
+      remainingAmount: order.remainingAmount ?? 0,
+      walletAmount: order.walletAmount ?? 0,
+      remarks: order.remarks,
+      razorpayPaymentId: order.razorpayPaymentId,
+      paidAt: order.paidAt?.toISOString() ?? null,
       review: order.review ? {
         id: order.review.id,
         rating: order.review.rating,
-        description: order.review.description ?? null,
+        description: order.review.description,
         createdAt: order.review.createdAt.toISOString()
       } : null,
-      timestamps: {
-        created: order.createdAt.toISOString(),
-        updated: order.updatedAt.toISOString(),
-        accepted: order.acceptedAt?.toISOString() ?? null,
-        completed: order.completedAt?.toISOString() ?? null
-      }
+      acceptedAt: order.acceptedAt?.toISOString() ?? null,
+      startedAt: order.startedAt?.toISOString() ?? null,
+      completedAt: order.completedAt?.toISOString() ?? null,
+      cancelledAt: order.cancelledAt?.toISOString() ?? null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString()
     }));
 
     return NextResponse.json({
@@ -163,7 +204,8 @@ export async function GET(req: NextRequest) {
         message: error.message,
         stack: error.stack
       } : 'Unknown error',
-      timestamp: currentUTCTime
+      timestamp: currentUTCTime,
+      user: session?.user?.email
     });
 
     return NextResponse.json({
