@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
       // Create main transaction record
       const mainTransaction = await tx.transaction.create({
         data: {
+          id: await prisma.transaction.findMany().then(() => crypto.randomUUID()),
           amount,
           type,
           description: description || `${type.toLowerCase()} transaction`,
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
 
             const referralBonusTransaction = await tx.transaction.create({
               data: {
+                id: crypto.randomUUID(),
                 amount: REFERRAL_BONUS,
                 type: 'REFERRAL_BONUS',
                 description: `Referral bonus from ${user.email}`,
@@ -174,7 +176,7 @@ export async function GET(request: NextRequest) {
     const wallet = await prisma.wallet.findUnique({
       where: { userId },
       include: {
-        transactions: {
+        Transaction: {
           orderBy: {
             createdAt: 'desc'
           },
@@ -196,7 +198,7 @@ export async function GET(request: NextRequest) {
       data: {
         wallet : {
           balance: wallet?.balance || 0,
-          transactions: wallet?.transactions || []
+          transactions: wallet?.Transaction || []
         },
         timestamp: currentUTCTime
       }
@@ -262,7 +264,7 @@ export async function PUT(request: NextRequest) {
         skip,
         take: limit,
         include: {
-          wallet: true
+          Wallet: true
         }
       }),
       prisma.transaction.count({ where })

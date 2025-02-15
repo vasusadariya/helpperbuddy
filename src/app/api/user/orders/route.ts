@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
       prisma.order.findMany({
         where: whereClause,
         include: {
-          service: {
+          Service: {
             select: {
               name: true,
               price: true,
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
               phoneno: true
             }
           },
-          review: {
+          Review: {
             select: {
               id: true,
               rating: true,
@@ -111,9 +111,9 @@ export async function GET(req: NextRequest) {
     const formattedOrders = orders.map(order => ({
       id: order.id,
       service: {
-        name: order.service?.name ?? 'Service Unavailable',
-        price: order.service?.price ?? 0,
-        category: order.service?.category ?? 'Uncategorized'
+        name: order.Service?.name ?? 'Service Unavailable',
+        price: order.Service?.price ?? 0,
+        category: order.Service?.category ?? 'Uncategorized'
       },
       partner: order.Partner ? {
         name: order.Partner.name,
@@ -127,11 +127,11 @@ export async function GET(req: NextRequest) {
       pincode: order.pincode,
       amount: order.amount,
       remarks: order.remarks ?? null,
-      review: order.review ? {
-        id: order.review.id,
-        rating: order.review.rating,
-        description: order.review.description ?? null,
-        createdAt: order.review.createdAt.toISOString()
+      review: order.Review ? {
+        id: order.Review.id,
+        rating: order.Review.rating,
+        description: order.Review.description ?? null,
+        createdAt: order.Review.createdAt.toISOString()
       } : null,
       timestamps: {
         created: order.createdAt.toISOString(),

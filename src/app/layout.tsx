@@ -38,8 +38,8 @@ export default function RootLayout({
       <body
         className={`antialiased`}
       >
-      
       <CartProvider>
+        
           {children}
         </CartProvider>
       </body>
