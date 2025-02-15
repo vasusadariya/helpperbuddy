@@ -195,6 +195,15 @@ CREATE TABLE "Wallet" (
 );
 
 -- CreateTable
+CREATE TABLE "system_config" (
+    "variable_name" TEXT NOT NULL,
+    "variable_value" INTEGER NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "system_config_pkey" PRIMARY KEY ("variable_name")
+);
+
+-- CreateTable
 CREATE TABLE "ContactMessage" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -203,15 +212,6 @@ CREATE TABLE "ContactMessage" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ContactMessage_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "system_config" (
-    "variable_name" TEXT NOT NULL,
-    "variable_value" INTEGER NOT NULL,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "system_config_pkey" PRIMARY KEY ("variable_name")
 );
 
 -- CreateIndex
@@ -227,13 +227,13 @@ CREATE UNIQUE INDEX "Order_razorpayPaymentId_key" ON "Order"("razorpayPaymentId"
 CREATE INDEX "Order_partnerId_status_idx" ON "Order"("partnerId", "status");
 
 -- CreateIndex
+CREATE INDEX "Order_userId_status_idx" ON "Order"("userId", "status");
+
+-- CreateIndex
 CREATE INDEX "Order_pincode_status_idx" ON "Order"("pincode", "status");
 
 -- CreateIndex
 CREATE INDEX "Order_serviceId_status_idx" ON "Order"("serviceId", "status");
-
--- CreateIndex
-CREATE INDEX "Order_userId_status_idx" ON "Order"("userId", "status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Partner_email_key" ON "Partner"("email");

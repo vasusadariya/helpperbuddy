@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
     const wallet = await prisma.wallet.findUnique({
       where: { userId },
       include: {
-        Transaction: {
+        transaction: {
           orderBy: {
             createdAt: 'desc'
           },
@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
       data: {
         wallet : {
           balance: wallet?.balance || 0,
-          transactions: wallet?.Transaction || []
+          transactions: wallet?.transaction || []
         },
         timestamp: currentUTCTime
       }

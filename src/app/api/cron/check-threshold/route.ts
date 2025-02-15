@@ -15,13 +15,13 @@ export async function GET() {
         }
       },
       include: {
-        Service: {
+        service: {
           select: {
             name: true,
             threshold: true
           }
         },
-        User: true
+        user: true
       }
     });
 
@@ -29,19 +29,19 @@ export async function GET() {
       thresholdOrders.map(order => 
         sendOrderThresholdNotification({
           user: {
-            name: order.User.name,
-            email: order.User.email
+            name: order.user.name,
+            email: order.user.email
           },
           order: {
             id: order.id,
-            serviceName: order.Service.name,
+            serviceName: order.service.name,
             date: order.date,
             time: order.time,
             address: order.address,
             pincode: order.pincode,
             amount: order.amount,
             createdAt: order.createdAt,
-            threshold: Number(order.Service.threshold || 2)
+            threshold: Number(order.service.threshold || 2)
           }
         })
       )
