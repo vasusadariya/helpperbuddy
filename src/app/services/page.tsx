@@ -173,7 +173,7 @@ export default function ServicesPage() {
     setCart([]);
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity,0);
+  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = async () => {
@@ -236,7 +236,7 @@ export default function ServicesPage() {
         name: service.name,
       }));
 
-      if (!validateDateTimeForServices(bookingDetails.date,bookingDetails.time,servicesWithThreshold)) {
+      if (!validateDateTimeForServices(bookingDetails.date, bookingDetails.time, servicesWithThreshold)) {
         return;
       }
     }
@@ -326,11 +326,10 @@ export default function ServicesPage() {
           {categories.map((cat) => (
             <li
               key={cat}
-              className={`cursor-pointer p-2 rounded-md ${
-                category === cat
+              className={`cursor-pointer p-2 rounded-md ${category === cat
                   ? "bg-blue-500 text-white"
                   : "hover:bg-gray-100"
-              }`}
+                }`}
               onClick={() => handleCategoryClick(cat)}
             >
               {cat === "all" ? "All Services" : cat}
@@ -392,9 +391,8 @@ export default function ServicesPage() {
 
       {/* Cart Sidebar */}
       <aside
-        className={`fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300 ${
-          isCartOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed right-0 top-0 h-full w-80 bg-white z-20 shadow-lg transform transition-transform duration-300 ${isCartOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="p-4 h-full flex flex-col">
           <div className="flex justify-between items-center mb-4">
@@ -481,7 +479,7 @@ export default function ServicesPage() {
       {/* Cart Toggle Button */}
       <button
         onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-4 right-4 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600"
+        className="fixed bottom-4 right-4 bg-blue-500 z-10 text-white p-4 rounded-full shadow-lg hover:bg-blue-600"
       >
         🛒 {cartItemCount > 0 && <span className="ml-1">{cartItemCount}</span>}
       </button>
