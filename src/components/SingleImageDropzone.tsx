@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useDropzone } from 'react-dropzone';
+import Image from 'next/image';
 
 export function SingleImageDropzone({ width, height, value, onChange }: 
     { width: number; height: number; value?: File | string | null; onChange?: (file?: File | null) => void; }) {
