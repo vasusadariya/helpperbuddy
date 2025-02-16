@@ -3,8 +3,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  FileText,
-  Star,
+
   Clock,
   CheckCircle,
   Wallet,
@@ -17,6 +16,8 @@ import {
   PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { calculateCancellationTime } from "@/lib/utils/timeUtils";
+import toast from "react-hot-toast";
 
 type DashboardStats = {
   totalOrders: number;
@@ -41,6 +42,7 @@ interface Order {
     name: string;
     price: number;
     category: string;
+    threshold: number;
   };
   status: OrderStatus;
   date: string;
@@ -137,7 +139,6 @@ export default function UserDashboard() {
         setIsLoading(true);
         setError(null);
 
-
         // Fetch orders with partner details and wallet data in parallel
         const [ordersResponse, walletResponse] = await Promise.all([
           fetch("/api/user/orders?limit=5&include=partner"), // Add include=partner to get partner details
@@ -207,46 +208,10 @@ export default function UserDashboard() {
           throw new Error(
             walletData.data?.error || "Failed to fetch wallet data"
           );
-
         }
-
-        // Process orders data
-        const orders = ordersData.data.orders || [];
-        setRecentOrders(orders);
-
-        const completedOrders = orders.filter(
-          (order) => order.status === 'COMPLETED'
-        );
-
-        const pendingOrders = orders.filter(
-          (order) => order.status === 'PENDING'
-        );
-
-        const totalRating = completedOrders.reduce(
-          (sum, order) => sum + (order.review?.rating || 0),
-          0
-        );
-
-        setStats({
-          totalOrders: ordersData.data.pagination.total,
-          completedOrders: completedOrders.length,
-          pendingOrders: pendingOrders.length,
-          averageRating: completedOrders.length
-            ? +(totalRating / completedOrders.length).toFixed(1)
-            : 0,
-        });
-
-        // Process wallet data
-        setWalletData({
-          balance: walletData.data.wallet.balance,
-          transactions: walletData.data.wallet.transactions || [],
-        });
-
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-
-        setError(error instanceof Error ? error.message : 'An unexpected error occurred');
-
+        setError(error instanceof Error ? error.message : "An error occurred");
       } finally {
         setIsLoading(false);
       }
@@ -345,6 +310,49 @@ export default function UserDashboard() {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  const handleCancellation = async (orderId: string) => {
+    try {
+      // Show confirmation dialog
+      const confirmed = window.confirm(
+        "Are you sure you want to cancel this order? This action cannot be undone."
+      );
+      
+      if (!confirmed) return;
+  
+      // Show loading toast
+      const loadingToast = toast.loading('Cancelling order...');
+  
+      // Call the API endpoint
+      const response = await fetch(`/api/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to cancel order');
+      }
+  
+      // Success
+      toast.success('Order cancelled successfully', {
+        id: loadingToast
+      });
+  
+      // Refresh the page or update the data
+      window.location.reload();
+      // Or if you're using router.refresh():
+      // router.refresh();
+  
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to cancel order'
+      );
+    }
   };
 
   if (isLoading) {
@@ -503,7 +511,7 @@ export default function UserDashboard() {
                   No transactions yet
                 </p>
               )}
-
+              
             </div>
           </div>
         </div>
@@ -575,6 +583,64 @@ export default function UserDashboard() {
                               )}
                             </div>
                           </div>
+
+{/* Cancellation Status Section */}
+{(() => {
+  // Don't show anything if order is cancelled or completed
+  if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
+    return null;
+  }
+
+  const { isCancellable, timeRemaining, cancellableTime } = calculateCancellationTime(
+    order.date,
+    order.time,
+    order.service?.threshold
+  );
+
+  // Within threshold period (can't cancel yet)
+  if (!isCancellable && !order.Partner) {
+    return (
+      <div className="mt-3 flex items-center space-x-2 bg-yellow-50 px-4 py-2 rounded-lg">
+        <Clock className="w-4 h-4 text-yellow-600" />
+        <span className="text-sm text-yellow-700">
+          You will be able to cancel this order after{' '}
+          {cancellableTime.toLocaleString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          })}
+          {timeRemaining > 0 && ` (${timeRemaining} hours remaining)`}
+        </span>
+      </div>
+    );
+  }
+
+  // Past threshold time and no partner accepted - can cancel now
+  if (isCancellable && !order.Partner && order.status === 'PENDING') {
+    return (
+      <div className="mt-3 flex items-center justify-between bg-red-50 px-4 py-2 rounded-lg">
+        <div className="flex items-center space-x-2">
+          <XCircle className="w-4 h-4 text-red-600" />
+          <span className="text-sm text-red-700">
+            {Number(order.service?.threshold || 2)} hours have passed since booking. You can cancel now.
+          </span>
+        </div>
+        <button
+          onClick={() => handleCancellation(order.id)}
+          className="px-3 py-1 text-sm text-red-600 hover:text-red-700 
+                   bg-white hover:bg-red-50 rounded-md transition-colors border border-red-200"
+        >
+          Cancel Order
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+})()}
 
                           {order.Partner && (
                             <div className="bg-gray-50 rounded-lg p-4 mt-3">
@@ -728,6 +794,18 @@ export default function UserDashboard() {
                           )}
                         </div>
                       </div>
+
+                      {/* Cancelled Order Message */}
+        {order.status === 'CANCELLED' && (
+          <div className="mt-3 bg-red-50 px-4 py-2 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <XCircle className="w-4 h-4 text-red-600" />
+              <span className="text-sm text-red-700">
+                Order cancelled {order.cancelledAt ? `on ${formatDate(order.cancelledAt)}` : ''}
+              </span>
+            </div>
+          </div>
+        )}
 
                       {order.razorpayPaymentId && (
                         <div className="mt-3 p-3 bg-green-50 rounded-lg">
