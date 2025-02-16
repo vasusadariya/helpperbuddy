@@ -62,10 +62,11 @@ export default function HeroSection() {
   const nextImage = useCallback(() => {
     setCurrentImage((prev) => (prev + 1) % images.length);
   }, []);
-  //@ts-ignore
+
   const previousImage = useCallback(() => {
     setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
   }, []);
+  <button onClick={previousImage}>Previous</button>
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
