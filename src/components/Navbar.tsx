@@ -100,10 +100,10 @@ export default function Navbar() {
 
       <div className="max-w-auto mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
         <div className="flex items-center space-x-2">
-          <Link href="/">
+          <Link href="/" className='flex justify-between'>
             <Image className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" width={32} height={32} />
+            <span className="text-2xl font-extrabold text-black tracking-wide ml-2">Helper Buddy</span>
           </Link>
-          <span className="text-2xl font-extrabold text-black tracking-wide">Helper Buddy</span>
         </div>
 
         <div className="hidden md:flex flex-1 justify-center relative">
