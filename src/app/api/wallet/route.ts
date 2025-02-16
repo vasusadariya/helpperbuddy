@@ -3,11 +3,16 @@ import prisma from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "../auth/[...nextauth]/options"
 
-const REFERRAL_BONUS = 50; // ₹50 referral bonus
-const MIN_PURCHASE_FOR_REFERRAL = 100; // Minimum purchase amount to trigger referral bonus
+const MIN_PURCHASE_FOR_REFERRAL = 100;
 
 export async function POST(request: NextRequest) {
   try {
+    const result1: { variable_value: number }[] = await prisma.$queryRaw`
+              SELECT variable_value FROM system_config 
+              WHERE variable_name = 'referral'
+            `
+        const config = result1[0]
+        const REFERRAL_BONUS = config.variable_value;
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -176,7 +181,7 @@ export async function GET() {
     const wallet = await prisma.wallet.findUnique({
       where: { userId },
       include: {
-        transaction: {
+        Transaction: {
           orderBy: {
             createdAt: 'desc'
           },
@@ -198,7 +203,7 @@ export async function GET() {
       data: {
         wallet : {
           balance: wallet?.balance || 0,
-          transactions: wallet?.transaction || []
+          transactions: wallet?.Transaction || []
         },
         timestamp: currentUTCTime
       }
