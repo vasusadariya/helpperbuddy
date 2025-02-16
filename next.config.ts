@@ -3,7 +3,13 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
-    domains: ['assets.zyrosite.com','img.freepik.com'], // Add this domain
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "files.edgestore.dev",
+      },
+    ],
+    domains: ['assets.zyrosite.com', 'img.freepik.com'], // Add this domain
   },
 };
 
