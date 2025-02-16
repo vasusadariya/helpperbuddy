@@ -196,7 +196,7 @@ const Footer: React.FC = () => {
             <p className="text-gray-400 mb-4">
               HelperBuddy offers professional house, office, and AC cleaning services across India, delivering top-quality, eco-friendly solutions tailored to your needs. Our trusted team ensures your spaces are spotless, fresh, and well-maintained.
             </p>
-            <Link href="/contact" className="text-emerald-500 hover:text-emerald-400 transition-colors">
+            <Link href="/contactus" className="text-emerald-500 hover:text-emerald-400 transition-colors">
               Contact Us →
             </Link>
           </div>

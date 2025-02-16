@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 4;
 
 export async function GET(req: Request) {
 	const { searchParams } = new URL(req.url);
@@ -12,10 +12,11 @@ export async function GET(req: Request) {
 	const results = await prisma.blog.findMany({
 		take,
 		skip,
+		where: { isActive: true },
 		orderBy: { createdAt: 'desc' },
 	});
 
-	const total = await prisma.blog.count();
+	const total = await prisma.blog.count({ where: { isActive: true } });
 
 	return NextResponse.json({
 		data: results,

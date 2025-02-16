@@ -28,6 +28,7 @@ export default function AdminAnalytics() {
         setTrafficData(trafficJson);
       } catch (err) {
         setError("Error loading analytics data.");
+        console.error("Error loading analytics data:", err);
       } finally {
         setLoading(false);
       }

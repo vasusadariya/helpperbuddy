@@ -62,7 +62,7 @@ export default function HeroSection() {
   const nextImage = useCallback(() => {
     setCurrentImage((prev) => (prev + 1) % images.length);
   }, []);
-
+  //@ts-ignore
   const previousImage = useCallback(() => {
     setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
   }, []);
@@ -118,10 +118,11 @@ export default function HeroSection() {
                 <Image
                   src={images[currentImage]}
                   alt={`Carousel image ${currentImage + 1}`}
-                  fill
                   className="object-cover opacity-80"
                   priority
                   sizes="100vw"
+                  height={600}
+                  width={1600}
                 />
                 <div className="absolute inset-0 bg-black/20" /> {/* Consistent overlay */}
               </div>

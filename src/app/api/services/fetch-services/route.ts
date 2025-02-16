@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
   
   try {

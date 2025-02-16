@@ -28,7 +28,7 @@ export default function TestimonialsSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">What Our Customers Say</h2>
-          <p className="mt-4 text-xl text-gray-600">Don't just take our word for it</p>
+          <p className="mt-4 text-xl text-gray-600">Don&apos;t just take our word for it</p>
         </div>
         <div className="mt-12 grid gap-8 md:grid-cols-3">
           {testimonials.map((testimonial, index) => (
@@ -40,7 +40,7 @@ export default function TestimonialsSection() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
               <div className="p-6">
-                <p className="text-gray-600 italic mb-4">"{testimonial.quote}"</p>
+                <p className="text-gray-600 italic mb-4">&quot;{testimonial.quote}</p>
                 <div className="flex items-center">
                   <Image
                     src={testimonial.image || "/placeholder.svg"}

@@ -96,7 +96,7 @@ export default function SignIn() {
           >
             Sign in with Google
           </button>
-          <p className="pt-5">Don't have an account? <Link href="/signup" className="text-blue-600 hover:underline">
+          <p className="pt-5">Don&apos;t have an account?{" "} <Link href="/signup" className="text-blue-600 hover:underline">
              Sign up
           </Link></p>
         </div>
@@ -105,7 +105,13 @@ export default function SignIn() {
   );
 }
 
-function LabelledInput({ label, type, onChange }: { label: string; type: string; onChange: (e: any) => void }) {
+interface LabelledInputProps {
+  label: string;
+  type: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+function LabelledInput({ label, type, onChange }: LabelledInputProps) {
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700">{label}</label>

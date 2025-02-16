@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     const missingFields = Object.entries(requiredFields)
       .filter(([_, value]) => !value)
       .map(([field]) => field);
+      console.log(__dirname);
 
     if (missingFields.length > 0) {
       return NextResponse.json({ 

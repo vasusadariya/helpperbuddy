@@ -30,6 +30,12 @@ interface RazorpayResponse {
   razorpay_signature: string;
 }
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function PaymentPage({ params }: { params: { orderId: string } }) {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
@@ -145,8 +151,8 @@ export default function PaymentPage({ params }: { params: { orderId: string } })
     };
 
     try {
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
+      const rzp = new (window).Razorpay(options);
+      rzp.on('payment.failed', function (response: { error: { code: string; description: string; source: string; step: string; reason: string; metadata: { order_id: string; payment_id: string; } } }) {
         console.error('Payment failed:', response.error);
         setError('Payment failed. Please try again.');
         setProcessingPayment(false);
