@@ -16,11 +16,12 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
 console.log(razorpay);
-// Types
-type ReferralResult = {
-  wallet: Wallet
-  transaction: Transaction
-} | null
+
+// type ReferralResult = {
+//   wallet: Wallet
+//   transaction: Transaction
+// } | null
+
 type WebhookEvent = {
   event: string;
   payload: {

@@ -457,10 +457,9 @@ export async function POST(req: NextRequest) {
     // Handle Razorpay errors
     if (error && typeof error === 'object' && 'statusCode' in error) {
       return NextResponse.json({
-        //@ts-ignore
         success: false,
         error: "Payment gateway error",
-        details: (error as any).description || "Error processing payment",
+        details: (error as { description?: string }).description || "Error processing payment",
         timestamp: currentUTCTime,
       }, { status: 400 });
     }

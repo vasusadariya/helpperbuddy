@@ -22,7 +22,7 @@ export async function GET(
         phoneno: true,
         createdAt: true,
         referralCode: true,
-        Wallet: true
+        wallet: true
       }
     });
 
@@ -57,7 +57,7 @@ export async function PATCH(
         phoneno: true,
         createdAt: true,
         referralCode: true,
-        Wallet: true
+        wallet: true
       }
     });
 
