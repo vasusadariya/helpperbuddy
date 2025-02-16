@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const messages = await prisma.$queryRaw`
       SELECT * FROM "ContactMessage" ORDER BY "createdAt" DESC

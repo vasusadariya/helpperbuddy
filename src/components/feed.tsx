@@ -7,7 +7,7 @@ import { Pagination } from './pagination';
 import { Blog } from '@prisma/client';
 
 const PAGE_SIZE = 10;
-
+console.log(PAGE_SIZE);
 export const BlogFeed = () => {
 	const searchParams = useSearchParams();
 	const page = Number(searchParams.get('page')) || 1;

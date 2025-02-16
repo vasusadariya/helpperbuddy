@@ -21,6 +21,7 @@ const validateServerDateTime = (
     // Parse the incoming ISO date string
     const selectedDateTime = new Date(dateTimeString);
     const now = new Date();
+    console.log("Selected date and time:", selectedDateTime, timeString);
 
     // Check if the date and time are valid
     if (isNaN(selectedDateTime.getTime())) {
@@ -59,6 +60,7 @@ const validateServerDateTime = (
 
     return { isValid: true };
   } catch (error) {
+    console.error("Error validating date and time:", error);
     return {
       isValid: false,
       error: "Please select a valid date and time",
@@ -66,7 +68,7 @@ const validateServerDateTime = (
   }
 };
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const currentUTCTime = new Date()
@@ -455,6 +457,7 @@ export async function POST(req: NextRequest) {
     // Handle Razorpay errors
     if (error && typeof error === 'object' && 'statusCode' in error) {
       return NextResponse.json({
+        //@ts-ignore
         success: false,
         error: "Payment gateway error",
         details: (error as any).description || "Error processing payment",
@@ -522,7 +525,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const updateData: any = { status };
+      const updateData: { status: string; razorpayPaymentId?: string; paidAt?: Date } = { status };
 
       if (status === "COMPLETED" && razorpayPaymentId) {
         updateData.razorpayPaymentId = razorpayPaymentId;

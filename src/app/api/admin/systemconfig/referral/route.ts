@@ -3,11 +3,11 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const result = await prisma.$queryRaw`
+    const result: { variable_value: number }[] = await prisma.$queryRaw`
       SELECT variable_value FROM system_config 
       WHERE variable_name = 'referral'
     `
-    const config = (result as any[])[0]
+    const config = result[0]
 
     if (!config) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function PATCH(request: Request) {
       )
     }
 
-    const result = await prisma.$queryRaw`
+    const result: { variable_value: number }[] = await prisma.$queryRaw`
       INSERT INTO system_config (variable_name, variable_value, "updatedAt")
       VALUES ('referral', ${variable_value}, '2025-02-15 22:28:22'::timestamp)
       ON CONFLICT (variable_name)
@@ -50,7 +50,7 @@ export async function PATCH(request: Request) {
       RETURNING variable_value
     `
     // Return just the number value
-    return NextResponse.json((result as any[])[0].variable_value)
+    return NextResponse.json((result)[0].variable_value)
 
   } catch (error) {
     console.error(error)

@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 
 const articles = [
   {
@@ -55,10 +56,12 @@ const LatestArticles = () => {
           {/* Featured Article */}
           <Link href={`/blogs/${articles[0].id}`} className="relative group">
             <div className="relative h-[600px] overflow-hidden rounded-2xl">
-              <img
+              <Image
                 src={articles[0].image}
                 alt={articles[0].title}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                height={600}
+                width={1200}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-0 p-8 text-white">
@@ -83,10 +86,12 @@ const LatestArticles = () => {
                 className="flex gap-6 group hover:bg-white rounded-xl p-3 transition-colors"
               >
                 <div className="w-1/3 h-[120px] overflow-hidden rounded-xl flex-shrink-0">
-                  <img
+                  <Image
                     src={article.image}
                     alt={article.title}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    height={120}
+                    width={120}
                   />
                 </div>
                 <div className="w-2/3 space-y-3">

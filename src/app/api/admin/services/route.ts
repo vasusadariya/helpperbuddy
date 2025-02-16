@@ -15,9 +15,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
-        let { name, description, price, category, image } = await request.json();
+        const { name, description, category, image } = await request.json();
+        let { price } = await request.json();
         price = parseFloat(price);
-
         const result = await prisma.$queryRaw<{ enum_range: string[] }[]>`
             SELECT enum_range(NULL::"Category") AS enum_range;
         `;

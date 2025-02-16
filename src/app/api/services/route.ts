@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Category } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
     try {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
         }
         else if (category && category !== 'all' && query.length == 0) {
             services = await prisma.service.findMany({
-                where: { category: category as any },
+                where: { category: category as Category },
             });
         }
         else if (query) {
