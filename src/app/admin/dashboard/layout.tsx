@@ -1,60 +1,93 @@
-'use client';
-
+// app/admin/dashboard/layout.tsx
+'use client'
+import { ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Plus, Users, FileText, Wallet } from 'lucide-react';
+import { ChevronDown, Home, Users, BookOpen, Gift, Wallet, Settings } from 'lucide-react';
+import { useState } from 'react';
 
-const Sidebar = ({ children }: { children: React.ReactNode }) => {
-  const pathname = usePathname();
-  
-  const menuItems = [
-    { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/dashboard/addservices', label: 'Add Service', icon: Plus },
-    { href: '/admin/dashboard/manage-partners', label: 'Manage Partners', icon: Users },
-    { href: '/admin/dashboard/add-blog', label: 'Add Blog', icon: FileText },
-    { href: '/admin/dashboard/wallet', label: 'Wallet & Referral', icon: Wallet },
+interface SidebarItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  subItems?: { name: string; href: string; }[];
+}
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+
+  const sidebarItems: SidebarItem[] = [
+    { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
+    { name: 'Services', href: '/admin/dashboard/services', icon: Settings },
+    { 
+      name: 'Users', 
+      href: '#',
+      icon: Users,
+      subItems: [
+        { name: 'Service Providers', href: '/admin/dashboard/users/providers' },
+        { name: 'Customers', href: '/admin/dashboard/users/customers' }
+      ]
+    },
+    { name: 'Blogs', href: '/admin/dashboard/blogs', icon: BookOpen },
+    { name: 'Referrals', href: '/admin/dashboard/referrals', icon: Gift },
+    { name: 'Wallet', href: '/admin/dashboard/wallet', icon: Wallet },
   ];
 
   return (
-    <div className="flex h-screen">
-      <div className="w-64 bg-gray-900 text-white p-4">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-lg">
+        <div className="p-4 border-b">
+          <h2 className="text-xl font-semibold">Admin Dashboard</h2>
         </div>
-        <nav>
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
-            return (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                className={`flex items-center gap-4 p-3 rounded-lg mb-2 transition-colors ${
-                  isActive 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-300 hover:bg-gray-800'
-                }`}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+        <nav className="mt-4">
+          {sidebarItems.map((item) => (
+            <div key={item.name}>
+              {item.subItems ? (
+                <div>
+                  <button
+                    onClick={() => setExpandedItem(expandedItem === item.name ? null : item.name)}
+                    className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  >
+                    <item.icon className="w-5 h-5 mr-2" />
+                    <span>{item.name}</span>
+                    <ChevronDown className={`ml-auto w-4 h-4 transform transition-transform ${
+                      expandedItem === item.name ? 'rotate-180' : ''
+                    }`} />
+                  </button>
+                  {expandedItem === item.name && (
+                    <div className="pl-8 bg-gray-50">
+                      {item.subItems.map((subItem) => (
+                        <Link
+                          key={subItem.name}
+                          href={subItem.href}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          {subItem.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href={item.href}
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                >
+                  <item.icon className="w-5 h-5 mr-2" />
+                  <span>{item.name}</span>
+                </Link>
+              )}
+            </div>
+          ))}
         </nav>
       </div>
-      <div className="flex-1 overflow-auto bg-gray-100">
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
         <div className="p-8">
           {children}
         </div>
       </div>
     </div>
   );
-};
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <Sidebar>{children}</Sidebar>;
 }
