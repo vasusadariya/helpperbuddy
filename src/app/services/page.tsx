@@ -1,5 +1,7 @@
 "use client";
 
+import Navbar from "@/components/Navbar"
+import Footer from "@/components/Footer"
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -133,7 +135,9 @@ export default function ServicesPage() {
     const params = new URLSearchParams();
     if (query) params.set("query", query);
     if (category && category !== "all") params.set("category", category);
-    router.push(`/services?${params.toString()}`);
+    
+    // Replace the current history state instead of pushing a new one
+    router.replace(`/services?${params.toString()}`);
   };
 
   const addToCart = (service: Service) => {
@@ -280,7 +284,7 @@ export default function ServicesPage() {
         clearCart();
 
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        router.push(`/user/dashboard`);
+        router.push('/user/dashboard');
       } else {
         throw new Error("Failed to create one or more orders");
       }

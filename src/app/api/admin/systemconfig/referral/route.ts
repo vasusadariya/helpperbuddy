@@ -38,6 +38,11 @@ export async function PATCH(request: Request) {
         { error: 'variable_value must be a number' },
         { status: 400 }
       )
+    } else if (variable_value > 1000 || variable_value < 0) {
+      return NextResponse.json(
+        { error: 'variable_value must be less than 1000' },
+        { status: 400 }
+      )
     }
 
     const result: { variable_value: number }[] = await prisma.$queryRaw`
