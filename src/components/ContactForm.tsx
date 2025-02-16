@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { Loader2, Send, CheckCircle } from "lucide-react";
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
@@ -38,47 +39,117 @@ export default function ContactForm() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-md">
-      <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
-      {success && <p className="text-green-500">Message sent successfully!</p>}
-      {error && <p className="text-red-500">{error}</p>}
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 lg:p-12">
+      <div className="mx-auto max-w-screen-xl">
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Left Column - Contact Information */}
+          <div className="flex flex-col justify-center space-y-8 p-4 lg:p-8">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+                Get in Touch
+              </h1>
+              <p className="mt-4 text-lg text-gray-600">
+                We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+              </p>
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          name="name"
-          placeholder="Your Name"
-          value={formData.name}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="Your Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
-        <textarea
-          name="message"
-          placeholder="Your Message"
-          value={formData.message}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          rows={4}
-          required
-        />
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white p-2 rounded"
-          disabled={loading}
-        >
-          {loading ? "Sending..." : "Send Message"}
-        </button>
-      </form>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Email</h3>
+                <p className="mt-2 text-gray-600">hello@helperbuddy.in</p>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Office</h3>
+                <p className="mt-2 text-gray-600">Amroli Cross Rd, near Santosh Electronics, Bhagu Nagar-1, Amroli, Surat, Gujarat 394107.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Contact Form */}
+          <div className="bg-white p-6 shadow-lg rounded-2xl sm:p-8 lg:p-12">
+            {success && (
+              <div className="mb-8 bg-green-50 rounded-xl p-6 flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+                <p className="text-green-700 text-base font-medium">Message sent successfully!</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-8 bg-red-50 rounded-xl p-6">
+                <p className="text-red-800 text-base font-medium">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="space-y-3">
+                <label htmlFor="name" className="block text-base font-medium text-gray-900">
+                  Name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  name="name"
+                  placeholder="Your full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="block w-full rounded-xl border border-gray-200 px-6 py-4 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  required
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label htmlFor="email" className="block text-base font-medium text-gray-900">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="block w-full rounded-xl border border-gray-200 px-6 py-4 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  required
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label htmlFor="message" className="block text-base font-medium text-gray-900">
+                  Message
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  placeholder="How can we help you?"
+                  value={formData.message}
+                  onChange={handleChange}
+                  rows={6}
+                  className="block w-full rounded-xl border border-gray-200 px-6 py-4 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-gray-900 px-6 py-4 text-base font-semibold text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5" />
+                    <span>Send Message</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 'use client';
 import React, { useState } from "react";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 interface PincodeValidation {
   pincode: string;
@@ -8,79 +10,112 @@ interface PincodeValidation {
   state?: string;
 }
 
+interface LabelledInputProps {
+  label: string;
+  type: string;
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  pattern?: string;
+  placeholder?: string;
+}
+
+function LabelledInput({ 
+  label, 
+  type, 
+  name, 
+  value, 
+  onChange, 
+  pattern, 
+  placeholder 
+}: LabelledInputProps) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-gray-900">
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        pattern={pattern}
+        placeholder={placeholder}
+        className="block w-full rounded-lg border border-gray-200 px-4 py-3 text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:text-sm"
+        required
+      />
+    </div>
+  );
+}
+
 export default function PartnerRegister() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     pincodes: "",
-    phoneno: "", // Added phone number field
+    phoneno: "",
   });
-
   const [validatedPincodes, setValidatedPincodes] = useState<PincodeValidation[]>([]);
-const [isValidating, setIsValidating] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [error, setError] = useState("");
 
-const validatePincode = async (pincode: string): Promise<PincodeValidation> => {
-  // Strictly allow only 6-digit numeric pincodes
-  if (!/^\d{6}$/.test(pincode)) {
-    return { pincode, isValid: false };
-  }
-
-  try {
-    const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
-    const data = await response.json();
-
-    if (data[0]?.Status === "Success") {
-      const postOffice = data[0].PostOffice?.[0];
-      return postOffice
-        ? {
-            pincode,
-            isValid: true,
-            district: postOffice.District,
-            state: postOffice.State,
-          }
-        : { pincode, isValid: false };
+  const validatePincode = async (pincode: string): Promise<PincodeValidation> => {
+    if (!/^\d{6}$/.test(pincode)) {
+      return { pincode, isValid: false };
     }
 
-    return { pincode, isValid: false };
-  } catch {
-    return { pincode, isValid: false };
-  }
-};
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
 
-const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  setFormData({ ...formData, pincodes: value });
+      if (data[0]?.Status === "Success") {
+        const postOffice = data[0].PostOffice?.[0];
+        return postOffice
+          ? {
+              pincode,
+              isValid: true,
+              district: postOffice.District,
+              state: postOffice.State,
+            }
+          : { pincode, isValid: false };
+      }
+      return { pincode, isValid: false };
+    } catch {
+      return { pincode, isValid: false };
+    }
+  };
 
-  if (value) {
-    setIsValidating(true);
-    
-    // Split, trim, and filter only valid 6-digit pincodes
-    const pincodes = value
-      .split(",")
-      .map(p => p.trim())
-      .filter(p => /^\d{6}$/.test(p)); // Only keep valid 6-digit numbers
+  const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, pincodes: value });
 
-    const validations = await Promise.all(pincodes.map(validatePincode));
-    setValidatedPincodes(validations);
-    setIsValidating(false);
-  } else {
-    setValidatedPincodes([]);
-  }
-};
+    if (value) {
+      setIsValidating(true);
+      const pincodes = value
+        .split(",")
+        .map(p => p.trim())
+        .filter(p => /^\d{6}$/.test(p));
 
+      const validations = await Promise.all(pincodes.map(validatePincode));
+      setValidatedPincodes(validations);
+      setIsValidating(false);
+    } else {
+      setValidatedPincodes([]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     if (validatedPincodes.some(p => !p.isValid)) {
-      alert("Please fix invalid pincodes before submitting");
+      setError("Please fix invalid pincodes before submitting");
       return;
     }
 
-    // Validate phone number
     if (!/^\d{10}$/.test(formData.phoneno)) {
-      alert("Please enter a valid 10-digit phone number");
+      setError("Please enter a valid 10-digit phone number");
       return;
     }
 
@@ -98,123 +133,144 @@ const handlePincodeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
       const data = await response.json();
       if (response.ok) {
-        window.location.href = "./check-your-mail"; // Redirect to service selection page
+        window.location.href = "./check-your-mail";
       } else {
-        alert(data.error);
+        setError(data.error);
       }
     } catch (error) {
       console.error("Registration error:", error);
-      alert("Something went wrong!");
+      setError("Something went wrong!");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-3xl p-8 bg-white border border-gray-200 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">Partner Registration</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+        <div className="w-full max-w-xl">
+          <div className="rounded-2xl bg-white p-8 shadow-lg">
+            <div className="mb-8">
+              <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+                Partner Registration
+              </h2>
+              <p className="mt-2 text-center text-sm text-gray-600">
+                Join our network of service providers
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
-          </div>
+            {error && (
+              <div className="mb-6 rounded-lg bg-red-50 p-4">
+                <p className="text-sm font-medium text-red-800">{error}</p>
+              </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
+                <LabelledInput
+                  label="Full Name"
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter your full name"
+                />
+                
+                <LabelledInput
+                  label="Email address"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="you@example.com"
+                />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-              <input
-                type="tel"
-                name="phoneno"
-                pattern="[0-9]{10}"
-                value={formData.phoneno}
-                onChange={(e) => setFormData({ ...formData, phoneno: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="10-digit mobile number"
-                required
-              />
-            </div>
-          </div>
+                <LabelledInput
+                  label="Password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Enter a strong password"
+                />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Pincodes</label>
-            <input
-              type="text"
-              name="pincodes"
-              placeholder="Enter comma-separated pincodes"
-              value={formData.pincodes}
-              onChange={handlePincodeChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
+                <LabelledInput
+                  label="Phone Number"
+                  type="tel"
+                  name="phoneno"
+                  pattern="[0-9]{10}"
+                  value={formData.phoneno}
+                  onChange={(e) => setFormData({ ...formData, phoneno: e.target.value })}
+                  placeholder="10-digit mobile number"
+                />
 
-          {isValidating && (
-            <div className="text-blue-600">Validating pincodes...</div>
-          )}
-
-          {validatedPincodes.length > 0 && (
-            <div className="space-y-2">
-              {validatedPincodes.map((validation, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${
-                    validation.isValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                  }`}
-                >
-                  <span className="font-medium">{validation.pincode}</span>
-                  {validation.isValid ? (
-                    <span className="ml-2">
-                      ✓ Valid ({validation.district}, {validation.state})
-                    </span>
-                  ) : (
-                    <span className="ml-2">
-                      ✗ Invalid pincode
-                    </span>
-                  )}
+                <div className="space-y-2">
+                  <LabelledInput
+                    label="Service Areas (Pincodes)"
+                    type="text"
+                    name="pincodes"
+                    value={formData.pincodes}
+                    onChange={handlePincodeChange}
+                    placeholder="Enter comma-separated pincodes, e.g. 400001, 400002"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Enter the pincodes of areas where you'll provide services, separated by commas
+                  </p>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg"
-          >
-            Register as Partner
-          </button>
-        </form>
+              {isValidating && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Validating pincodes...</span>
+                </div>
+              )}
+
+              {validatedPincodes.length > 0 && (
+                <div className="space-y-2">
+                  {validatedPincodes.map((validation, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center rounded-lg p-3 text-sm ${
+                        validation.isValid 
+                          ? 'bg-green-50 text-green-800' 
+                          : 'bg-red-50 text-red-800'
+                      }`}
+                    >
+                      <span className="font-medium">{validation.pincode}</span>
+                      {validation.isValid ? (
+                        <span className="ml-2">
+                          ✓ Valid ({validation.district}, {validation.state})
+                        </span>
+                      ) : (
+                        <span className="ml-2">
+                          ✗ Invalid pincode
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  className="w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+                >
+                  Register as Partner
+                </button>
+              </div>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-gray-600">
+              Already registered?{" "}
+              <Link
+                href="/signin"
+                className="font-medium text-gray-900 hover:text-gray-700 hover:underline"
+              >
+                Sign in to your account
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
