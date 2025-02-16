@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./provider";
 import { CartProvider } from "./context/CartContext";
+import { EdgeStoreProvider } from "../lib/edgestore";
 import { Toaster } from "react-hot-toast";
 import Loader from "@/components/Loader";
 import { useState, useEffect } from "react";
@@ -16,11 +17,9 @@ function RootLayoutClient({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Force the loader to stay for at least 2 seconds
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 10);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -34,10 +33,12 @@ function RootLayoutClient({
           {isLoading ? (
             <Loader />
           ) : (
-            <CartProvider>
-              <Toaster position="top-center" />
-              {children}
-            </CartProvider>
+            <EdgeStoreProvider>
+              <CartProvider>
+                <Toaster position="top-center" />
+                {children}
+              </CartProvider>
+            </EdgeStoreProvider>
           )}
         </body>
       </Providers>
