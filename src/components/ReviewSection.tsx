@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 const reviews = [
   {
@@ -99,10 +100,12 @@ export default function ReviewSection() {
                   >
                     <div className="bg-white rounded-2xl p-8 shadow-lg h-full">
                       <div className="flex items-center gap-4 mb-4">
-                        <img
+                        <Image
                           src={review.image}
                           alt={review.name}
                           className="w-12 h-12 rounded-full object-cover"
+                          width={48}
+                          height={48}
                         />
                         <div>
                           <h3 className="font-semibold">{review.name}</h3>

@@ -17,7 +17,8 @@ export default function AdminDashboard() {
                 const data = await res.json();
                 setPendingAdmins(data.users || []);
             } catch (err) {
-                setError("Error loading pending admins.");
+                setError("Error loading pending admins.");  
+                console.error(err);
             } finally {
                 setLoading(false);
             }
@@ -41,6 +42,7 @@ export default function AdminDashboard() {
             setPendingAdmins(pendingAdmins.filter((user) => user.id !== userId));
         } catch (err) {
             alert(`Error: Could not ${action} admin.`);
+            console.error(err);
         } finally {
             setProcessing(null);
         }

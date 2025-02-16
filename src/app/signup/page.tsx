@@ -35,7 +35,9 @@ export default function Signup() {
       let data;
       try {
         data = await res.json();
+        console.log("Signup response:", data);
       } catch (error) {
+        console.error("Signup response is not JSON:", error);
         setErrorMessage("Invalid server response. Please try again.");
         return;
       }

@@ -11,7 +11,7 @@ type ProfileFormData = {
 
 export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<any>(null); // Replace with your user type
+  const [user, setUser] = useState<{ email: string; phoneNo: string } | null>(null); // Replace with your user type
   const { register, handleSubmit, formState: { errors } } = useForm<ProfileFormData>();
 
   const onSubmit = async (data: ProfileFormData) => {

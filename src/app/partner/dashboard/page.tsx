@@ -62,7 +62,6 @@ interface PartnerService {
 }
 
 export default function PartnerDashboard() {
-  const [services, setServices] = useState<Service[]>([]);
   const [partnerServices, setPartnerServices] = useState<PartnerService[]>([]);
   const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
   const [acceptedOrders, setAcceptedOrders] = useState<Order[]>([]);
@@ -71,7 +70,8 @@ export default function PartnerDashboard() {
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);  // Track errors
 
-
+  console.log(partnerServices);
+  console.log(setPartnerServices);
   const fetchPartnerData = async () => {
     try {
       const response = await fetch("/api/partner");

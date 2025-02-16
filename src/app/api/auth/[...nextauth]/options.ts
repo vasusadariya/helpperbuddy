@@ -1,6 +1,8 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions, User as NextAuthUser } from "next-auth";
+import { Session as NextAuthSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import { JWT } from "next-auth/jwt";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -32,7 +34,19 @@ async function ensureWalletExists(userId: string) {
     }
 }
 
-export const authOptions = {
+interface User extends NextAuthUser {
+    role: string;
+}
+interface Session extends NextAuthSession {
+    user: {
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+        role: string | null;
+    };
+}
+
+export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -40,7 +54,7 @@ export const authOptions = {
                 email: { label: "Email", type: "text", placeholder: "email@example.com" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials) {
+            async authorize(credentials): Promise<User | null> {
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error("Email and password are required.");
                 }
@@ -80,9 +94,9 @@ export const authOptions = {
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            async profile(profile) {
-                let user = await prisma.user.findUnique({ where: { email: profile.email } });
-                let partner = await prisma.partner.findUnique({ where: { email: profile.email } });
+            async profile(profile): Promise<User> {
+                const user = await prisma.user.findUnique({ where: { email: profile.email } });
+                const partner = await prisma.partner.findUnique({ where: { email: profile.email } });
 
                 // Validate Admin Email Format
                 const isAdminPattern = /^hbadmin[\w\d]+@gmail\.com$/.test(profile.email);
@@ -110,7 +124,7 @@ export const authOptions = {
                         email: profile.email,
                         name: profile.name,
                         role: "USER", // Always create as USER, handle admin status separately
-                        password: profile.password, // Set a default or random password
+                        password: "", // Set a default or random password
                         referralCode: Math.random().toString(36).substring(7),
                     },
                 });
@@ -121,20 +135,25 @@ export const authOptions = {
         }),
     ],
     callbacks: {
-        async session({ session, token }: { session: any; token: any }) {
-            session.user.role = token.role;
+        //@ts-ignore
+        async session({ session, token }: { session: Session; token: JWT }) {
+            if (!session.user) {
+                session.user = { name: null, email: null, image: null, role: token.role as string };
+            } else {
+                session.user = { ...session.user, role: token.role as string };
+            }
             return session;
         },
-        async jwt({ token, user }: { token: any; user?: any }) {
+        async jwt({ token, user}: { token: JWT; user?: User | NextAuthUser }) {
             if (user) {
-                token.role = user.role;
+                token.role = (user as User).role;
             }
             return token;
         },
-        async signIn({ user }: { user: any }) {
+        async signIn({ user, account, profile, email, credentials }: { user: User | NextAuthUser; account: any; profile?: any; email?: any; credentials?: any }) {
             try {
                 if (!user) return false; // Prevent login for new users
-                if (user.role === "USER") {
+                if ((user as User).role === "USER") {
                     await ensureWalletExists(user.id);
                 }
                 return true;
@@ -144,8 +163,7 @@ export const authOptions = {
             }
         },
         async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-            if (url.startsWith("/")) return `${baseUrl}${url}`;
-            return baseUrl;
+            return url.startsWith("/") ? `${baseUrl}${url}` : baseUrl;
         },
     },
     pages: {

@@ -19,7 +19,7 @@ export function SingleImageDropzone({ width, height, value, onChange }:
     return (
         <div {...getRootProps()} className="p-4 border rounded-lg cursor-pointer text-center">
             <input {...getInputProps()} />
-            {imageUrl ? <img src={imageUrl} alt="Preview" className="mx-auto" width={width} height={height} /> : <p>Drag & drop or click to upload</p>}
+            {imageUrl ? <Image src={imageUrl} alt="Preview" className="mx-auto" width={width} height={height} /> : <p>Drag & drop or click to upload</p>}
         </div>
     );
 }

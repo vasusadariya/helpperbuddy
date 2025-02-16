@@ -4,9 +4,9 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 import { sendOrderAcceptanceEmail } from "../../services/emailServices/route";
 
-interface OrderAcceptanceEmailData {
-  orderId: string;
-}
+// interface OrderAcceptanceEmailData {
+// orderId: string;
+// }
 
 interface ServiceData {
   name: string;

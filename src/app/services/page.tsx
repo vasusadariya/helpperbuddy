@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 import { toast, Toaster } from "react-hot-toast";
 import { format } from "date-fns";
 import CheckoutModal from "@/components/CheckoutModal";
-import { validateDateTime, validateDateTimeForServices } from "@/lib/utils/validation";
+import { validateDateTime,validateDateTimeForServices } from "@/lib/utils/validation";
+import Image from "next/image";
 
 interface Service {
   id: string;
@@ -47,9 +48,8 @@ export default function ServicesPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
   // const [cartServices, setCartServices] = useState<Service[]>([]);
-
+  // console.log(selectedService);
   const [query, setQuery] = useState(searchParams.get("query") || "");
   const [category, setCategory] = useState(
     searchParams.get("category") || "all"
@@ -359,10 +359,12 @@ export default function ServicesPage() {
                 key={service.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden"
               >
-                <img
+                <Image
                   src={service.image || "https://via.placeholder.com/150"}
                   alt={service.name}
                   className="w-full h-48 object-cover"
+                  height={150}
+                  width={150}
                 />
                 <div className="p-4">
                   <h3 className="text-lg font-semibold mb-2">{service.name}</h3>
@@ -411,10 +413,12 @@ export default function ServicesPage() {
                     key={item.id}
                     className="flex items-center gap-2 p-2 border-b"
                   >
-                    <img
+                    <Image
                       src={item.image || "https://via.placeholder.com/50"}
                       alt={item.name}
                       className="w-12 h-12 object-cover rounded"
+                      height={50}
+                      width={50}
                     />
                     <div className="flex-1">
                       <h3 className="font-semibold">{item.name}</h3>

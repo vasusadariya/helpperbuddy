@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 export async function GET() {
     try {
         const status = 'PENDING';
-
+        console.log('Fetching PartnerRequestedService with status:', status);
         const services = await prisma.$queryRaw`SELECT * FROM "PartnerRequestedService" WHERE status = 'PENDING' ORDER BY id DESC`;
 
         return NextResponse.json(services, { status: 200 });

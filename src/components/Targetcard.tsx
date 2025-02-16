@@ -10,7 +10,7 @@ const TargetCard: React.FC = () => {
       <div className="flex justify-between items-center mb-4">
         <div>
           <h3 className="text-lg font-semibold">Monthly Target</h3>
-          <p className="text-gray-500">Target you've set for each month</p>
+          <p className="text-gray-500">Target you&apos;ve set for each month</p>
         </div>
         <button>
           <MoreVertical size={20} className="text-gray-400" />
@@ -42,7 +42,7 @@ const TargetCard: React.FC = () => {
       </div>
 
       <p className="text-center text-gray-600">
-        You earn $3287 today, it's higher than last month. Keep up your good work!
+        You earn $3287 today, it&apos;s higher than last month. Keep up your good work!
       </p>
 
       <div className="grid grid-cols-3 gap-4">

@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hash } from 'bcryptjs';
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
 import { authOptions } from "../auth/[...nextauth]/options";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   let session;
@@ -273,7 +272,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Received body:', body);
 
-    let { name, email, password, pincodes, phoneno } = body;
+    const { name, email, password, pincodes, phoneno } = body;
 
     // Check required fields
     if (!name || !email || !password || !pincodes || !phoneno) {
@@ -341,8 +340,12 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
 
-  } catch (error: any) {
-    console.error('Error creating partner:', error.message, error.stack);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error creating partner:', error.message, error.stack);
+    } else {
+      console.error('Error creating partner:', error);
+    }
     return NextResponse.json({ 
       error: 'Error creating partner', 
       details: JSON.stringify(error, null, 2) 

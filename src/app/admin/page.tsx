@@ -19,6 +19,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import Link from 'next/link';
 import TargetCard from '@/components/Targetcard';
+import Image from 'next/image';
 
 // Types
 interface NavItemProps {
@@ -36,7 +37,7 @@ interface StatCardProps {
 
 interface TooltipProps {
   active?: boolean;
-  payload?: any[];
+  payload?: { value: number }[];
   label?: string;
 }
 
@@ -56,7 +57,7 @@ const Sidebar: React.FC = () => (
     <div className="flex items-center p-4 gap-2">
       <div className="w-8 h-8 rounded-lg">
       <Link href="/">
-            <img className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" />
+            <Image className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" height={100} width={100} />
           </Link>
       </div>
       <h1 className="text-xl font-semibold">Helper Buddy</h1>
@@ -119,10 +120,12 @@ const Header: React.FC = () => (
         <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
       </button>
       <div className="flex items-center gap-2">
-        <img
+        <Image
           src="/api/placeholder/32/32"
           alt="User"
           className="w-8 h-8 rounded-full"
+          width={32}
+          height={32}
         />
         <span>Musharof</span>
         <ChevronDown size={16} />
@@ -152,7 +155,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, change }) => (
   </div>
 );
 
-const   CustomTooltip: React.FC<TooltipProps> = ({ active, payload, label }) => {
+const   CustomTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-2 border border-gray-200 rounded-lg shadow-sm">
