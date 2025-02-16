@@ -1,13 +1,14 @@
-// app/admin/dashboard/services/components/ServiceModal.tsx
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { SingleImageDropzone } from '@/components/SingleImageDropzone';
 
 interface ServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ServiceFormData) => void;
+  onSubmit: (data: ServiceFormData, file?: File) => void;
   initialData?: ServiceFormData;
   mode: 'add' | 'edit';
+  isUploading: boolean;
 }
 
 interface ServiceFormData {
@@ -16,6 +17,7 @@ interface ServiceFormData {
   price: number;
   category: string;
   threshold: number;
+  image?: string;
 }
 
 export default function ServiceModal({
@@ -23,7 +25,8 @@ export default function ServiceModal({
   onClose,
   onSubmit,
   initialData,
-  mode
+  mode,
+  isUploading
 }: ServiceModalProps) {
   const [categories, setCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState<ServiceFormData>(
@@ -35,6 +38,7 @@ export default function ServiceModal({
       threshold: 2,
     }
   );
+  const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,11 +64,25 @@ export default function ServiceModal({
     }
   }, [isOpen]);
 
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFile(null);
+      setFormData(initialData || {
+        name: '',
+        description: '',
+        price: 0,
+        category: '',
+        threshold: 2,
+      });
+    }
+  }, [isOpen, initialData]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit(formData, file || undefined);
   };
 
   if (isLoading) {
@@ -93,6 +111,28 @@ export default function ServiceModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Service Image
+            </label>
+            <SingleImageDropzone 
+              width={200} 
+              height={200} 
+              value={file} 
+              onChange={(file) => setFile(file ?? null)}
+            />
+            {initialData?.image && !file && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">Current image:</p>
+                <img 
+                  src={initialData.image} 
+                  alt="Current service" 
+                  className="mt-1 h-32 w-32 object-cover rounded-md"
+                />
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Name
@@ -172,14 +212,21 @@ export default function ServiceModal({
               type="button"
               onClick={onClose}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              disabled={isUploading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:bg-gray-400"
+              disabled={isUploading}
             >
-              {mode === 'add' ? 'Add Service' : 'Save Changes'}
+              {isUploading 
+                ? 'Uploading...' 
+                : mode === 'add' 
+                  ? 'Add Service' 
+                  : 'Save Changes'
+              }
             </button>
           </div>
         </form>

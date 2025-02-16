@@ -1,69 +1,85 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
-const services = [
-  {
-    name: "Home Deep Cleaning",
-    price: "₹2999",
-    description: "Complete home cleaning with premium equipment",
-    image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=400",
-  },
-  {
-    name: "Office Sanitization",
-    price: "₹3999",
-    description: "Professional office cleaning and sanitization",
-    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400",
-  },
-  {
-    name: "AC Service",
-    price: "₹799",
-    description: "Complete AC cleaning and maintenance",
-    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400",
-  },
-  {
-    name: "Carpet Cleaning",
-    price: "₹1499",
-    description: "Deep carpet cleaning and stain removal",
-    image: "https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&q=80&w=400",
-  },
-  {
-    name: "Window Cleaning",
-    price: "₹999",
-    description: "Professional window and glass cleaning",
-    image: "https://images.unsplash.com/photo-1527515862127-a4fc05baf7a5?auto=format&fit=crop&q=80&w=400",
-  }
-];
+interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string | null;
+  category: string;
+}
 
-export default function ServiceSection() {
+const fetchServices = async () => {
+  const res = await fetch('/api/home-page/services');
+  if (!res.ok) throw new Error('Failed to fetch services');
+  return res.json();
+};
+
+const ServiceSection: React.FC = () => {
+  const [services, setServices] = useState<Service[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(true);
   const cardsToShow = 3;
-  const maxIndex = services.length - cardsToShow;
 
-  const nextSlide = () => {
+  useEffect(() => {
+    fetchServices().then(setServices).catch(console.error);
+  }, []);
+
+  const maxIndex = Math.max(0, services.length - cardsToShow);
+
+  const nextSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-  };
+  }, [maxIndex]);
 
-  const prevSlide = () => {
+  const prevSlide = useCallback(() => {
     setCurrentIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
-  };
+  }, [maxIndex]);
+
+  // Auto-sliding functionality
+  useEffect(() => {
+    if (!autoPlay) return;
+
+    const intervalId = setInterval(nextSlide, 5000); // Slide every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [autoPlay, nextSlide]);
+
+  if (!services.length) return null;
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-white dark:bg-gray-900">
       <div className="container mx-auto px-4">
-        <h2 className="text-4xl font-bold text-center mb-12">Our Services</h2>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-center md:text-left dark:text-white">
+            Our Services
+          </h2>
+          <Link
+            href="/services"
+            className="text-black dark:text-white hover:underline mt-4 md:mt-0"
+          >
+            View All
+          </Link>
+        </div>
 
         <div className="relative">
           <div className="flex items-center">
             <button
-              onClick={prevSlide}
-              className="p-2 rounded-full bg-black text-white hover:bg-gray-800 transition-colors z-10"
+              onClick={() => {
+                prevSlide();
+                setAutoPlay(false);
+              }}
+              className="p-2 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors z-10"
+              aria-label="Previous slide"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
+
             <div className="overflow-hidden mx-4 flex-1">
               <motion.div
                 animate={{ x: `${-currentIndex * (100 / cardsToShow)}%` }}
@@ -71,28 +87,44 @@ export default function ServiceSection() {
                 className="flex gap-6"
                 style={{ width: `${(services.length / cardsToShow) * 100}%` }}
               >
-                {services.map((service, index) => (
+                {services.map((service) => (
                   <motion.div
-                    key={index}
+                    key={service.id}
                     whileHover={{ scale: 1.02 }}
-                    className="w-full"
+                    className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 flex-shrink-0"
                   >
-                    <div className="bg-gray-50 rounded-2xl overflow-hidden shadow-lg">
-                      <Image
-                        src={service.image}
-                        alt={service.name}
-                        className="w-full h-48 object-cover"
-                        width={400}
-                        height={200}
-                      />
-                      <div className="p-6">
-                        <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
-                        <p className="text-gray-600 mb-4">{service.description}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xl font-bold">{service.price}</span>
-                          <button className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg h-[400px] flex flex-col">
+                      {service.image ? (
+                        <div className="relative h-48 w-full flex-shrink-0">
+                          <Image
+                            src={service.image}
+                            alt={service.name}
+                            className="object-cover"
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            priority
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-48 bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                      )}
+                      <div className="p-6 flex flex-col flex-grow">
+                        <h3 className="text-lg md:text-xl font-semibold mb-2 dark:text-white">
+                          {service.name}
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-300 flex-grow text-sm md:text-base">
+                          {service.description}
+                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xl md:text-2xl font-bold dark:text-white">
+                            ₹{service.price}
+                          </span>
+                          <Link
+                            href={`/book/${service.id}`}
+                            className="bg-black dark:bg-white text-white dark:text-black px-4 md:px-6 py-2 rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors whitespace-nowrap"
+                          >
                             Book Now
-                          </button>
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -100,9 +132,14 @@ export default function ServiceSection() {
                 ))}
               </motion.div>
             </div>
+
             <button
-              onClick={nextSlide}
-              className="p-2 rounded-full bg-black text-white hover:bg-gray-800 transition-colors z-10"
+              onClick={() => {
+                nextSlide();
+                setAutoPlay(false);
+              }}
+              className="p-2 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors z-10"
+              aria-label="Next slide"
             >
               <ChevronRight className="w-6 h-6" />
             </button>
@@ -111,4 +148,6 @@ export default function ServiceSection() {
       </div>
     </section>
   );
-}
+};
+
+export default ServiceSection;
