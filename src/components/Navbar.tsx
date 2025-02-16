@@ -12,6 +12,7 @@ interface ExtendedSession extends Session {
 }
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
+import Image from 'next/image';
 import { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -36,7 +37,8 @@ export default function Navbar() {
   const [loading, setLoading] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-
+  console.log(results);
+  console.log(loading);
   useEffect(() => {
     const handleScroll = () => setScrolling(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
@@ -99,7 +101,7 @@ export default function Navbar() {
       <div className="max-w-auto mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
         <div className="flex items-center space-x-2">
           <Link href="/">
-            <img className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" />
+            <Image className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" width={32} height={32} />
           </Link>
           <span className="text-2xl font-extrabold text-black tracking-wide">Helper Buddy</span>
         </div>

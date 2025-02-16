@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      let transactions = [mainTransaction];
+      const transactions = [mainTransaction];
 
       // Handle referral bonus if applicable
       if (user.referredBy && type === 'CREDIT' && amount >= MIN_PURCHASE_FOR_REFERRAL) {
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
               where: { id: referrerWallet.id },
               data: { balance: { increment: REFERRAL_BONUS } }
             });
-
+            console.log('Updated referrer wallet:', updatedReferrerWallet);
             const referralBonusTransaction = await tx.transaction.create({
               data: {
                 id: crypto.randomUUID(),
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
@@ -241,10 +241,11 @@ export async function PUT(request: NextRequest) {
     } = await request.json();
 
     // Build where clause for filtering
-    const where: any = { userId };
+    type TransactionType = 'CREDIT' | 'DEBIT' | 'REFERRAL_BONUS';
+    const where: { userId: string; createdAt?: { gte: Date; lte: Date }; type?: TransactionType } = { userId };
 
     if (startDate && endDate) {
-      where.createdAt = {
+      where['createdAt'] = {
         gte: new Date(startDate),
         lte: new Date(endDate)
       };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import Razorpay from "razorpay"
-import { PrismaClient, Transaction, Wallet, Order } from "@prisma/client"
+import { PrismaClient, Transaction, Wallet } from "@prisma/client"
 import crypto from "crypto"
 
 // Constants
@@ -8,20 +8,19 @@ const REFERRAL_BONUS_AMOUNT = 50
 const CURRENCY = "INR"
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000 // 1 second
-
+console.log(CURRENCY);
 // Configuration
 const prisma = new PrismaClient()
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
-
+console.log(razorpay);
 // Types
 type ReferralResult = {
   wallet: Wallet
   transaction: Transaction
 } | null
-
 type WebhookEvent = {
   event: string;
   payload: {

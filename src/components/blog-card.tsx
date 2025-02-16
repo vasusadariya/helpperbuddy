@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import React from 'react';
 import { type Blog } from '@prisma/client';
+import Image from 'next/image';
 
 export const BlogCard = (props: Blog) => {
 	const { title, content, image, author, readTime, createdAt } = props;
@@ -16,12 +17,12 @@ export const BlogCard = (props: Blog) => {
 		<Card className="overflow-hidden rounded-xl bg-white shadow-lg dark:bg-zinc-800">
 			{image && (
 				<div className="relative">
-					<img
+					<Image
 						alt="Blog cover"
 						className="aspect-[3/2] h-64 w-full object-cover"
 						src={image}
-						width="420"
-						height="280"
+						width={420}
+						height={280}
 					/>
 				</div>
 			)}

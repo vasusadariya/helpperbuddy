@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 const services = [
   {
@@ -77,10 +78,12 @@ export default function ServiceSection() {
                     className="w-full"
                   >
                     <div className="bg-gray-50 rounded-2xl overflow-hidden shadow-lg">
-                      <img
+                      <Image
                         src={service.image}
                         alt={service.name}
                         className="w-full h-48 object-cover"
+                        width={400}
+                        height={200}
                       />
                       <div className="p-6">
                         <h3 className="text-xl font-semibold mb-2">{service.name}</h3>

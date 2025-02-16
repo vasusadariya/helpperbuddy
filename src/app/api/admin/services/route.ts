@@ -1,49 +1,59 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from "@/lib/prisma";
+// app/api/admin/services/route.ts
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
 export async function GET() {
-    try {
-        const services = await prisma.service.findMany({
-            orderBy: { createdAt: 'desc' },
-        });
-        return NextResponse.json(services, { status: 200 });
-    } catch (error) {
-        console.error("Error fetching services:", error);
-        return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 });
-    }
+  try {
+    const services = await prisma.service.findMany({
+      include: {
+        ServiceProvider: {
+          include: {
+            Partner: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return NextResponse.json(services);
+  } catch (error) {
+    return NextResponse.json({ error: 'Error fetching services' }, { status: 500 });
+  }
 }
 
-export async function POST(request: NextRequest) {
-    try {
-        let { name, description, price, category, image } = await request.json();
-        price = parseFloat(price);
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { name, description, price, category, threshold } = body;
 
-        const result = await prisma.$queryRaw<{ enum_range: string[] }[]>`
-            SELECT enum_range(NULL::"Category") AS enum_range;
-        `;
-        const categories = result[0]?.enum_range ?? [];
-        
-        if (!categories.includes(category)) {
-            return NextResponse.json(
-                { error: `Invalid category. Must be one of: ${categories.join(', ')}` },
-                { status: 400 }
-            );
-        }
+    const service = await prisma.service.create({
+      data: {
+        name,
+        description,
+        price: Number(price),
+        category,
+        threshold: Number(threshold),
+      },
+      include: {
+        ServiceProvider: {
+          include: {
+            Partner: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-        const newService = await prisma.service.create({
-            data: {
-                name,
-                description,
-                price,
-                category,
-                image
-            }
-        });
-
-        return NextResponse.json({ success: true, service: newService }, { status: 201 });
-    } catch (error) {
-        console.error("Error creating service:", error);
-        const errorMessage = error instanceof Error ? error.message : "Failed to create service";
-        return NextResponse.json({ error: errorMessage }, { status: 500 });
-    }
+    return NextResponse.json(service);
+  } catch (error) {
+    console.error('Error creating service:', error);
+    return NextResponse.json({ error: 'Error creating service' }, { status: 500 });
+  }
 }

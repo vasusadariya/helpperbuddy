@@ -3,7 +3,6 @@
 
 import { useEffect, useState } from "react";
 import {
-
   Clock,
   CheckCircle,
   Wallet,
@@ -16,8 +15,10 @@ import {
   PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
+
 import { calculateCancellationTime } from "@/lib/utils/timeUtils";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
 type DashboardStats = {
   totalOrders: number;
@@ -666,10 +667,12 @@ export default function UserDashboard() {
                                 {/* Partner Profile Image */}
                                 <div className="flex-shrink-0">
                                   {order.Partner.profileImage ? (
-                                    <img
+                                    <Image
                                       src={order.Partner.profileImage}
                                       alt={order.Partner.name}
                                       className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                      width={48}
+                                      height={48}
                                     />
                                   ) : (
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">

@@ -38,17 +38,17 @@ interface NewOrderNotificationData {
   };
 }
 
-interface NotificationResult {
-  success: boolean;
-  summary?: {
-    total: number;
-    successful: number;
-    failed: number;
-    timestamp: string;
-  };
-  error?: string;
-  partnersCount: number;
-}
+// interface NotificationResult {
+//   success: boolean;
+//   summary?: {
+//     total: number;
+//     successful: number;
+//     failed: number;
+//     timestamp: string;
+//   };
+//   error?: string;
+//   partnersCount: number;
+// }
 
 // Required environment variables for main service
 const mainServiceEnvVars = [
