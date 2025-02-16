@@ -20,8 +20,7 @@ export const RiveDemo = () => {
   );
 };
 
-export default function Loading() {
-
+export default function App() {
   return (
     <div className="flex justify-center items-center h-screen bg-black">
       <div className="w-1/2 h-1/2">
