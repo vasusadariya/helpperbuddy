@@ -34,21 +34,11 @@ export const validateDateTime = (
     const minimumBookingTime = new Date(now);
     minimumBookingTime.setHours(minimumBookingTime.getHours() + threshold);
 
-    // Check if booking time meets threshold requirement
-    if (selectedDateTime < minimumBookingTime) {
-      const serviceName = service.name ? `${service.name} ` : '';
-      const formattedThreshold = formatTime(minimumBookingTime);
-      
-      toast.error(
-        `${serviceName}requires ${threshold} hours advance booking. ` +
-        `Earliest available time is ${formattedThreshold}`
-      );
-      return false;
-    }
+    // Check if it's a booking for today
+    const isToday = selectedDateTime.toDateString() === now.toDateString();
 
     // Check if the date is in the past
     if (selectedDateTime < now) {
-      const isToday = selectedDateTime.toDateString() === now.toDateString();
       if (isToday) {
         toast.error("Please select a future time for today's bookings");
       } else {
@@ -58,21 +48,23 @@ export const validateDateTime = (
     }
 
     // Check service hours (8 AM to 8 PM)
-    const hour = selectedDateTime.getHours();
-    if (hour < 8 || hour >= 20) {
+    const bookingHour = selectedDateTime.getHours();
+    const bookingMinutes = selectedDateTime.getMinutes();
+    if (bookingHour < 8 || (bookingHour === 20 && bookingMinutes > 0) || bookingHour > 20) {
       toast.error("Our service hours are between 8:00 AM and 8:00 PM");
       return false;
     }
 
-    // Check if selected time falls within service hours considering threshold
-    const serviceEndTime = new Date(selectedDateTime);
-    serviceEndTime.setHours(20, 0, 0, 0); // 8 PM
-    const serviceEndTimeWithThreshold = new Date(serviceEndTime.getTime() - (threshold * 60 * 60 * 1000));
-
-    if (selectedDateTime > serviceEndTimeWithThreshold) {
-      const lastBookingTime = formatTime(serviceEndTimeWithThreshold);
+    // Only apply threshold check to slots that fall within threshold window
+    const thresholdWindow = new Date(now.getTime() + (threshold * 60 * 60 * 1000));
+    
+    if (isToday && selectedDateTime <= thresholdWindow) {
+      const serviceName = service.name ? `${service.name} ` : '';
+      const formattedThreshold = formatTime(minimumBookingTime);
+      
       toast.error(
-        `Booking too close to closing time. Last booking time for this service is ${lastBookingTime}`
+        `${serviceName}requires ${threshold} hours advance booking. ` +
+        `Earliest available time is ${formattedThreshold}`
       );
       return false;
     }
