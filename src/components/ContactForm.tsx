@@ -39,50 +39,50 @@ export default function ContactForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 lg:p-12">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-6 lg:p-8 rounded-sm">
       <div className="mx-auto max-w-screen-xl">
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Left Column - Contact Information */}
-          <div className="flex flex-col justify-center space-y-8 p-4 lg:p-8">
+          <div className="flex flex-col justify-center space-y-6 p-3 lg:p-6">
             <div>
-              <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                 Get in Touch
               </h1>
-              <p className="mt-4 text-lg text-gray-600">
+              <p className="mt-3 text-lg text-gray-600">
                 We'd love to hear from you. Send us a message and we'll respond as soon as possible.
               </p>
             </div>
-
-            <div className="space-y-6">
+  
+            <div className="space-y-4">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">Email</h3>
-                <p className="mt-2 text-gray-600">hello@helperbuddy.in</p>
+                <h3 className="text-lg font-semibold text-gray-900">Email</h3>
+                <p className="mt-1 text-gray-600">hello@helperbuddy.in</p>
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">Office</h3>
-                <p className="mt-2 text-gray-600">Amroli Cross Rd, near Santosh Electronics, Bhagu Nagar-1, Amroli, Surat, Gujarat 394107.</p>
+                <h3 className="text-lg font-semibold text-gray-900">Office</h3>
+                <p className="mt-1 text-gray-600">Amroli Cross Rd, near Santosh Electronics, Bhagu Nagar-1, Amroli, Surat, Gujarat 394107.</p>
               </div>
             </div>
           </div>
-
+  
           {/* Right Column - Contact Form */}
-          <div className="bg-white p-6 shadow-lg rounded-2xl sm:p-8 lg:p-12">
+          <div className="bg-white p-5 shadow-2xl rounded-2xl sm:p-6 lg:p-8">
             {success && (
-              <div className="mb-8 bg-green-50 rounded-xl p-6 flex items-center gap-3">
-                <CheckCircle className="h-6 w-6 text-green-500" />
+              <div className="mb-6 bg-green-50 rounded-xl p-4 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
                 <p className="text-green-700 text-base font-medium">Message sent successfully!</p>
               </div>
             )}
-
+  
             {error && (
-              <div className="mb-8 bg-red-50 rounded-xl p-6">
+              <div className="mb-6 bg-red-50 rounded-xl p-4">
                 <p className="text-red-800 text-base font-medium">{error}</p>
               </div>
             )}
-
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="space-y-3">
-                <label htmlFor="name" className="block text-base font-medium text-gray-900">
+  
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-900">
                   Name
                 </label>
                 <input
@@ -92,13 +92,13 @@ export default function ContactForm() {
                   placeholder="Your full name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border border-gray-200 px-6 py-4 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="block w-full rounded-xl border border-gray-200 px-4 py-3 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
                   required
                 />
               </div>
-
-              <div className="space-y-3">
-                <label htmlFor="email" className="block text-base font-medium text-gray-900">
+  
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-900">
                   Email
                 </label>
                 <input
@@ -108,13 +108,13 @@ export default function ContactForm() {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full rounded-xl border border-gray-200 px-6 py-4 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="block w-full rounded-xl border border-gray-200 px-4 py-3 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
                   required
                 />
               </div>
-
-              <div className="space-y-3">
-                <label htmlFor="message" className="block text-base font-medium text-gray-900">
+  
+              <div className="space-y-2">
+                <label htmlFor="message" className="block text-sm font-medium text-gray-900">
                   Message
                 </label>
                 <textarea
@@ -123,16 +123,16 @@ export default function ContactForm() {
                   placeholder="How can we help you?"
                   value={formData.message}
                   onChange={handleChange}
-                  rows={6}
-                  className="block w-full rounded-xl border border-gray-200 px-6 py-4 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  rows={5}
+                  className="block w-full rounded-xl border border-gray-200 px-4 py-3 text-base text-gray-900 transition-colors placeholder:text-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
                   required
                 />
               </div>
-
+  
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-gray-900 px-6 py-4 text-base font-semibold text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                className="w-full rounded-xl bg-gray-900 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
