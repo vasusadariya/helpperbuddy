@@ -11,60 +11,69 @@ const razorpay = new Razorpay({
 
 export async function GET(
   req: NextRequest,
-  context: { params: { orderId: string } }
+  context: { params: Promise<{ orderId: string }> }
 ) {
-  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  const orderId = context.params.orderId;
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const { orderId } = await context.params; // Await the params promise
 
   try {
     // Get session
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json({
-        success: false,
-        error: "Unauthorized",
-        timestamp: currentUTCTime
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+          timestamp: currentUTCTime,
+        },
+        { status: 401 }
+      );
     }
 
     // Get user with wallet
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
-        wallet: true
-      }
+        wallet: true,
+      },
     });
 
     if (!user) {
-      return NextResponse.json({
-        success: false,
-        error: "User not found",
-        timestamp: currentUTCTime
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User not found",
+          timestamp: currentUTCTime,
+        },
+        { status: 404 }
+      );
     }
 
     // Get order details
     const order = await prisma.order.findFirst({
-        where: {
-          id: orderId, // Use extracted orderId here
-          userId: user.id,
-        },
-        include: {
-          service: {
-            select: {
-              name: true,
-              description: true,
-            },
+      where: {
+        id: orderId, // Use extracted orderId here
+        userId: user.id,
+      },
+      include: {
+        service: {
+          select: {
+            name: true,
+            description: true,
           },
         },
-      });
+      },
+    });
 
     if (!order) {
-      return NextResponse.json({
-        success: false,
-        error: "Order not found",
-        timestamp: currentUTCTime
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Order not found",
+          timestamp: currentUTCTime,
+        },
+        { status: 404 }
+      );
     }
 
     // Calculate amounts
@@ -79,8 +88,8 @@ export async function GET(
         success: true,
         data: {
           status: "COMPLETED",
-          timestamp: currentUTCTime
-        }
+          timestamp: currentUTCTime,
+        },
       });
     }
 
@@ -103,8 +112,8 @@ export async function GET(
         data: {
           walletAmount: walletAmount,
           remainingAmount: remainingAmount,
-          updatedAt: new Date(currentUTCTime)
-        }
+          updatedAt: new Date(currentUTCTime),
+        },
       });
     }
 
@@ -124,22 +133,24 @@ export async function GET(
           name: order.service.name,
           description: order.service.description ?? "",
         },
-        timestamp: currentUTCTime
-      }
+        timestamp: currentUTCTime,
+      },
     });
-
   } catch (error) {
     console.error("[Payment Initiate API Error]:", {
       error: error instanceof Error ? error.message : "Unknown error",
       timestamp: currentUTCTime,
-      orderId: orderId
+      orderId: orderId,
     });
 
-    return NextResponse.json({
-      success: false,
-      error: "Failed to initiate payment",
-      details: error instanceof Error ? error.message : "Unknown error",
-      timestamp: currentUTCTime
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to initiate payment",
+        details: error instanceof Error ? error.message : "Unknown error",
+        timestamp: currentUTCTime,
+      },
+      { status: 500 }
+    );
   }
 }

@@ -118,7 +118,7 @@ export default function ServicesPage() {
       if (query) params.append("query", query);
       if (category && category !== "all") params.append("category", category);
 
-      const res = await fetch(`/api/services?${params.toString()}`);
+      const res = await fetch('/api/services?${params.toString()}');
       const data = await res.json();
       if (sortType === 'low-to-high') {
         setServices([...data].sort((a, b) => a.price - b.price));
@@ -191,8 +191,10 @@ export default function ServicesPage() {
     if (query) params.set("query", query);
     if (category && category !== "all") params.set("category", category);
 
+
     // Replace the current history state instead of pushing a new one
     router.replace(`/services?${params.toString()}`);
+
   };
 
   const addToCart = (service: Service) => {
@@ -378,6 +380,7 @@ export default function ServicesPage() {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <Toaster position="top-center" />
+
       <div className="h-5"></div>
       <div className="flex flex-1 mt-16">
         {/* Categories Sidebar */}
@@ -397,6 +400,7 @@ export default function ServicesPage() {
               </li>
             ))}
           </ul>
+
         </div>
 
         {/* Main Content */}

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   try {

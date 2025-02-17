@@ -1,55 +1,22 @@
-import { Decimal } from "@prisma/client/runtime/library";
+export const formatDateTime = (date: Date): string => {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+};
 
-export const calculateCancellationTime = (
-  orderDate: string, 
-  orderTime: string, 
-  serviceThreshold: Decimal | number | null | undefined
-) => {
-  try {
-    // Current time
-    const now = new Date();
-    console.log('Current time:', now.toISOString());
+export const calculateOrderAge = (createdAt: Date): number => {
+  const now = new Date();
+  return (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+};
 
-    // Convert order date and time to Date object
-    const orderDateTime = new Date(`${orderDate}T${orderTime}`);
-    console.log('Order DateTime:', orderDateTime.toISOString());
-    
-    // Get threshold hours (default to 2 if not provided)
-    const thresholdHours = serviceThreshold ? Number(serviceThreshold) : 2;
-    console.log('Threshold Hours:', thresholdHours);
-    
-    // Calculate when order becomes cancellable (order time + threshold hours)
-    const cancellableTime = new Date(orderDateTime.getTime() + (thresholdHours * 60 * 60 * 1000));
-    console.log('Cancellable After:', cancellableTime.toISOString());
-    
-    // Calculate if order is cancellable
-    const isCancellable = now >= cancellableTime;
-    
-    // Calculate remaining time until cancellation is available
-    const timeUntilCancellable = cancellableTime.getTime() - now.getTime();
-    // Convert to hours and round up to nearest hour
-    const hoursRemaining = Math.max(0, Math.ceil(timeUntilCancellable / (1000 * 60 * 60)));
-    
-    console.log({
-      currentTime: now.toISOString(),
-      orderTime: orderDateTime.toISOString(),
-      thresholdHours,
-      cancellableTime: cancellableTime.toISOString(),
-      isCancellable,
-      hoursRemaining
-    });
-
-    return {
-      isCancellable,
-      timeRemaining: hoursRemaining,
-      cancellableTime
-    };
-  } catch (error) {
-    console.error('Error calculating cancellation time:', error);
-    return {
-      isCancellable: false,
-      timeRemaining: 0,
-      cancellableTime: new Date()
-    };
+export const formatTimeRemaining = (hours: number): string => {
+  if (hours <= 0) return "Can be cancelled now";
+  
+  const fullHours = Math.floor(hours);
+  const minutes = Math.round((hours - fullHours) * 60);
+  
+  if (fullHours === 0) {
+    return `${minutes} minutes remaining`;
+  } else if (minutes === 0) {
+    return `${fullHours} hour${fullHours > 1 ? 's' : ''} remaining`;
   }
+  return `${fullHours} hour${fullHours > 1 ? 's' : ''} and ${minutes} minutes remaining`;
 };

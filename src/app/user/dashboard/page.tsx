@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  AlertCircle,
   Clock,
   CheckCircle,
   Wallet,
@@ -15,10 +16,11 @@ import {
   PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
-
-import { calculateCancellationTime } from "@/lib/utils/timeUtils";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import { OrderCancellationStatus } from "@/components/OrderCancellation";
+33;
+import { PaymentOptions } from "@/components/PaymentOptions";
 
 type DashboardStats = {
   totalOrders: number;
@@ -69,6 +71,7 @@ interface Order {
   startedAt?: string | null;
   completedAt?: string | null;
   cancelledAt?: string | null;
+  paymentMode?: "ONLINE" | "COD";
 }
 
 interface OrdersResponse {
@@ -241,9 +244,9 @@ export default function UserDashboard() {
         };
       case "SERVICE_COMPLETED":
         return {
-          text: "Service Completed - Payment Pending",
+          text: "Service Completed - Select Payment Method",
           class: "bg-yellow-100 text-yellow-800",
-          icon: <Clock className="w-4 h-4" />,
+          icon: <AlertCircle className="w-4 h-4" />,
         };
       case "PAYMENT_REQUESTED":
         return {
@@ -293,12 +296,15 @@ export default function UserDashboard() {
   };
 
   const shouldShowPaymentButton = (order: Order) => {
+    // Do not show the payment option if payment has been completed (either wallet-only or via Razorpay)
+    if (order.status === "PAYMENT_COMPLETED") return false;
+    // If service is completed but no Razorpay payment id exists, and remaining amount is greater than zero, allow payment.
     return (
-      (order.status === "ACCEPTED" ||
-        order.status === "SERVICE_COMPLETED" ||
+      ((order.status === "ACCEPTED" && !order.startedAt) ||
+        (order.status === "SERVICE_COMPLETED" && !order.razorpayPaymentId) ||
         order.status === "PAYMENT_REQUESTED") &&
       !order.razorpayPaymentId &&
-      (order.remainingAmount > 0 || order.amount > 0)
+      (order.remainingAmount !== undefined && order.remainingAmount > 0)
     );
   };
 
@@ -319,39 +325,38 @@ export default function UserDashboard() {
       const confirmed = window.confirm(
         "Are you sure you want to cancel this order? This action cannot be undone."
       );
-      
+
       if (!confirmed) return;
-  
+
       // Show loading toast
-      const loadingToast = toast.loading('Cancelling order...');
-  
+      const loadingToast = toast.loading("Cancelling order...");
+
       // Call the API endpoint
       const response = await fetch(`/api/orders/${orderId}/cancel`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-        }
+          "Content-Type": "application/json",
+        },
       });
-  
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to cancel order');
+        throw new Error(error.error || "Failed to cancel order");
       }
-  
+
       // Success
-      toast.success('Order cancelled successfully', {
-        id: loadingToast
+      toast.success("Order cancelled successfully", {
+        id: loadingToast,
       });
-  
+
       // Refresh the page or update the data
       window.location.reload();
       // Or if you're using router.refresh():
       // router.refresh();
-  
     } catch (error) {
-      console.error('Error cancelling order:', error);
+      console.error("Error cancelling order:", error);
       toast.error(
-        error instanceof Error ? error.message : 'Failed to cancel order'
+        error instanceof Error ? error.message : "Failed to cancel order"
       );
     }
   };
@@ -512,332 +517,275 @@ export default function UserDashboard() {
                   No transactions yet
                 </p>
               )}
-              
             </div>
           </div>
         </div>
 
         {/* Recent Orders */}
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Orders
-              </h2>
-              <Link
-                href="/user/orders"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                View All
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-            <div className="space-y-4">
-              {recentOrders.length > 0 ? (
-                recentOrders.map((order) => {
-                  const statusDisplay = getStatusDisplay(order);
-                  const showPayment = shouldShowPaymentButton(order);
-
-                  // Add null checks for amounts
-                  const amount = order?.amount || 0;
-                  const walletAmount = order?.walletAmount || 0;
-                  const remainingAmount = order?.remainingAmount || 0;
-
-                  return (
-                    <div
-                      key={order.id}
-                      className="border-b last:border-b-0 pb-4 last:pb-0"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-3 flex-grow">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {order.service?.name ||
-                                "Service Name Not Available"}
-                            </p>
-                            <div className="mt-1 space-y-1">
-                              <p className="text-sm text-gray-600">
-                                Scheduled:{" "}
-                                {order.date
-                                  ? formatDate(order.date)
-                                  : "Date Not Set"}
-                              </p>
-                              {order.time && (
-                                <p className="text-sm text-gray-600">
-                                  Time: {order.time}
-                                </p>
-                              )}
-                            </div>
-                            <div className="mt-2 space-y-1">
-                              <p className="text-sm text-gray-600">
-                                Amount: ₹{amount.toFixed(2)}
-                              </p>
-                              {walletAmount > 0 && (
-                                <p className="text-sm text-green-600">
-                                  Wallet Used: ₹{walletAmount.toFixed(2)}
-                                </p>
-                              )}
-                              {(showPayment || remainingAmount > 0) && (
-                                <p className="text-sm text-blue-600">
-                                  Balance Due: ₹{remainingAmount.toFixed(2)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-{/* Cancellation Status Section */}
-{(() => {
-  // Don't show anything if order is cancelled or completed
-  if (order.status === 'CANCELLED' || order.status === 'COMPLETED') {
-    return null;
-  }
-
-  const { isCancellable, timeRemaining, cancellableTime } = calculateCancellationTime(
-    order.date,
-    order.time,
-    order.service?.threshold
-  );
-
-  // Within threshold period (can't cancel yet)
-  if (!isCancellable && !order.Partner) {
-    return (
-      <div className="mt-3 flex items-center space-x-2 bg-yellow-50 px-4 py-2 rounded-lg">
-        <Clock className="w-4 h-4 text-yellow-600" />
-        <span className="text-sm text-yellow-700">
-          You will be able to cancel this order after{' '}
-          {cancellableTime.toLocaleString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-          })}
-          {timeRemaining > 0 && ` (${timeRemaining} hours remaining)`}
-        </span>
-      </div>
-    );
-  }
-
-  // Past threshold time and no partner accepted - can cancel now
-  if (isCancellable && !order.Partner && order.status === 'PENDING') {
-    return (
-      <div className="mt-3 flex items-center justify-between bg-red-50 px-4 py-2 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <XCircle className="w-4 h-4 text-red-600" />
-          <span className="text-sm text-red-700">
-            {Number(order.service?.threshold || 2)} hours have passed since booking. You can cancel now.
-          </span>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+          <Link
+            href="/user/orders"
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            View All
+            <ArrowUpRight className="w-4 h-4 ml-1" />
+          </Link>
         </div>
-        <button
-          onClick={() => handleCancellation(order.id)}
-          className="px-3 py-1 text-sm text-red-600 hover:text-red-700 
-                   bg-white hover:bg-red-50 rounded-md transition-colors border border-red-200"
-        >
-          Cancel Order
-        </button>
-      </div>
-    );
-  }
+        <div className="space-y-4">
+          {recentOrders.length > 0 ? (
+            recentOrders.map((order) => {
+              const statusDisplay = getStatusDisplay(order);
+              const showPayment = shouldShowPaymentButton(order);
 
-  return null;
-})()}
+              // Add null checks for amounts and format them
+              const amount = order?.amount || 0;
+              const walletAmount = order?.walletAmount || 0;
+              const remainingAmount = order?.remainingAmount || 0;
 
-                          {order.Partner && (
-                            <div className="bg-gray-50 rounded-lg p-4 mt-3">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="bg-blue-100 p-1.5 rounded-full">
-                                    <UserCheck className="w-4 h-4 text-blue-600" />
-                                  </div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    Service Provider Details
-                                  </p>
-                                </div>
-                                <div className="flex items-center">
-                                  {order.Partner.isActive && (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      Active Now
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-start space-x-4">
-                                {/* Partner Profile Image */}
-                                <div className="flex-shrink-0">
-                                  {order.Partner.profileImage ? (
-                                    <Image
-                                      src={order.Partner.profileImage}
-                                      alt={order.Partner.name}
-                                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                      width={48}
-                                      height={48}
-                                    />
-                                  ) : (
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">
-                                      <span className="text-lg font-semibold text-blue-600">
-                                        {order.Partner.name
-                                          .charAt(0)
-                                          .toUpperCase()}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Partner Details */}
-                                <div className="flex-grow">
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-medium text-gray-900">
-                                      {order.Partner.name}
-                                    </h4>
-                                    {/* {order.Partner.rating && (
-            <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
-              <Star className="w-3 h-3 text-yellow-400 mr-1 fill-current" />
-              <span className="text-xs font-medium text-yellow-700">
-                {order.Partner.rating.toFixed(1)}
-              </span>
-            </div>
-          )} */}
-                                  </div>
-
-                                  {/* Service Timeline */}
-                                  <div className="mt-2 space-y-1.5">
-                                    {order.acceptedAt && (
-                                      <div className="flex items-center text-xs text-gray-500">
-                                        <Clock className="w-3 h-3 mr-1 text-blue-500" />
-                                        Accepted: {formatDate(order.acceptedAt)}
-                                      </div>
-                                    )}
-                                    {order.startedAt && (
-                                      <div className="flex items-center text-xs text-gray-500">
-                                        <PlayCircle className="w-3 h-3 mr-1 text-blue-500" />
-                                        Started: {formatDate(order.startedAt)}
-                                      </div>
-                                    )}
-                                    {order.completedAt && (
-                                      <div className="flex items-center text-xs text-gray-500">
-                                        <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
-                                        Completed:{" "}
-                                        {formatDate(order.completedAt)}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Contact Information */}
-                                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                                    {order.Partner.phoneno && (
-                                      <div className="flex items-center text-sm text-gray-600">
-                                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                                        <a
-                                          href={`tel:${order.Partner.phoneno}`}
-                                          className="hover:text-blue-600 transition-colors"
-                                        >
-                                          {order.Partner.phoneno}
-                                        </a>
-                                      </div>
-                                    )}
-                                    <div className="flex items-center text-sm text-gray-600">
-                                      <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                                      <a
-                                        href={`mailto:${order.Partner.email}`}
-                                        className="hover:text-blue-600 transition-colors"
-                                      >
-                                        {order.Partner.email}
-                                      </a>
-                                    </div>
-                                  </div>
-
-                                  {/* Action Buttons */}
-                                  <div className="mt-4 flex justify-end space-x-2">
-                                    {order.Partner.phoneno && (
-                                      <button
-                                        onClick={() =>
-                                          order.Partner &&
-                                          (window.location.href = `tel:${order.Partner.phoneno}`)
-                                        }
-                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                                      >
-                                        <Phone className="w-3 h-3 mr-1.5" />
-                                        Call
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() =>
-                                        order.Partner &&
-                                        (window.location.href = `mailto:${order.Partner.email}`)
-                                      }
-                                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
-                                    >
-                                      <Mail className="w-3 h-3 mr-1.5" />
-                                      Email
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+              return (
+                <div
+                  key={order.id}
+                  className="border-b last:border-b-0 pb-4 last:pb-0"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-3 flex-grow">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {order.service?.name || "Service Name Not Available"}
+                        </p>
+                        <div className="mt-1 space-y-1">
+                          <p className="text-sm text-gray-600">
+                            Scheduled:{" "}
+                            {order.date
+                              ? formatDate(order.date)
+                              : "Date Not Set"}
+                          </p>
+                          {order.time && (
+                            <p className="text-sm text-gray-600">
+                              Time: {order.time}
+                            </p>
                           )}
                         </div>
-
-                        <div className="flex flex-col items-end space-y-2 ml-4">
-                          <span
-                            className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}
-                          >
-                            {statusDisplay.icon}
-                            <span className="ml-1">{statusDisplay.text}</span>
-                          </span>
-
-                          {showPayment && (
-                            <Link
-                              href={`/payment/${order.id}`}
-                              className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              Pay Now
-                            </Link>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm text-gray-600">
+                            Amount: ₹{amount.toFixed(2)}
+                          </p>
+                          {walletAmount > 0 && (
+                            <p className="text-sm text-green-600">
+                              Wallet Used: ₹{walletAmount.toFixed(2)}
+                            </p>
+                          )}
+                          {remainingAmount > 0 && (
+                            <p className="text-sm text-blue-600">
+                              Balance Due: ₹{remainingAmount.toFixed(2)}
+                            </p>
                           )}
                         </div>
                       </div>
 
-                      {/* Cancelled Order Message */}
-        {order.status === 'CANCELLED' && (
-          <div className="mt-3 bg-red-50 px-4 py-2 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <XCircle className="w-4 h-4 text-red-600" />
-              <span className="text-sm text-red-700">
-                Order cancelled {order.cancelledAt ? `on ${formatDate(order.cancelledAt)}` : ''}
-              </span>
-            </div>
-          </div>
-        )}
+                      {order.status === "PENDING" && (
+                        <OrderCancellationStatus
+                          order={{
+                            id: order.id,
+                            status: order.status,
+                            createdAt: new Date(order.date || ""),
+                            service: {
+                              name: order.service?.name || "",
+                              threshold: order.service?.threshold || 2,
+                            },
+                            date: order.date,
+                            time: order.time,
+                            amount: order.amount || 0,
+                            Partner: order.Partner,
+                          }}
+                        />
+                      )}
 
-                      {order.razorpayPaymentId && (
-                        <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                          <p className="text-sm font-medium text-green-800">
-                            Payment Completed
-                          </p>
-                          <div className="mt-1 space-y-1">
-                            <p className="text-xs text-green-700">
-                              Transaction ID: {order.razorpayPaymentId}
-                            </p>
-                            {order.paidAt && (
-                              <p className="text-xs text-green-700">
-                                Paid on: {formatDate(order.paidAt)}
+                      {order.Partner && (
+                        <div className="bg-gray-50 rounded-lg p-4 mt-3">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              <div className="bg-blue-100 p-1.5 rounded-full">
+                                <UserCheck className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <p className="text-sm font-medium text-gray-900">
+                                Service Provider Details
                               </p>
-                            )}
+                            </div>
+                            <div className="flex items-center">
+                              {order.Partner.isActive && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Active Now
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-start space-x-4">
+                            <div className="flex-shrink-0">
+                              {order.Partner.profileImage ? (
+                                <Image
+                                  src={order.Partner.profileImage}
+                                  alt={order.Partner.name}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                  width={48}
+                                  height={48}
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">
+                                  <span className="text-lg font-semibold text-blue-600">
+                                    {order.Partner.name
+                                      .charAt(0)
+                                      .toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-grow">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium text-gray-900">
+                                  {order.Partner.name}
+                                </h4>
+                              </div>
+
+                              <div className="mt-2 space-y-1.5">
+                                {order.acceptedAt && (
+                                  <div className="flex items-center text-xs text-gray-500">
+                                    <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                                    Accepted: {formatDate(order.acceptedAt)}
+                                  </div>
+                                )}
+                                {order.startedAt && (
+                                  <div className="flex items-center text-xs text-gray-500">
+                                    <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                                    Started: {formatDate(order.startedAt)}
+                                  </div>
+                                )}
+                                {order.completedAt && (
+                                  <div className="flex items-center text-xs text-gray-500">
+                                    <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
+                                    Completed: {formatDate(order.completedAt)}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                                {order.Partner.phoneno && (
+                                  <div className="flex items-center text-sm text-gray-600">
+                                    <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                                    <a
+                                      href={`tel:${order.Partner.phoneno}`}
+                                      className="hover:text-blue-600 transition-colors"
+                                    >
+                                      {order.Partner.phoneno}
+                                    </a>
+                                  </div>
+                                )}
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                                  <a
+                                    href={`mailto:${order.Partner.email}`}
+                                    className="hover:text-blue-600 transition-colors"
+                                  >
+                                    {order.Partner.email}
+                                  </a>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 flex justify-end space-x-2">
+                                {order.Partner.phoneno && (
+                                  <button
+                                    onClick={() =>
+                                      order.Partner &&
+                                      (window.location.href = `tel:${order.Partner.phoneno}`)
+                                    }
+                                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                                  >
+                                    <Phone className="w-3 h-3 mr-1.5" />
+                                    Call
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() =>
+                                    order.Partner &&
+                                    (window.location.href = `mailto:${order.Partner.email}`)
+                                  }
+                                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                                >
+                                  <Mail className="w-3 h-3 mr-1.5" />
+                                  Email
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
+
+                      {order.status === "SERVICE_COMPLETED" && !order.razorpayPaymentId && (
+                        <div className="mt-3">
+                          <PaymentOptions
+                            order={{
+                              id: order.id,
+                              amount: order.amount,
+                              remainingAmount: order.remainingAmount,
+                              status: order.status,
+                            }}
+                            onPaymentComplete={() => {
+                              // Refresh the orders list
+                              window.location.reload();
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
-                  );
-                })
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No orders found
-                </p>
-              )}
-            </div>
-          </div>
+
+                    <div className="flex flex-col items-end space-y-2 ml-4">
+                      <span className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}>
+                        {statusDisplay.icon}
+                        <span className="ml-1">{statusDisplay.text}</span>
+                      </span>
+
+                      {shouldShowPaymentButton(order) && (
+                        <Link
+                          href={`/payment/${order.id}`}
+                          className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Pay Now
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  {order.razorpayPaymentId && (
+                    <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">
+                        Payment Completed
+                      </p>
+                      <div className="mt-1 space-y-1">
+                        <p className="text-xs text-green-700">
+                          Transaction ID: {order.razorpayPaymentId}
+                        </p>
+                        {order.paidAt && (
+                          <p className="text-xs text-green-700">
+                            Paid on: {formatDate(order.paidAt)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-gray-500 text-center py-4">No orders found</p>
+          )}
         </div>
+      </div>
+    </div>
       </div>
     </div>
   );
