@@ -116,10 +116,10 @@ export async function POST(req: NextRequest) {
         () => prisma.order.findUnique({
           where: { razorpayOrderId },
           include: {
-            Service: true,
-            User: {
+            service: true,
+            user: {
               include: {
-                Wallet: true,
+                wallet: true,
                 referrer: {
                   include: {
                     wallet: true
