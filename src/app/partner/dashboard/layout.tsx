@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -10,7 +11,8 @@ import {
   User, 
   MapPin,
   Menu,
-  X
+  X,
+  LogOut
 } from "lucide-react";
 
 export default function PartnerDashboardLayout({
@@ -29,6 +31,10 @@ export default function PartnerDashboardLayout({
   ];
 
   const isActiveLink = (path: string) => pathname === path;
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/' });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -51,7 +57,7 @@ export default function PartnerDashboardLayout({
         >
           <div className="h-full flex flex-col">
             <div className="p-4 border-b">
-              <h1 className="text-xl font-bold">Partner Portal</h1>
+              <h1 className="text-xl font-bold">Partner Dashboard</h1>
             </div>
 
             <nav className="flex-1 p-4 space-y-1">
@@ -73,18 +79,27 @@ export default function PartnerDashboardLayout({
                   </Link>
                 );
               })}
+              
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="w-5 h-5 mr-3" />
+                Logout
+              </button>
             </nav>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 ">
+        <div className="flex-1">
           {/* Mobile header spacer */}
           <div className="h-14 lg:h-0"></div>
           
           {/* Content area */}
           <main className="flex-1 overflow-x-hidden overflow-y-auto">
-            <div className="container mx-auto  py-8">
+            <div className="container mx-auto py-8">
               {children}
             </div>
           </main>
