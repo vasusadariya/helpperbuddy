@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
 
     const requiredFields = { title, content, author };
     const missingFields = Object.entries(requiredFields)
-      .filter(([_, value]) => !value)
-      .map(([field]) => field);
-      console.log(__dirname);
+    .filter(([, value]) => !value) // No `_` warning
+    .map(([field]) => field);
+
 
     if (missingFields.length > 0) {
       return NextResponse.json({ 

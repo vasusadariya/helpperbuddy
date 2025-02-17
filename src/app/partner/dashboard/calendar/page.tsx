@@ -8,46 +8,40 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 
 interface Order {
     id: string;
-    service: {
-        name: string;
-    };
+    service: { name: string };
     date: string;
     time: string;
 }
 
 export default function Home() {
     const [acceptedOrders, setAcceptedOrders] = useState<Order[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchAcceptedOrders = async () => {
             try {
                 const response = await fetch('/api/partner/orders');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
                 const data = await response.json();
-                if (data.success) {
-                    setAcceptedOrders(data.data.orders);
-                } else {
-                    throw new Error(data.error || 'Failed to fetch orders');
-                }
+
+                if (!data.success) throw new Error(data.error || "Failed to fetch orders");
+                setAcceptedOrders(data.data.orders);
             } catch (err) {
-                console.error('Error fetching accepted orders:', err);
+                console.error("Error fetching orders:", err);
+                setError("Failed to load orders. Please try again.");
             }
         };
+
         fetchAcceptedOrders();
     }, []);
 
     // Convert orders to FullCalendar event format
     const events = acceptedOrders.map((order) => {
-        const eventDate = new Date(order.date + 'T' + order.time);
-        const isPast = eventDate < new Date();
-
+        const eventDate = new Date(`${order.date}T${order.time}`);
         return {
             id: order.id,
             title: order.service.name,
-            start: eventDate,
-            color: isPast ? 'red' : 'green',
+            start: isNaN(eventDate.getTime()) ? new Date() : eventDate,
+            color: eventDate < new Date() ? 'red' : 'green',
         };
     });
 
@@ -56,12 +50,8 @@ export default function Home() {
             <Navbar />
             <div className="p-6 pt-40">
                 <h2 className="text-xl font-semibold mb-4">Accepted Orders Calendar</h2>
-                <FullCalendar
-                    plugins={[dayGridPlugin]}
-                    initialView="dayGridMonth"
-                    events={events}
-                    height="auto"
-                />
+                {error && <p className="text-red-500">{error}</p>}
+                <FullCalendar plugins={[dayGridPlugin]} initialView="dayGridMonth" events={events} height="auto" />
             </div>
             <Footer />
         </div>

@@ -463,7 +463,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: "Payment gateway error",
-        details: (error as any).description || "Error processing payment",
+        details: (error as { description?: string }).description || "Error processing payment",
         timestamp: currentUTCTime,
       }, { status: 400 });
     }

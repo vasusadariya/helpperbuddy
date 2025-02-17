@@ -64,10 +64,10 @@ const Footer: React.FC = () => {
   };
 
   const socialLinks: SocialLink[] = [
-    { name: "Facebook", icon: Facebook, href: "https://facebook.com" },
-    { name: "X", icon: XIcon, href: "https://x.com" },
+    { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/profile.php?id=61566410515044" },
+    { name: "X", icon: XIcon, href: "https://twitter.com/helperbuddyin" },
     { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com" },
-    { name: "Instagram", icon: Instagram, href: "https://instagram.com" }
+    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/helperbuddy.in" }
   ];
 
   const footerLinks: FooterLink[] = [
@@ -78,7 +78,7 @@ const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="bg-black text-white pt-16 pb-8">
+    <footer className="bg-black text-white pt-16 pb-8 z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Mobile and Tablet Layout */}
         <div className="lg:hidden flex flex-col space-y-8">

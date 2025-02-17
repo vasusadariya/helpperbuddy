@@ -2,7 +2,7 @@
 'use client'
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { ChevronDown, Home, Users, BookOpen, Gift, Wallet, Settings } from 'lucide-react';
+import { ChevronDown, Home, Users, BookOpen, Gift, Wallet, Settings, LogOut } from 'lucide-react';
 import { useState } from 'react';
 
 interface SidebarItem {
@@ -24,12 +24,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       icon: Users,
       subItems: [
         { name: 'Service Providers', href: '/admin/dashboard/users/providers' },
-        { name: 'Customers', href: '/admin/dashboard/users/customers' }
+        { name: 'Customers', href: '/admin/dashboard/users/customers' },
+        { name: 'Admin', href: '/admin/dashboard/users/pending-admin' }
       ]
     },
     { name: 'Blogs', href: '/admin/dashboard/blogs', icon: BookOpen },
-    { name: 'Referrals', href: '/admin/dashboard/referrals', icon: Gift },
-    { name: 'Wallet', href: '/admin/dashboard/wallet', icon: Wallet },
+    { name: 'Wallet & Referrals', href: '/admin/dashboard/wallet', icon: Wallet },
   ];
 
   return (
