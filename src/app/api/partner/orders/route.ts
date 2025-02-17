@@ -1,10 +1,10 @@
-import { NextResponse,NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
 export async function GET(request: NextRequest) {
-  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const currentUTCTime = new Date("2025-02-17 18:59:06");
 
   try {
     const session = await getServerSession(authOptions);
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
     const partner = await prisma.partner.findUnique({
       where: { 
         email: session.user.email,
-        approved: true, // Added approved check
-        isActive: true  // Added active check
+        approved: true,
+        isActive: true
       }
     });
 
@@ -32,11 +32,12 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
+    // Updated to include ACCEPTED, IN_PROGRESS, and PAYMENT_COMPLETED status
     const acceptedOrders = await prisma.order.findMany({
       where: {
         partnerId: partner.id,
         status: {
-          in: ['ACCEPTED', 'COMPLETED']
+          in: ['ACCEPTED', 'IN_PROGRESS', 'PAYMENT_COMPLETED']
         }
       },
       include: {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
           select: {
             name: true,
             email: true,
-            phoneno: true // Added phone number
+            phoneno: true
           }
         }
       },
@@ -72,14 +73,14 @@ export async function GET(request: NextRequest) {
       data: {
         orders: acceptedOrders.map(order => ({
           id: order.id,
-          service: order.serviceId,
-          user: order.userId,
+          service: order.service,
+          user: order.user,
           date: order.date.toISOString(),
           time: order.time,
           status: order.status,
           amount: order.amount,
-          address: order.address, // Added address
-          pincode: order.pincode, // Added pincode
+          address: order.address,
+          pincode: order.pincode,
           razorpayOrderId: order.razorpayOrderId,
           razorpayPaymentId: order.razorpayPaymentId,
           paidAt: order.paidAt?.toISOString() || null,

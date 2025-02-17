@@ -12,6 +12,10 @@ export async function GET() {
     }
 
     // Get the partner's ID
+    if (!session.user.email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
     const partner = await prisma.partner.findUnique({
       where: {
         email: session.user.email
@@ -49,6 +53,10 @@ export async function POST(request: NextRequest) {
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!session.user.email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     // Get the partner
