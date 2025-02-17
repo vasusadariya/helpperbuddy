@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: {
-          Service: true,
-          User: true
+          service: true,
+          user: true
         }
       });
 
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
           acceptedAt: new Date()
         },
         include: {
-          Service: {
+          service: {
             select: {
               name: true,
               price: true,
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
               description: true
             }
           },
-          User: {
+          user: {
             select: {
               name: true,
               email: true,

@@ -21,7 +21,6 @@ const validateServerDateTime = (
     // Parse the incoming ISO date string
     const selectedDateTime = new Date(dateTimeString);
     const now = new Date();
-    console.log("Selected date and time:", selectedDateTime, timeString);
 
     // Check if the date and time are valid
     if (isNaN(selectedDateTime.getTime())) {
@@ -60,7 +59,6 @@ const validateServerDateTime = (
 
     return { isValid: true };
   } catch (error) {
-    console.error("Error validating date and time:", error);
     return {
       isValid: false,
       error: "Please select a valid date and time",
@@ -68,7 +66,7 @@ const validateServerDateTime = (
   }
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const currentUTCTime = new Date()
@@ -318,6 +316,10 @@ export async function POST(req: NextRequest) {
     // Get wallet balance before transaction
     const wallet = await prisma.wallet.findUnique({
       where: { userId: user.id },
+      select: {
+        balance: true,
+        id: true
+      }
     });
 
     const result = await prisma.$transaction(async (tx) => {
@@ -339,6 +341,7 @@ export async function POST(req: NextRequest) {
           walletAmount: 0, // Will be updated during payment
           remainingAmount: totalAmount,
           status: "PENDING",
+          currency: "INR",
         },
         include: { service: true, user: true },
       });
@@ -524,7 +527,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const updateData: { status: string; razorpayPaymentId?: string; paidAt?: Date } = { status };
+      const updateData: any = { status };
 
       if (status === "COMPLETED" && razorpayPaymentId) {
         updateData.razorpayPaymentId = razorpayPaymentId;

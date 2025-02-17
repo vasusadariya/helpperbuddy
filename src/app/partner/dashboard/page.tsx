@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Clock, CheckCircle, PlayCircle } from 'lucide-react';
 import OrderNotification from "@/components/OrderNotification";
 
 interface Service {
@@ -11,6 +12,11 @@ interface Service {
   description: string;
   category: string;
   isActive: boolean;
+}
+
+interface StatusUpdate {
+  orderId: string;
+  status: 'IN_PROGRESS' | 'COMPLETED';
 }
 
 interface PartnerData {
@@ -68,6 +74,7 @@ export default function PartnerDashboard() {
   const [newService, setNewService] = useState("");
   const [loading, setLoading] = useState(true);
   const [description, setDescription] = useState("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);  // Track errors
 
   console.log(partnerServices);
@@ -131,12 +138,47 @@ export default function PartnerDashboard() {
   }, []);
 
   const getOrderStatusDisplay = (order: Order) => {
-    if (order.status === "ACCEPTED") {
-      return order.razorpayPaymentId 
-        ? { text: "Payment Completed", className: "bg-green-100 text-green-800" }
-        : { text: "Waiting for Payment", className: "bg-yellow-100 text-yellow-800" };
+    switch (order.status) {
+      case 'ACCEPTED':
+        return order.razorpayPaymentId 
+          ? { text: "Payment Completed", className: "bg-green-100 text-green-800" }
+          : { text: "Waiting for Payment", className: "bg-yellow-100 text-yellow-800" };
+      case 'IN_PROGRESS':
+        return { text: "In Progress", className: "bg-blue-100 text-blue-800" };
+      case 'COMPLETED':
+        return { text: "Completed", className: "bg-green-100 text-green-800" };
+      default:
+        return { text: order.status, className: "bg-gray-100 text-gray-800" };
     }
-    return { text: order.status, className: "bg-blue-100 text-blue-800" };
+  };
+
+  const handleStatusUpdate = async (orderId: string, newStatus: 'IN_PROGRESS' | 'COMPLETED') => {
+    if (!confirm(`Are you sure you want to mark this service as ${newStatus.toLowerCase()}?`)) {
+      return;
+    }
+
+    setIsUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
+
+    try {
+      const response = await fetch('/api/partner/orders/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status: newStatus })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        await fetchAcceptedOrders(); // Refresh orders after status update
+      } else {
+        throw new Error(data.error || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update status. Please try again.');
+    } finally {
+      setIsUpdatingStatus(prev => ({ ...prev, [orderId]: false }));
+    }
   };
 
   const handleRequestService = async () => {
@@ -175,33 +217,6 @@ export default function PartnerDashboard() {
       setError(err instanceof Error ? err.message : "Failed to submit service request");
     }
   };
-
-  // const getOrderStatusDisplay = (order: Order) => {
-  //   switch (order.status) {
-  //     case 'ACCEPTED':
-  //       return {
-  //         text: order.razorpayPaymentId ? 'Accepted' : 'Waiting for Payment',
-  //         className: order.razorpayPaymentId 
-  //           ? 'bg-green-100 text-green-800'
-  //           : 'bg-yellow-100 text-yellow-800'
-  //       };
-  //     case 'COMPLETED':
-  //       return {
-  //         text: 'Completed',
-  //         className: 'bg-blue-100 text-blue-800'
-  //       };
-  //     case 'CANCELLED':
-  //       return {
-  //         text: 'Cancelled',
-  //         className: 'bg-red-100 text-red-800'
-  //       };
-  //     default:
-  //       return {
-  //         text: order.status,
-  //         className: 'bg-gray-100 text-gray-800'
-  //       };
-  //   }
-  // };
 
   const formatDateTime = (date: string, time: string) => {
     try {
@@ -301,43 +316,80 @@ export default function PartnerDashboard() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Accepted Orders</h2>
         <div className="space-y-4">
-          {acceptedOrders.length === 0 ? (
-            <p className="text-gray-500">No accepted orders</p>
-          ) : (
-            acceptedOrders.map((order) => {
-              const { formattedDate, formattedTime } = formatDateTime(order.date, order.time);
-              const status = getOrderStatusDisplay(order);
+        {acceptedOrders.length === 0 ? (
+              <p className="text-gray-500">No accepted orders</p>
+            ) : (
+              acceptedOrders.map((order) => {
+                const { formattedDate, formattedTime } = formatDateTime(order.date, order.time);
+                const status = getOrderStatusDisplay(order);
+                const isUpdating = isUpdatingStatus[order.id] || false;
 
-              return (
-                <div key={order.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{order.service.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        Customer: {order.user.name}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Date: {formattedDate}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Time: {formattedTime}
-                      </p>
-                    </div>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${status.className}`}>
-                      {status.text}
-                    </span>
-                  </div>
-                  <div className="mt-2 pt-2 border-t">
-                    <div className="flex justify-between items-center">
-                      <p className="text-sm font-medium">
-                        Amount: ₹{order.amount.toFixed(2)}
-                      </p>
-                      {order.paidAt && (
-                        <p className="text-xs text-gray-500">
-                          Paid on: {new Date(order.paidAt).toLocaleDateString()}
+                return (
+                  <div key={order.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{order.service.name}</h3>
+                        <p className="text-sm text-gray-600">
+                          Customer: {order.user.name}
                         </p>
-                      )}
+                        <p className="text-sm text-gray-600">
+                          Date: {formattedDate}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Time: {formattedTime}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${status.className}`}>
+                        {status.text}
+                      </span>
                     </div>
+                    <div className="mt-2 pt-2 border-t">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium">
+                          Amount: ₹{order.amount.toFixed(2)}
+                        </p>
+                        {order.paidAt && (
+                          <p className="text-xs text-gray-500">
+                            Paid on: {new Date(order.paidAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                        
+                        {/* Service Status Update Buttons */}
+                      {order.status === 'ACCEPTED' && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => handleStatusUpdate(order.id, 'IN_PROGRESS')}
+                            disabled={isUpdating}
+                            className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 mr-2"
+                          >
+                            {isUpdating ? (
+                              <Clock className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <PlayCircle className="w-4 h-4 mr-2" />
+                            )}
+                            Start Service
+                          </button>
+                        </div>
+                      )}
+
+{order.status === 'IN_PROGRESS' && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => handleStatusUpdate(order.id, 'COMPLETED')}
+                            disabled={isUpdating}
+                            className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                          >
+                            {isUpdating ? (
+                              <Clock className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                            )}
+                            Mark Completed
+                          </button>
+                        </div>
+                      )}
+
                   </div>
                 </div>
               );
@@ -386,4 +438,3 @@ export default function PartnerDashboard() {
     </div>
   );
 }
-

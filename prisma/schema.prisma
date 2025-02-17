@@ -17,6 +17,7 @@ model Blog {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   isActive  Boolean  @default(true)
+
   @@index([isActive])
 }
 
@@ -45,6 +46,7 @@ model Order {
   completedAt        DateTime?
   cancelledAt        DateTime?
   paymentRequestedAt DateTime?
+  paymentMode        PaymentMode? @default(ONLINE)
   Partner            Partner?     @relation(fields: [partnerId], references: [id])
   service            Service      @relation(fields: [serviceId], references: [id])
   user               User         @relation(fields: [userId], references: [id])
@@ -96,7 +98,7 @@ model PartnerRequestedService {
   description String?
   partnerId   String
   createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @default(now())  @updatedAt
+  updatedAt   DateTime             @default(now()) @updatedAt
   status      ServiceRequestStatus @default(PENDING)
   Partner     Partner              @relation(fields: [partnerId], references: [id])
 
@@ -199,6 +201,22 @@ model Wallet {
   @@index([userId])
 }
 
+model SystemConfig {
+  variable_name  String   @id
+  variable_value Int
+  updatedAt      DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
 enum Category {
   AC_SERVICE
   BATHROOM_KITCHEN_CLEANING
@@ -247,20 +265,4 @@ enum TransactionType {
   DEBIT
   REFERRAL_BONUS
   SIGNUP_BONUS
-}
-
-model SystemConfig {
-  variable_name    String   @id
-  variable_value   Int      
-  updatedAt        DateTime @updatedAt
-
-  @@map("system_config")
-}
-
-model ContactMessage {
-  id        String   @id @default(cuid())
-  name      String
-  email     String
-  message   String   @db.Text
-  createdAt DateTime @default(now())
 }
