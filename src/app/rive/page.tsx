@@ -14,10 +14,7 @@ export const RiveDemo = () => {
   
   return (
     <div className="relative w-full h-full bg-black flex justify-center items-center">
-      {/* Added negative margin and padding to create overlap */}
-      <div className="absolute inset-0 -m-1 p-1 bg-black">
-        <RiveComponent className="w-full h-full brightness-125" />
-      </div>
+      <RiveComponent className="w-full h-full brightness-125" />
     </div>
   );
 };

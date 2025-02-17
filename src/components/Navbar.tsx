@@ -19,6 +19,13 @@ interface ExtendedSession extends Session {
   };
 }
 
+interface ServiceResult {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+}
+
 export default function Navbar() {
   const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
@@ -30,17 +37,73 @@ export default function Navbar() {
 
   const [scrolling, setScrolling] = useState(false);
   const [query, setQuery] = useState<string>('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [results, setResults] = useState<ServiceResult[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [requested, setRequested] = useState<boolean>(false);
+  const [isClicked, setIsClicked] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [showWalletTooltip, setShowWalletTooltip] = useState(false);
+  const [showRequestButton, setShowRequestButton] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolling(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolling(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const fetchServices = async (query: string) => {
+    if (!query) return setResults([]);
+    setIsClicked(false);
+    setRequested(false);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/services/home-page', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      setResults(data);
+    } catch (error) {
+      console.error('Error fetching search results:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestService = async () => {
+    if (query.length < 3 || query.length > 50) return;
+    setRequested(true);
+
+    try {
+      await fetch('/api/services/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: query }),
+      });
+    } catch (error) {
+      console.error('Error requesting service:', error);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchServices(query);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
 
   const handleDashboardRedirect = () => {
     switch (userRole) {
@@ -60,6 +123,20 @@ export default function Navbar() {
     setDropdownOpen(false);
   };
 
+  const handleRequestClick = async () => {
+    try {
+      const response = await fetch("/api/services/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: query }),
+      });
+    } catch (error) {
+      console.error("Error requesting service:", error);
+    }
+  };
+
   const NavLink = ({ href, children, icon: Icon }: { href: string; children: React.ReactNode; icon?: any }) => (
     <Link href={href} className="group flex items-center space-x-2">
       {Icon && <Icon className="w-5 h-5 text-gray-600 group-hover:text-black transition-colors duration-300" />}
@@ -75,9 +152,8 @@ export default function Navbar() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-        scrolling ? 'backdrop-blur-lg bg-white/50 shadow-md' : 'bg-white'
-      }`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrolling ? 'backdrop-blur-lg bg-white/50 shadow-md' : 'bg-white'
+        }`}
     >
       <div className="bg-black text-white border-b text-center py-2 text-sm font-medium">
         We are AVAILABLE in Mumbai, Surat
@@ -100,6 +176,7 @@ export default function Navbar() {
           </div>
 
           {/* Search Bar */}
+          {/* Search Bar with Dropdown */}
           <div className="hidden md:flex flex-1 justify-center max-w-md">
             <div className="w-full max-w-sm relative">
               <input
@@ -109,7 +186,59 @@ export default function Navbar() {
                 placeholder="Search for a service..."
                 className="w-full px-6 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all shadow-sm"
               />
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              {loading ? (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-400 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8V12H4z"></path>
+                  </svg>
+                </div>
+              ) : (
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              )}
+
+              {/* Search Results Dropdown */}
+              {query && (
+                <div className="absolute left-0 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {results.length > 0 ? (
+                    results.map((service) => (
+                      <div
+          key={service.id}
+          className="p-4 border-b last:border-none hover:bg-gray-50 cursor-pointer transition"
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.append("query", service.name);
+            // Redirecting to the desired URL
+            window.location.href = `/services?${params.toString()}`;
+          }}
+        >
+          <h3 className="font-semibold text-gray-900">{service.name}</h3>
+        </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      {loading ? (
+                        <p className="text-gray-500 text-center">Loading services...</p>
+                      ) : (
+                        <div>
+                          <p className="text-gray-500 text-center">No services found.</p>
+                          <button
+                            onClick={() => { handleRequestClick(); setIsClicked(true); }}
+                            disabled={isClicked}
+                            className={`w-full h-8 rounded-lg font-bold text-lg transition-all duration-300
+                    ${isClicked
+                                ? 'bg-gray-400 text-gray-800 cursor-not-allowed'
+                                : 'bg-black text-white cursor-pointer hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500'
+                              }`}
+                          >
+                            {isClicked ? "Service Requested" : "Request Service"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

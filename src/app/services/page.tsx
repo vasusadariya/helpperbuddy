@@ -17,6 +17,7 @@ interface Service {
   description: string;
   price: number;
   threshold: number;
+  numberoforders: number;
   category: string;
   image?: string;
 }
@@ -78,8 +79,6 @@ export default function ServicesPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
-  // const [cartServices, setCartServices] = useState<Service[]>([]);
-  // console.log(selectedService);
   const [query, setQuery] = useState(searchParams.get("query") || "");
   const [category, setCategory] = useState(
     searchParams.get("category") || "all"
@@ -100,7 +99,8 @@ export default function ServicesPage() {
     pincode: "",
     remarks: "",
   });
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fetchCategories = async () => {
     try {
@@ -114,19 +114,39 @@ export default function ServicesPage() {
 
   const fetchServices = async () => {
     try {
+      setIsLoading(true);
       const params = new URLSearchParams();
       if (query) params.append("query", query);
       if (category && category !== "all") params.append("category", category);
 
-      const res = await fetch('/api/services?${params.toString()}');
+      const res = await fetch(`/api/services?${params.toString()}`);
       const data = await res.json();
+
       if (sortType === 'low-to-high') {
         setServices([...data].sort((a, b) => a.price - b.price));
       } else if (sortType === 'high-to-low') {
         setServices([...data].sort((a, b) => b.price - a.price));
+      } else if (sortType === 'top-orders') {
+        setServices([...data].sort((a, b) => a.numberoforders - b.numberoforders));
       }
     } catch (error) {
       console.error("Error fetching services:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRequestClick = async () => {
+    try {
+      const response = await fetch("/api/services/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: query }),
+      });
+    } catch (error) {
+      console.error("Error requesting service:", error);
     }
   };
 
@@ -171,6 +191,8 @@ export default function ServicesPage() {
       setServices([...services].sort((a, b) => a.price - b.price));
     } else if (type === 'high-to-low') {
       setServices([...services].sort((a, b) => b.price - a.price));
+    } else if (sortType === 'top-orders') {
+      setServices([...services].sort((a, b) => a.numberoforders - b.numberoforders));
     }
     setSortType(type);
   };
@@ -391,8 +413,8 @@ export default function ServicesPage() {
               <li
                 key={cat}
                 className={`cursor-pointer p-2 rounded-md ${category === cat
-                    ? "bg-black text-white"
-                    : "hover:bg-gray-100"
+                  ? "bg-black text-white"
+                  : "hover:bg-gray-100"
                   }`}
                 onClick={() => handleCategoryClick(cat)}
               >
@@ -437,6 +459,18 @@ export default function ServicesPage() {
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                   <button
                     onClick={() => {
+                      handleSort('high-to-low');
+                      setIsSortOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h9" />
+                    </svg>
+                    Price (High to Low)
+                  </button>
+                  <button
+                    onClick={() => {
                       handleSort('low-to-high');
                       setIsSortOpen(false);
                     }}
@@ -449,7 +483,7 @@ export default function ServicesPage() {
                   </button>
                   <button
                     onClick={() => {
-                      handleSort('high-to-low');
+                      handleSort('top-orders');
                       setIsSortOpen(false);
                     }}
                     className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
@@ -457,7 +491,7 @@ export default function ServicesPage() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h9" />
                     </svg>
-                    Price (High to Low)
+                    Top Orders
                   </button>
                 </div>
               )}
@@ -498,7 +532,26 @@ export default function ServicesPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center">No services found.</p>
+            <div>
+              {isLoading ? (
+                <p className="text-gray-500 text-center">Loading services...</p>
+              ) : (
+                <div>
+                  <p className="text-gray-500 text-center">No services found.</p>
+                  <button
+                    onClick={() => { handleRequestClick(); setIsClicked(true); }}
+                    disabled={isClicked}
+                    className={`w-full h-10 rounded-lg font-bold text-lg transition-all duration-300
+                    ${isClicked
+                        ? 'bg-gray-400 text-gray-800 cursor-not-allowed'
+                        : 'bg-black text-white cursor-pointer hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500'
+                      }`}
+                  >
+                    {isClicked ? "Service Requested" : "Request Service"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </main>
 

@@ -7,18 +7,8 @@ export async function POST(req: Request) {
     try {
         const { name } = await req.json();
 
-        // Validate input
         if (!name || name.length < 3 || name.length > 50) {
             return NextResponse.json({ error: 'Invalid service name' }, { status: 400 });
-        }
-
-        // Check if the service has already been requested
-        const existingRequest = await prisma.requestedService.findFirst({
-            where: { name },
-        });        
-
-        if (existingRequest) {
-            return NextResponse.json({ message: 'Service already requested' }, { status: 409 });
         }
 
         const newService = await prisma.requestedService.create({
