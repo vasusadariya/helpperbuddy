@@ -6,10 +6,8 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 const ORDER_WINDOW_HOURS = 48;
-console.log("ORDER_WINDOW_HOURS", ORDER_WINDOW_HOURS);
-console.log("DEFAULT_PAGE_SIZE", DEFAULT_PAGE_SIZE);
-console.log("MAX_PAGE_SIZE", MAX_PAGE_SIZE);
-export async function GET() {
+
+export async function GET(request: NextRequest) {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   try {

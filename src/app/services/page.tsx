@@ -85,7 +85,7 @@ export default function ServicesPage() {
       if (query) params.append("query", query);
       if (category && category !== "all") params.append("category", category);
 
-      const res = await fetch(`/api/services?${params.toString()}`);
+      const res = await fetch('/api/services?${params.toString()}');
       const data = await res.json();
       setServices(data);
     } catch (error) {
@@ -133,7 +133,7 @@ export default function ServicesPage() {
     const params = new URLSearchParams();
     if (query) params.set("query", query);
     if (category && category !== "all") params.set("category", category);
-    router.push(`/services?${params.toString()}`);
+    router.push('/services?${params.toString()}');
   };
 
   const addToCart = (service: Service) => {
@@ -280,7 +280,7 @@ export default function ServicesPage() {
         clearCart();
 
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        router.push(`/user/dashboard`);
+        router.push('/user/dashboard');
       } else {
         throw new Error("Failed to create one or more orders");
       }
@@ -319,24 +319,27 @@ export default function ServicesPage() {
     <div className="flex min-h-screen">
       <Toaster position="top-center" />
 
-      {/* Categories Sidebar */}
-      <aside className="w-64 bg-white p-4 shadow-lg fixed h-full">
-        <h2 className="text-xl font-semibold mb-4">Categories</h2>
-        <ul className="space-y-2">
-          {categories.map((cat) => (
-            <li
-              key={cat}
-              className={`cursor-pointer p-2 rounded-md ${category === cat
-                  ? "bg-blue-500 text-white"
-                  : "hover:bg-gray-100"
-                }`}
-              onClick={() => handleCategoryClick(cat)}
-            >
-              {cat === "all" ? "All Services" : cat}
-            </li>
-          ))}
-        </ul>
-      </aside>
+{/* Categories Sidebar */}
+<aside className="w-64 bg-black p-6 shadow-lg fixed h-full font-['Inter',sans-serif] overflow-y-auto">
+  <h2 className="text-2xl font-bold mb-6 text-white tracking-tight truncate">Categories</h2>
+  <ul className="space-y-3">
+    {categories.map((cat) => (
+      <li
+        key={cat}
+        className={`cursor-pointer px-4 py-3 rounded-lg transition-all duration-200 font-medium break-words ${
+          category === cat
+            ? "bg-gray-700 text-white shadow-md"
+            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:shadow-sm"
+        }`}
+        onClick={() => handleCategoryClick(cat)}
+      >
+        <span className="text-[15px] tracking-wide block overflow-hidden text-ellipsis whitespace-nowrap">
+          {cat === "all" ? "All Services" : cat}
+        </span>
+      </li>
+    ))}
+  </ul>
+</aside>
 
       {/* Main Content */}
       <main className="flex-1 ml-64 p-6">

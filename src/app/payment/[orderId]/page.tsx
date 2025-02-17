@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Script from 'next/script';
+import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils/formatCurrency';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
 
 interface OrderDetails {
   orderId: string;
@@ -36,8 +36,9 @@ declare global {
   }
 }
 
-export default function PaymentPage({ params }: { params: { orderId: string } }) {
+export default function PaymentPage() {
   const router = useRouter();
+  const { orderId } = useParams() as { orderId: string }; // Unwrap params using useParams
   const { data: session, status: sessionStatus } = useSession();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,24 +51,20 @@ export default function PaymentPage({ params }: { params: { orderId: string } })
       return;
     }
 
-    if (sessionStatus === 'authenticated' && params.orderId) {
-      fetchOrderDetails(params.orderId);
+    if (sessionStatus === 'authenticated' && orderId) {
+      fetchOrderDetails(orderId);
     }
-  }, [sessionStatus, params.orderId]);
+  }, [sessionStatus, orderId]);
 
-  const fetchOrderDetails = async (orderId: string) => {
+  const fetchOrderDetails = async (id: string) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`/api/payment/initiate/${orderId}`);
+
+      const response = await fetch(`/api/payment/initiate/${id}`);
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch order details');
-      }
-
-      if (!data.success) {
+      if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to fetch order details');
       }
 
@@ -151,7 +148,7 @@ export default function PaymentPage({ params }: { params: { orderId: string } })
     };
 
     try {
-      const rzp = new (window).Razorpay(options);
+      const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response: { error: { code: string; description: string; source: string; step: string; reason: string; metadata: { order_id: string; payment_id: string; } } }) {
         console.error('Payment failed:', response.error);
         setError('Payment failed. Please try again.');
@@ -185,7 +182,7 @@ export default function PaymentPage({ params }: { params: { orderId: string } })
           <p className="text-red-600 mt-2">{error}</p>
           <div className="mt-4 flex space-x-3">
             <button 
-              onClick={() => fetchOrderDetails(params.orderId)}
+              onClick={() => fetchOrderDetails(orderId)}
               className="text-blue-600 hover:text-blue-800"
             >
               Try Again
