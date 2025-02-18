@@ -1,108 +1,191 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import crypto from "crypto";
-import { authOptions } from "../../auth/[...nextauth]/options";
 
-interface VerifyRequestBody {
+interface VerifyPayload {
   orderId: string;
-  razorpayPaymentId: string;
-  razorpayOrderId: string;
-  razorpaySignature: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature?: string;
 }
 
 export async function POST(req: NextRequest) {
-  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
+  let payload: VerifyPayload;
 
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({
+    payload = await req.json();
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Invalid request payload",
+        timestamp: currentUTCTime,
+      },
+      { status: 400 }
+    );
+  }
+
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json(
+      {
         success: false,
         error: "Unauthorized",
-        timestamp: currentUTCTime
-      }, { status: 401 });
-    }
-
-    // Get request body
-    const body: VerifyRequestBody = await req.json();
-    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = body;
-
-    // Verify the order belongs to the user
-    const order = await prisma.order.findFirst({
-      where: {
-        id: orderId,
-        user: {
-          email: session.user.email
-        }
+        timestamp: currentUTCTime,
       },
-      include: {
-        service: {
-          select: {
-            name: true
+      { status: 401 }
+    );
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // Get order with user and wallet details
+      const order = await tx.order.findFirst({
+        where: {
+          id: payload.orderId,
+          user: { email: session?.user?.email ?? "" },
+        },
+        include: {
+          service: true,
+          user: {
+            include: { wallet: true }
+          },
+        },
+      });
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      // Check if order is already paid
+      if (order.status === "PAYMENT_COMPLETED") {
+        throw new Error("Order is already paid");
+      }
+
+      // Handle wallet payment if applicable
+      if (order.walletAmount > 0) {
+        // Verify current wallet balance
+        const currentWallet = await tx.wallet.findUnique({
+          where: { id: order.user.wallet?.id }
+        });
+
+        if (!currentWallet || currentWallet.balance < order.walletAmount) {
+          throw new Error("Insufficient wallet balance");
+        }
+
+        // Deduct from wallet
+        const updatedWallet = await tx.wallet.update({
+          where: { id: currentWallet.id },
+          data: {
+            balance: {
+              decrement: order.walletAmount
+            }
           }
+        });
+
+        // Create wallet transaction record
+        await tx.transaction.create({
+          data: {
+            amount: order.walletAmount,
+            type: "DEBIT",
+            description: order.remainingAmount > 0 
+              ? `Partial payment for order #${order.id}`
+              : `Full payment for order #${order.id}`,
+            walletId: currentWallet.id,
+            userId: order.userId,
+            id: order.id
+          }
+        });
+
+        // If no remaining amount (full wallet payment)
+        if (order.remainingAmount === 0) {
+          const updatedOrder = await tx.order.update({
+            where: { id: order.id },
+            data: {
+              status: "PAYMENT_COMPLETED",
+              paidAt: new Date(currentUTCTime),
+              paymentMode: "COD" // Since it's wallet-only payment
+            }
+          });
+
+          return {
+            success: true,
+            message: "Payment completed using wallet",
+            order: updatedOrder,
+            wallet: updatedWallet
+          };
         }
       }
-    });
 
-    if (!order) {
-      return NextResponse.json({
-        success: false,
-        error: "Order not found",
-        timestamp: currentUTCTime
-      }, { status: 404 });
-    }
-
-    // Generate signature verification string
-    const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest("hex");
-
-    // Verify signature
-    if (generatedSignature !== razorpaySignature) {
-      return NextResponse.json({
-        success: false,
-        error: "Invalid payment signature",
-        timestamp: currentUTCTime
-      }, { status: 400 });
-    }
-
-    // Update order status to PAYMENT_COMPLETED
-    // Note: The actual order completion will be handled by the webhook
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: "PAYMENT_COMPLETED",
-        razorpayPaymentId,
-        paidAt: new Date(currentUTCTime),
-        updatedAt: new Date(currentUTCTime)
+      // Handle Razorpay payment for remaining amount
+      if (!payload.razorpayPaymentId || !payload.razorpayOrderId || !payload.razorpaySignature) {
+        throw new Error("Missing Razorpay payment information");
       }
+
+      // Verify Razorpay signature
+      const generatedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+        .update(payload.razorpayOrderId + "|" + payload.razorpayPaymentId)
+        .digest("hex");
+
+      if (generatedSignature !== payload.razorpaySignature) {
+        throw new Error("Invalid payment signature");
+      }
+
+      // Update order with Razorpay payment details
+      const updatedOrder = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "PAYMENT_COMPLETED",
+          razorpayPaymentId: payload.razorpayPaymentId,
+          paidAt: new Date(currentUTCTime),
+          paymentMode: "ONLINE"
+        }
+      });
+
+      return {
+        success: true,
+        message: order.walletAmount > 0 
+          ? "Payment completed using wallet and online payment"
+          : "Payment completed using online payment",
+        order: updatedOrder,
+        wallet: order.user.wallet
+      };
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        message: "Payment verified successfully",
-        orderId,
-        paymentId: razorpayPaymentId,
-        serviceName: order.service.name,
+        message: result.message,
+        order: {
+          id: result.order.id,
+          status: result.order.status,
+          amount: result.order.amount,
+          walletAmount: result.order.walletAmount,
+          remainingAmount: result.order.remainingAmount,
+          paidAt: result.order.paidAt,
+          paymentMode: result.order.paymentMode
+        },
+        wallet: result.wallet ? {
+          balance: result.wallet.balance
+        } : undefined,
         timestamp: currentUTCTime
       }
     });
 
   } catch (error) {
-    console.error("[Payment Verify API Error]:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: currentUTCTime
-    });
-
-    return NextResponse.json({
-      success: false,
-      error: "Failed to verify payment",
-      details: error instanceof Error ? error.message : "Unknown error",
-      timestamp: currentUTCTime
-    }, { status: 500 });
+    console.error("Payment verification error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Payment verification failed",
+        details: error instanceof Error ? error.message : "Unknown error",
+        timestamp: currentUTCTime
+      },
+      { status: 500 }
+    );
   }
 }

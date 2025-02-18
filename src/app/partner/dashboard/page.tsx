@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Clock, CheckCircle, PlayCircle } from 'lucide-react';
+import { Clock, CheckCircle, PlayCircle } from "lucide-react";
 import OrderNotification from "@/components/OrderNotification";
 
 // Keeping all the interfaces unchanged
@@ -52,7 +52,7 @@ interface Order {
   };
   date: string;
   time: string;
-  status: string;
+  status: "PENDING" | "ACCEPTED" | "IN_PROGRESS" | "SERVICE_COMPLETED" | "PAYMENT_REQUESTED" | "PAYMENT_COMPLETED" | "COMPLETED" | "CANCELLED";
   amount: number;
   razorpayPaymentId?: string;
   paidAt?: string;
@@ -80,7 +80,9 @@ export default function PartnerDashboard() {
       }
     } catch (err) {
       console.error("Error fetching partner data:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch partner data");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch partner data"
+      );
     }
   };
 
@@ -105,13 +107,12 @@ export default function PartnerDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await Promise.all([
-          fetchPartnerData(),
-          fetchAcceptedOrders()
-        ]);
+        await Promise.all([fetchPartnerData(), fetchAcceptedOrders()]);
       } catch (err) {
         console.error("Error fetching data:", err);
-        setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        setError(
+          err instanceof Error ? err.message : "Failed to load dashboard data"
+        );
       } finally {
         setLoading(false);
       }
@@ -133,22 +134,32 @@ export default function PartnerDashboard() {
       case 'COMPLETED':
         return { text: "Completed", className: "bg-green-100 text-green-800" };
       default:
-        return { text: order.status, className: "bg-gray-100 text-gray-800" };
+        return { 
+          text: order.status, 
+          className: "bg-gray-100 text-gray-800" 
+        };
     }
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: 'IN_PROGRESS' | 'COMPLETED') => {
-    if (!confirm(`Are you sure you want to mark this service as ${newStatus.toLowerCase()}?`)) {
+  const handleStatusUpdate = async (
+    orderId: string,
+    newStatus: "IN_PROGRESS" | "COMPLETED"
+  ) => {
+    if (
+      !confirm(
+        `Are you sure you want to mark this service as ${newStatus.toLowerCase()}?`
+      )
+    ) {
       return;
     }
 
-    setIsUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
+    setIsUpdatingStatus((prev) => ({ ...prev, [orderId]: true }));
 
     try {
-      const response = await fetch('/api/partner/orders/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, status: newStatus })
+      const response = await fetch("/api/partner/orders/update-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, status: newStatus }),
       });
 
       const data = await response.json();
@@ -156,13 +167,13 @@ export default function PartnerDashboard() {
       if (data.success) {
         await fetchAcceptedOrders();
       } else {
-        throw new Error(data.error || 'Failed to update status');
+        throw new Error(data.error || "Failed to update status");
       }
     } catch (error) {
-      console.error('Error updating order status:', error);
-      alert('Failed to update status. Please try again.');
+      console.error("Error updating order status:", error);
+      alert("Failed to update status. Please try again.");
     } finally {
-      setIsUpdatingStatus(prev => ({ ...prev, [orderId]: false }));
+      setIsUpdatingStatus((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 

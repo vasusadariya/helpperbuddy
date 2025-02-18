@@ -190,8 +190,7 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
         partner_phone: order.Partner.phoneno || 'Not provided',
         partner_email: order.Partner.email,
         dashboard_url: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
-        support_url: `${process.env.NEXT_PUBLIC_BASE_URL}/support`,
-        acceptance_time: acceptanceTime
+        // support_url: `${process.env.NEXT_PUBLIC_BASE_URL}/support`,
       }
     );
 
