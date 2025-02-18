@@ -21,6 +21,7 @@ const validateServerDateTime = (
     // Parse the incoming ISO date string
     const selectedDateTime = new Date(dateTimeString);
     const now = new Date();
+    timeString + 1;
 
     // Check if the date and time are valid
     if (isNaN(selectedDateTime.getTime())) {

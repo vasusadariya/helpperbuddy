@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Invalid request payload",
+        error: "Invalid request payload" + error,
         timestamp: currentUTCTime,
       },
       { status: 400 }
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       const order = await tx.order.findFirst({
         where: {
           id: payload.orderId,
-          user: { email: session?.user?.email ?? "" },
+          ser: { email: session?.user?.email ?? "" },
         },
         include: {
           service: true,
