@@ -1,4 +1,3 @@
-
 import NextAuth, { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import { Session as NextAuthSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";

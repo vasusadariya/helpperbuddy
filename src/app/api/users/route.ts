@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hash(password, 10);
     const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    const user = await prisma.user.create({
+    try{
+      const user = await prisma.user.create({
       data: {
         name,
         email,
@@ -76,14 +77,25 @@ export async function POST(request: NextRequest) {
         referralCode,
       },
     });
-
     console.log("User created successfully:", user);
     return NextResponse.json(
       { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
       { status: 201 }
     );
+    }catch (error: any) {
+      if (error.code === 'P2002') {
+        // This error code means unique constraint violation
+        const field = error.meta?.target?.[0];
+        return NextResponse.json(
+          { Error: `${field} already exists` },
+          { status: 409 }
+        );
+      }
+      console.error("Error in /api/user:", error);
+      return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
   } catch (error) {
-    console.error("Error in /api/users:", error);
+    console.error("Error in /api/user:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

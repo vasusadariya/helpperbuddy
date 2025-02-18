@@ -1,17 +1,14 @@
-// src/user/dashboard/layout.tsx
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User, FileText, Star, Wallet, Settings } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 const sidebarItems = [
   { name: "Profile", href: "/user/dashboard/profile", icon: User },
   { name: "Orders", href: "/user/dashboard/orders", icon: FileText },
-  { name: "Wallet", href: "/user/dashboard/wallet", icon: Wallet },
-  { name: "Reviews", href: "/user/dashboard/reviews", icon: Star },
-  { name: "Settings", href: "/user/dashboard/settings", icon: Settings },
 ];
 
 export default function DashboardLayout({
@@ -24,9 +21,10 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <Navbar />
       {/* Mobile menu button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md"
+        className="md:hidden fixed top-20 left-4 z-50 p-2 bg-white rounded-md shadow-md"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
         <svg
@@ -46,9 +44,9 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 transform ${
+        className={`fixed inset-y-0 top-8 left-0 transform ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 transition duration-200 ease-in-out z-30 w-64 bg-white shadow-lg`}
+        } md:translate-x-0 transition duration-200 ease-in-out z-30 w-64 bg-white shadow-lg mt-16`}
       >
         <div className="p-6">
           <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
@@ -75,8 +73,8 @@ export default function DashboardLayout({
       </div>
 
       {/* Main content */}
-      <div className="md:ml-64 p-8">
-        <div className="max-w-7xl mx-auto">{children}</div>
+      <div className="md:ml-64 pt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
       </div>
     </div>
   );
