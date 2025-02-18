@@ -8,14 +8,21 @@ export async function DELETE(
   try {
     const { id: serviceId } = await context.params;
 
-    // First delete all service provider entries
+    // First delete all order entries associated with the service
+    await prisma.order.deleteMany({
+      where: {
+        serviceId: serviceId,
+      },
+    });
+
+    // Then delete all service provider entries
     await prisma.serviceProvider.deleteMany({
       where: {
         serviceId: serviceId,
       },
     });
 
-    // Then delete the service
+    // Finally, delete the service
     const service = await prisma.service.delete({
       where: {
         id: serviceId,
@@ -33,47 +40,47 @@ export async function DELETE(
 }
 
 export async function PATCH(
-    req: NextRequest,
-    context: { params: { id: string } }
-  ) {
-    try {
-      const { id: serviceId } = await context.params;
-      const body = await req.json();
-      const { name, description, price, category, threshold, isActive, image } = body;
-  
-      const service = await prisma.service.update({
-        where: {
-          id: serviceId,
-        },
-        data: {
-          name,
-          description,
-          price: Number(price),
-          category,
-          threshold: Number(threshold),
-          isActive,
-          image,
-        },
-        include: {
-          ServiceProvider: {
-            include: {
-              Partner: {
-                select: {
-                  name: true,
-                  email: true,
-                },
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  try {
+    const { id: serviceId } = await context.params;
+    const body = await req.json();
+    const { name, description, price, category, threshold, isActive, image } = body;
+
+    const service = await prisma.service.update({
+      where: {
+        id: serviceId,
+      },
+      data: {
+        name,
+        description,
+        price: Number(price),
+        category,
+        threshold: Number(threshold),
+        isActive,
+        image,
+      },
+      include: {
+        ServiceProvider: {
+          include: {
+            Partner: {
+              select: {
+                name: true,
+                email: true,
               },
             },
           },
         },
-      });
-  
-      return NextResponse.json(service);
-    } catch (error) {
-      console.error('Error updating service:', error);
-      return NextResponse.json(
-        { error: 'Error updating service' },
-        { status: 500 }
-      );
-    }
+      },
+    });
+
+    return NextResponse.json(service);
+  } catch (error) {
+    console.error('Error updating service:', error);
+    return NextResponse.json(
+      { error: 'Error updating service' },
+      { status: 500 }
+    );
   }
+}

@@ -64,6 +64,12 @@ export default function ServiceModal({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (initialData) {
+        setFormData(initialData);
+    }
+}, [initialData]);
+
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {

@@ -25,6 +25,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       icon: Users,
       subItems: [
         { name: 'Service Providers', href: '/admin/dashboard/users/providers' },
+        { name: 'Service Recommendations', href: '/admin/dashboard/services-recommendations' },
         { name: 'Customers', href: '/admin/dashboard/users/customers' },
         { name: 'Admin', href: '/admin/dashboard/users/pending-admin' }
       ]
