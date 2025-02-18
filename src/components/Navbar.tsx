@@ -83,21 +83,13 @@ export default function Navbar() {
         We are AVAILABLE in Mumbai, Surat
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20 gap-8">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 shrink-0">
-            <Image className="h-10 w-auto" src="/logo.png" alt="Helper Buddy" width={40} height={40} />
-            <span className="text-2xl font-extrabold text-black tracking-wide">Helper Buddy</span>
+      <div className="max-w-auto mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+        <div className="flex items-center space-x-2">
+          <Link href="/" className='flex justify-between'>
+            <Image className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" width={32} height={32} />
+            <span className="text-2xl font-extrabold text-black tracking-wide ml-2">Helper Buddy</span>
           </Link>
-
-          {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex items-center space-x-8">
-            <NavLink href="/services" icon={ShoppingBag}>Services</NavLink>
-            <NavLink href="/blogs">Blogs</NavLink>
-            <NavLink href="/contactus">Contact Us</NavLink>
-            <NavLink href="/about">About Us</NavLink>
-          </div>
+        </div>
 
           {/* Search Bar */}
           <div className="hidden md:flex flex-1 justify-center max-w-md">

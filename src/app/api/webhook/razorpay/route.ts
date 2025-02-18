@@ -4,23 +4,29 @@ import { PrismaClient, Transaction, Wallet } from "@prisma/client"
 import crypto from "crypto"
 
 // Constants
-const REFERRAL_BONUS_AMOUNT = 50
+const prisma = new PrismaClient()
+const result: { variable_value: number }[] = await prisma.$queryRaw`
+          SELECT variable_value FROM system_config 
+          WHERE variable_name = 'referral'
+        `
+const config = result[0]
+const REFERRAL_BONUS_AMOUNT = config.variable_value;
 const CURRENCY = "INR"
 const MAX_RETRIES = 3
 const RETRY_DELAY = 1000 // 1 second
 console.log(CURRENCY);
 // Configuration
-const prisma = new PrismaClient()
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID!,
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
 console.log(razorpay);
-// Types
-type ReferralResult = {
-  wallet: Wallet
-  transaction: Transaction
-} | null
+
+// type ReferralResult = {
+//   wallet: Wallet
+//   transaction: Transaction
+// } | null
+
 type WebhookEvent = {
   event: string;
   payload: {
@@ -65,12 +71,12 @@ async function withRetry<T>(
 
 export async function POST(req: NextRequest) {
   const currentUTCTime = getCurrentUTCTime();
-  
+
   try {
     const body = await req.text();
     const signature = req.headers.get("x-razorpay-signature");
     const isTestMode = process.env.NODE_ENV === 'development';
-    
+
     // Signature verification (skip in dev mode)
     if (!isTestMode) {
       if (!signature) {
@@ -110,10 +116,10 @@ export async function POST(req: NextRequest) {
         () => prisma.order.findUnique({
           where: { razorpayOrderId },
           include: {
-            service: true,
-            user: {
+            Service: true,
+            User: {
               include: {
-                wallet: true,
+                Wallet: true,
                 referrer: {
                   include: {
                     wallet: true
@@ -227,7 +233,7 @@ export async function POST(req: NextRequest) {
         // Complete the order
         const updatedOrder = await tx.order.update({
           where: { id: order.id },
-          data: { 
+          data: {
             status: "COMPLETED",
             razorpayPaymentId: paymentId,
             paidAt: new Date(currentUTCTime),

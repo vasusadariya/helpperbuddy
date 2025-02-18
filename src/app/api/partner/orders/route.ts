@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
@@ -41,14 +41,14 @@ export async function GET(request: NextRequest) {
         }
       },
       include: {
-        service: {
+        Service: {
           select: {
             name: true,
             price: true,
             category: true
           }
         },
-        user: {
+        User: {
           select: {
             name: true,
             email: true,
@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
       data: {
         orders: acceptedOrders.map(order => ({
           id: order.id,
-          service: order.service,
-          user: order.user,
+          service: order.Service,
+          user: order.User,
           date: order.date.toISOString(),
           time: order.time,
           status: order.status,

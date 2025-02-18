@@ -150,7 +150,7 @@ export const authOptions: NextAuthOptions = {
             }
             return token;
         },
-        async signIn({ user, account, profile, email, credentials }: { user: User | NextAuthUser; account: any; profile?: any; email?: any; credentials?: any }) {
+        async signIn({ user }: { user: User | NextAuthUser }) {
             try {
                 if (!user) return false; // Prevent login for new users
                 if ((user as User).role === "USER") {

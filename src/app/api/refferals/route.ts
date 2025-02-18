@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "../auth/[...nextauth]/options"
-
-const REFERRAL_BONUS = 50; // ₹50 referral bonus for referrer
+import { number } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,6 +123,12 @@ export async function GET() {
 // Helper function to award referral bonus
 export async function awardReferralBonus(userId: string) {
   try {
+    const result: { variable_value: number }[] = await prisma.$queryRaw`
+          SELECT variable_value FROM system_config 
+          WHERE variable_name = 'referral'
+        `
+    const config = result[0]
+    const REFERRAL_BONUS = config.variable_value;
     // Find the user who made the purchase
     const purchaser = await prisma.user.findUnique({
       where: { id: userId },
