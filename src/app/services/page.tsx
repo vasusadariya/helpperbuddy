@@ -118,17 +118,21 @@ export default function ServicesPage() {
       const params = new URLSearchParams();
       if (query) params.append("query", query);
       if (category && category !== "all") params.append("category", category);
-
+  
       const res = await fetch(`/api/services?${params.toString()}`);
       const data = await res.json();
-
+  
+      // Sort data before updating state
+      let sortedData = [...data]; // Create a copy to avoid direct mutation
       if (sortType === 'low-to-high') {
-        setServices([...data].sort((a, b) => a.price - b.price));
+        sortedData.sort((a, b) => a.price - b.price);
       } else if (sortType === 'high-to-low') {
-        setServices([...data].sort((a, b) => b.price - a.price));
+        sortedData.sort((a, b) => b.price - a.price);
       } else if (sortType === 'top-orders') {
-        setServices([...data].sort((a, b) => a.numberoforders - b.numberoforders));
+        sortedData.sort((a, b) => b.numberoforders - a.numberoforders); // Sorting based on orders in descending order
       }
+  
+      setServices(sortedData); // Update state with the sorted data
     } catch (error) {
       console.error("Error fetching services:", error);
     } finally {
@@ -187,14 +191,18 @@ export default function ServicesPage() {
   };
 
   const handleSort = (type: string) => {
-    if (type === 'low-to-high') {
-      setServices([...services].sort((a, b) => a.price - b.price));
-    } else if (type === 'high-to-low') {
-      setServices([...services].sort((a, b) => b.price - a.price));
-    } else if (sortType === 'top-orders') {
-      setServices([...services].sort((a, b) => a.numberoforders - b.numberoforders));
-    }
     setSortType(type);
+    let sortedData = [...services];
+  
+    if (type === 'low-to-high') {
+      sortedData.sort((a, b) => a.price - b.price);
+    } else if (type === 'high-to-low') {
+      sortedData.sort((a, b) => b.price - a.price);
+    } else if (type === 'top-orders') {
+      sortedData.sort((a, b) => b.numberoforders - a.numberoforders);
+    }
+  
+    setServices(sortedData);
   };
 
   const handleCategoryClick = (selectedCategory: string) => {
@@ -213,8 +221,6 @@ export default function ServicesPage() {
     if (query) params.set("query", query);
     if (category && category !== "all") params.set("category", category);
 
-
-    // Replace the current history state instead of pushing a new one
     router.replace(`/services?${params.toString()}`);
 
   };
