@@ -42,7 +42,7 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
             order_id: data.razorpayOrderId,
             name: "Service Payment",
             description: "Payment for completed service",
-            handler: function(response: any) {
+            handler: function() {
               onPaymentComplete();
             },
           };

@@ -86,7 +86,6 @@ export default function ServicesPage() {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [sortType, setSortType] = useState('low-to-high');
   const [services, setServices] = useState<Service[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -102,15 +101,13 @@ export default function ServicesPage() {
   const [isClicked, setIsClicked] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      setCategories(["all", ...data]);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
+  // const fetchCategories = async () => {
+  //   try {
+  //     await fetch("/api/categories");
+  //   } catch (error) {
+  //     console.error("Error fetching categories:", error);
+  //   }
+  // };
 
   const fetchServices = async () => {
     try {
@@ -142,7 +139,7 @@ export default function ServicesPage() {
 
   const handleRequestClick = async () => {
     try {
-      const response = await fetch("/api/services/request", {
+      await fetch("/api/services/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -154,9 +151,9 @@ export default function ServicesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  // useEffect(() => {
+  //   fetchCategories();
+  // }, []);
 
   useEffect(() => {
     fetchServices();
@@ -192,7 +189,7 @@ export default function ServicesPage() {
 
   const handleSort = (type: string) => {
     setSortType(type);
-    let sortedData = [...services];
+    const sortedData = [...services];
   
     if (type === 'low-to-high') {
       sortedData.sort((a, b) => a.price - b.price);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import Razorpay from "razorpay"
-import { PrismaClient, Transaction, Wallet } from "@prisma/client"
+import { PrismaClient } from "@prisma/client"
 import crypto from "crypto"
 
 // Constants

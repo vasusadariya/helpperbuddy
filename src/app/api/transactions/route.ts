@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const currentUTCTime = new Date("2025-02-17 17:56:28");
 
   try {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             status: true,
-            service: {
+            Service: {
               select: {
                 name: true
               }
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
         remainingAmount: true,
         paidAt: true,
         status: true,
-        service: {
+        Service: {
           select: {
             name: true
           }
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
         id: order.id,
         status: order.status,
         service: {
-          name: order.service.name
+          name: order.Service.name
         }
       }
     }));

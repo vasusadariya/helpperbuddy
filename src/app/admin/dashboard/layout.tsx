@@ -1,7 +1,7 @@
 'use client'
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { ChevronDown, Home, Users, BookOpen, Gift, Wallet, Settings, LogOut, Menu, X } from 'lucide-react';
+import { ChevronDown, Home, Users, BookOpen, Wallet, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
 

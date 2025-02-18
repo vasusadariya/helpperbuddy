@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEdgeStore } from '@/lib/edgestore';
 import { Check, X } from 'lucide-react';
@@ -66,7 +66,6 @@ export default function ServicesRecommendations() {
             });
 
             if (response.ok) {
-                const newService = await response.json();
 
                 if (file && imageUrl) {
                     await edgestore.publicFiles.confirmUpload({
@@ -196,12 +195,11 @@ export default function ServicesRecommendations() {
 
     const ServicesList = ({
         title,
-        services = [], // Provide a default value for services
+        services = [],
         loading,
         error,
         onDelete,
         type,
-        showpartnerName = false
     }: {
         title: string;
         services?: RequestedService[] | PartnerRequestedService[]; // Make services optional

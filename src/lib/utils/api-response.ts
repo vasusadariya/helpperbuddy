@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 interface ErrorResponse {
   success: false;
-  error: any;
+  error: unknown;
   timestamp: string;
 }
 

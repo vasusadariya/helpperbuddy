@@ -144,7 +144,7 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
         id: data.orderId,
       },
       include: {
-        user: true,
+        User: true,
         Partner: true,
         service: true,
       },
@@ -159,18 +159,6 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
       month: 'long',
       year: 'numeric'
     });
-
-    const acceptanceTime = order.acceptedAt 
-      ? new Date(order.acceptedAt).toLocaleString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          dateStyle: 'long',
-          timeStyle: 'short'
-        })
-      : new Date().toLocaleString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          dateStyle: 'long',
-          timeStyle: 'short'
-        });
 
     const response = await emailjs.send(
       process.env.EMAILJS_SERVICE_ID!,
