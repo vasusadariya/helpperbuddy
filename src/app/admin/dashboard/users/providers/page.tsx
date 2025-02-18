@@ -3,10 +3,6 @@ import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 
-interface PartnerPincode {
-  pincode: string;
-}
-
 interface Partner {
     id: string;
     name: string;

@@ -49,7 +49,6 @@ interface FooterLink {
 
 const Footer: React.FC = () => {
   const [services, setServices] = useState<ServiceLink[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Fetch services from the API
@@ -70,10 +69,8 @@ const Footer: React.FC = () => {
         });
 
         setServices(fetchedServices);
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching services:", error);
-        setLoading(false);
       }
     };
 

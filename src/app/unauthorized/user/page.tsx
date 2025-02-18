@@ -114,7 +114,7 @@ export default function Unauthorized() {
 
                 {/* Help Text */}
                 <p className="mt-6 text-sm text-gray-500">
-                    Don't have an account?{" "}
+                    Don&#39;t have an account?{" "}
                     <Link 
                         href="/signup" 
                         className="text-gray-400 hover:text-white hover:underline transition-colors duration-200"

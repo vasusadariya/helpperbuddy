@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       },
       select: {
         amount: true,
-        service: {
+        Service: {
           select: {
             category: true,
           },
@@ -73,8 +73,8 @@ export async function GET(request: Request) {
 
     const categoryRevenue: Record<string, number> = {};
     orders.forEach((order) => {
-      if (order.service?.category && order.amount) {
-        const category = order.service.category;
+      if (order.Service?.category && order.amount) {
+        const category = order.Service.category;
         categoryRevenue[category] = (categoryRevenue[category] || 0) + order.amount;
       }
     });

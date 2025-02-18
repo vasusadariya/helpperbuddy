@@ -13,10 +13,8 @@ import {
   Phone,
   Mail,
   UserCheck,
-  PlayCircle,
 } from "lucide-react";
 import Link from "next/link";
-import toast from "react-hot-toast";
 import Image from "next/image";
 import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
@@ -110,18 +108,6 @@ interface TransactionsResponse {
     transactions: Transaction[];
     timestamp: string;
   };
-}
-
-function formatDate(dateString: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Kolkata'
-  }).format(new Date(dateString));
 }
 
 interface WalletData {
@@ -350,48 +336,6 @@ export default function UserDashboard() {
     });
   };
 
-  const handleCancellation = async (orderId: string) => {
-    try {
-      // Show confirmation dialog
-      const confirmed = window.confirm(
-        "Are you sure you want to cancel this order? This action cannot be undone."
-      );
-
-      if (!confirmed) return;
-
-      // Show loading toast
-      const loadingToast = toast.loading("Cancelling order...");
-
-      // Call the API endpoint
-      const response = await fetch(`/api/orders/${orderId}/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to cancel order");
-      }
-
-      // Success
-      toast.success("Order cancelled successfully", {
-        id: loadingToast,
-      });
-
-      // Refresh the page or update the data
-      window.location.reload();
-      // Or if you're using router.refresh():
-      // router.refresh();
-    } catch (error) {
-      console.error("Error cancelling order:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to cancel order"
-      );
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -569,7 +513,6 @@ export default function UserDashboard() {
           {recentOrders.length > 0 ? (
             recentOrders.map((order) => {
               const statusDisplay = getStatusDisplay(order);
-              const showPayment = shouldShowPaymentButton(order);
 
               // Add null checks for amounts and format them
               const amount = order?.amount || 0;

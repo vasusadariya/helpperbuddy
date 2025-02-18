@@ -63,13 +63,12 @@ const validateServerDateTime = (
     console.error("Error validating date and time:", error);
     return {
       isValid: false,
-      error: "Please select a valid date and time",
+      error: `${error}`,
     };
   }
 };
 
-export async function GET(request: NextRequest) {
-  console.log(request);
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const currentUTCTime = new Date()

@@ -345,7 +345,7 @@ export default function PartnerRegister() {
                   placeholder="Enter comma-separated pincodes, e.g. 400001, 400002"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  Enter the pincodes of areas where you'll provide services, separated by commas
+                  Enter the pincodes of areas where you&#39;ll provide services, separated by commas
                 </p>
               </div>
             </div>

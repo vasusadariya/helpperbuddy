@@ -1,16 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
-
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 50;
-const ORDER_WINDOW_HOURS = 48;
-console.log(DEFAULT_PAGE_SIZE,MAX_PAGE_SIZE,ORDER_WINDOW_HOURS);
-
-export async function GET(request: NextRequest) {
-  console.log(request);
+export async function GET() {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   try {
@@ -69,7 +62,7 @@ export async function GET(request: NextRequest) {
         ]
       },
       include: {
-        service: {
+        Service: {
           select: {
             name: true,
             category: true,
@@ -77,7 +70,7 @@ export async function GET(request: NextRequest) {
             description: true
           }
         },
-        user: {
+        User: {
           select: {
             name: true,
             phoneno: true
@@ -90,18 +83,17 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    // Format orders
     const formattedOrders = pendingOrders.map(order => ({
       id: order.id,
       serviceDetails: {
-        name: order.service.name,
-        category: order.service.category,
-        price: order.service.price,
-        description: order.service.description
+        name: order.Service.name,
+        category: order.Service.category,
+        price: order.Service.price,
+        description: order.Service.description
       },
       customerDetails: {
-        name: order.user.name,
-        phone: order.user.phoneno || 'Will be shared after acceptance'
+        name: order.User.name,
+        phone: order.User.phoneno || 'Will be shared after acceptance'
       },
       orderDetails: {
         date: order.date.toISOString().split('T')[0],

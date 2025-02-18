@@ -93,7 +93,7 @@ export default function RequestNewService() {
                   placeholder="Enter service description"
                 />
                 <p className="mt-2 text-xs text-gray-500">
-                  Provide a detailed description of the service you'd like to offer
+                  Provide a detailed description of the service you&#39;d like to offer
                 </p>
               </div>
 

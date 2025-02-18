@@ -48,23 +48,6 @@ export default function CheckoutModal({
   const [maxTime, setMaxTime] = useState<string>('20:00');
   const [maxThresholdService, setMaxThresholdService] = useState<CartService | null>(null);
 
-  // Find service with maximum threshold hours
-  useEffect(() => {
-    if (cartServices.length > 0) {
-      const serviceWithMaxThreshold = cartServices.reduce((max, service) => 
-        service.threshold > max.threshold ? service : max
-      , cartServices[0]);
-      
-      setMaxThresholdService(serviceWithMaxThreshold);
-    }
-  }, [cartServices]);
-
-  useEffect(() => {
-    if (bookingDetails.date && maxThresholdService) {
-      updateTimeConstraints(bookingDetails.date);
-    }
-  }, [bookingDetails.date, maxThresholdService]);
-
   const updateTimeConstraints = (selectedDate: string) => {
     if (!maxThresholdService) return;
 
@@ -96,6 +79,23 @@ export default function CheckoutModal({
     const maxHour = Math.min(20 - totalServiceTime, 20);
     setMaxTime(`${Math.max(8, maxHour).toString().padStart(2, '0')}:00`);
   };
+
+  // Find service with maximum threshold hours
+  useEffect(() => {
+    if (cartServices.length > 0) {
+      const serviceWithMaxThreshold = cartServices.reduce((max, service) => 
+        service.threshold > max.threshold ? service : max
+      , cartServices[0]);
+      
+      setMaxThresholdService(serviceWithMaxThreshold);
+    }
+  }, [cartServices]);
+
+  useEffect(() => {
+    if (bookingDetails.date && maxThresholdService) {
+      updateTimeConstraints(bookingDetails.date);
+    }
+  }, [bookingDetails.date, maxThresholdService, updateTimeConstraints]);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;

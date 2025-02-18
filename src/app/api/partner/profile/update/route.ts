@@ -29,7 +29,7 @@ export async function PUT(request: Request) {
       } catch (e) {
         console.log(e);
         return NextResponse.json(
-          { success: false, error: "Invalid JSON in request body" },
+          { success: false, error: e },
           { status: 400 }
         );
       }

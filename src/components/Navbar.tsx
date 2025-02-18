@@ -39,12 +39,10 @@ export default function Navbar() {
   const [query, setQuery] = useState<string>('');
   const [results, setResults] = useState<ServiceResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [requested, setRequested] = useState<boolean>(false);
   const [isClicked, setIsClicked] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [showWalletTooltip, setShowWalletTooltip] = useState(false);
-  const [showRequestButton, setShowRequestButton] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolling(window.scrollY > 50);
@@ -61,7 +59,6 @@ export default function Navbar() {
   const fetchServices = async (query: string) => {
     if (!query) return setResults([]);
     setIsClicked(false);
-    setRequested(false);
     setLoading(true);
     try {
       const res = await fetch('/api/services/home-page', {
@@ -77,23 +74,6 @@ export default function Navbar() {
       console.error('Error fetching search results:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const requestService = async () => {
-    if (query.length < 3 || query.length > 50) return;
-    setRequested(true);
-
-    try {
-      await fetch('/api/services/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: query }),
-      });
-    } catch (error) {
-      console.error('Error requesting service:', error);
     }
   };
 

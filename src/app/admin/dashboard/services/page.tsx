@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useEdgeStore } from '@/lib/edgestore';
 import ServiceModal from '@/components/ServiceModal';
 
