@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     payload = await req.json();
   } catch (error) {
+    console.error("Invalid request payload:", error);
     return NextResponse.json(
       {
         success: false,

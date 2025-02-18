@@ -3,11 +3,14 @@ import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
+
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 const ORDER_WINDOW_HOURS = 48;
+console.log(DEFAULT_PAGE_SIZE,MAX_PAGE_SIZE,ORDER_WINDOW_HOURS);
 
 export async function GET(request: NextRequest) {
+  console.log(request);
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   try {

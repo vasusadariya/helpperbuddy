@@ -15,6 +15,7 @@ export async function GET() {
     const categories = services.map(service => service.category);
     return NextResponse.json(categories);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Error fetching categories' }, { status: 500 });
   }
 }

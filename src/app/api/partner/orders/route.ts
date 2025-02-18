@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
 export async function GET(request: NextRequest) {
+  console.log(request);
   const currentUTCTime = new Date("2025-02-17 18:59:06");
 
   try {
