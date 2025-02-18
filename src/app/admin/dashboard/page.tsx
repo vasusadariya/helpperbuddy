@@ -53,16 +53,20 @@ export default function Dashboard() {
 
         const data = await response.json();
         setStats(data);
-      } catch (err: any) {
-        if (err.name === "AbortError") {
-          console.log("Fetch aborted");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          if (err.name === "AbortError") {
+            console.log("Fetch aborted");
+          } else {
+            console.error("Error fetching dashboard stats:", err);
+            setError("Failed to load data. Please try again.");
+          }
         } else {
-          console.error("Error fetching dashboard stats:", err);
-          setError("Failed to load data. Please try again.");
+          console.error("Unknown error occurred");
+          setError("An unexpected error occurred.");
         }
-      } finally {
-        setLoading(false);
       }
+      
     };
 
     fetchDashboardStats();

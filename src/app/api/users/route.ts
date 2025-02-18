@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         phoneno: true,
         createdAt: true,
         referralCode: true,
-        wallet: true
+        Wallet: true
       }
     });
 
@@ -82,27 +82,22 @@ export async function POST(request: NextRequest) {
       { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
       { status: 201 }
     );
-    } catch (error) {
-      if (
-        error &&
-        typeof error === 'object' &&
-        'code' in error &&
-        error.code === 'P2002' &&
-        'meta' in error &&
-        error.meta &&
-        typeof error.meta === 'object' &&
-        'target' in error.meta
-      ) {
-        const prismaError = error as { meta: { target: string[] } };
-        const field = prismaError.meta.target[0];
-        return NextResponse.json(
-          { Error: `${field} already exists` },
-          { status: 409 }
-        );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if ((error as any).code === 'P2002') { // Type assertion for known Prisma error
+          const field = (error as any).meta?.target?.[0];
+          return NextResponse.json(
+            { error: `${field} already exists` },
+            { status: 409 }
+          );
+        }
+        console.error("Prisma Error in /api/user:", error);
+      } else {
+        console.error("Unknown error in /api/user:", error);
       }
-      console.error("Error in /api/user:", error);
+    
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+    }    
   } catch (error) {
     console.error("Error in /api/user:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

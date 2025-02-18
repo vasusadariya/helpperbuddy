@@ -120,7 +120,7 @@ export default function ServicesPage() {
       const data = await res.json();
   
       // Sort data before updating state
-      let sortedData = [...data]; // Create a copy to avoid direct mutation
+      const sortedData = [...data]; // Create a copy to avoid direct mutation
       if (sortType === 'low-to-high') {
         sortedData.sort((a, b) => a.price - b.price);
       } else if (sortType === 'high-to-low') {
