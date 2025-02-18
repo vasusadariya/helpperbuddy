@@ -164,10 +164,10 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20 gap-8">
           {/* Logo */}
           {/* Logo */}
-<Link href="/" className="flex items-center space-x-3 shrink-0">
-  <Image className="h-10 w-auto" src="/logo.png" alt="Helper Buddy" width={40} height={40} />
-  <span className="hidden md:block text-2xl font-extrabold text-black tracking-wide">Helper Buddy</span>
-</Link>
+          <Link href="/" className="flex items-center space-x-3 shrink-0">
+            <Image className="h-10 w-auto" src="/logo.png" alt="Helper Buddy" width={40} height={40} />
+            <span className="hidden md:block text-2xl font-extrabold text-black tracking-wide">Helper Buddy</span>
+          </Link>
 
           {/* Navigation Links - Desktop */}
           <div className="hidden lg:flex items-center space-x-8">
@@ -293,7 +293,7 @@ export default function Navbar() {
             <div className="relative">
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                onClick={() => {setDropdownOpen(!dropdownOpen); setLoading(true);}}
+                onClick={() => { setDropdownOpen(!dropdownOpen); setLoading(true); }}
                 className="p-2 rounded-full hover:bg-gray-100 transition-all flex items-center space-x-3"
               >
                 {isAuthenticated ? (
@@ -383,74 +383,74 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto p-4 space-y-4">
               {/* Mobile Search */}
               {/* Mobile Search */}
-<div className="relative">
-  <input
-    type="text"
-    value={query}
-    onChange={(e) => setQuery(e.target.value)}
-    placeholder="Search for a service..."
-    className="w-full px-6 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-  />
-  {loading ? (
-    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-      <svg className="w-5 h-5 text-gray-400 animate-spin" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8V12H4z"></path>
-      </svg>
-    </div>
-  ) : (
-    <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-  )}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search for a service..."
+                  className="w-full px-6 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                />
+                {loading ? (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <svg className="w-5 h-5 text-gray-400 animate-spin" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8V12H4z"></path>
+                    </svg>
+                  </div>
+                ) : (
+                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                )}
 
-  {/* Mobile Search Results Dropdown */}
-  {query && (
-    <div className="absolute left-0 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-      {results.length > 0 ? (
-        results.map((service) => (
-          <div
-            key={service.id}
-            className="p-4 border-b last:border-none hover:bg-gray-50 cursor-pointer transition"
-            onClick={() => {
-              const params = new URLSearchParams();
-              params.append("query", service.name);
-              window.location.href = `/services?${params.toString()}`;
-              setMobileMenuOpen(false); // Close mobile menu after selection
-            }}
-          >
-            <h3 className="font-semibold text-gray-900">{service.name}</h3>
-          </div>
-        ))
-      ) : (
-        <div className="p-4 text-center text-gray-500">
-          {loading ? (
-            <p className="text-gray-500 text-center">Loading services...</p>
-          ) : (
-            <div>
-              <p className="text-gray-500 text-center">No services found.</p>
-              {query.length > 4 && (
-                <button
-                  onClick={() => {
-                    handleRequestClick();
-                    setIsClicked(true);
-                    setMobileMenuOpen(false); // Close mobile menu after request
-                  }}
-                  disabled={isClicked}
-                  className={`w-full h-8 mt-2 rounded-lg font-bold text-lg transition-all duration-300
+                {/* Mobile Search Results Dropdown */}
+                {query && (
+                  <div className="absolute left-0 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                    {results.length > 0 ? (
+                      results.map((service) => (
+                        <div
+                          key={service.id}
+                          className="p-4 border-b last:border-none hover:bg-gray-50 cursor-pointer transition"
+                          onClick={() => {
+                            const params = new URLSearchParams();
+                            params.append("query", service.name);
+                            window.location.href = `/services?${params.toString()}`;
+                            setMobileMenuOpen(false); // Close mobile menu after selection
+                          }}
+                        >
+                          <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        {loading ? (
+                          <p className="text-gray-500 text-center">Loading services...</p>
+                        ) : (
+                          <div>
+                            <p className="text-gray-500 text-center">No services found.</p>
+                            {query.length > 4 && (
+                              <button
+                                onClick={() => {
+                                  handleRequestClick();
+                                  setIsClicked(true);
+                                  setMobileMenuOpen(false); // Close mobile menu after request
+                                }}
+                                disabled={isClicked}
+                                className={`w-full h-8 mt-2 rounded-lg font-bold text-lg transition-all duration-300
                     ${isClicked
-                      ? 'bg-gray-400 text-gray-800 cursor-not-allowed'
-                      : 'bg-black text-white cursor-pointer hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500'
-                    }`}
-                >
-                  {isClicked ? "Service Requested" : "Request Service"}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )}
-</div>
+                                    ? 'bg-gray-400 text-gray-800 cursor-not-allowed'
+                                    : 'bg-black text-white cursor-pointer hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500'
+                                  }`}
+                              >
+                                {isClicked ? "Service Requested" : "Request Service"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="grid gap-3">
                 <Link href="/services" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-all">
