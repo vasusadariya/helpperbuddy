@@ -347,7 +347,6 @@ export async function POST(req: NextRequest) {
           remainingAmount: remainingAmount,
           status: "PENDING",
           currency: "INR",
-          paymentMode: "ONLINE", // Add this line since it's the default in your schema
         },
         include: { service: true, user: true },
       });

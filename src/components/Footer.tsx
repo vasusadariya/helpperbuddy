@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { Facebook, Linkedin, Instagram, Mail, Phone, MapPin, LucideIcon } from "lucide-react";
 
 // Interface for XIcon props
@@ -47,14 +48,41 @@ interface FooterLink {
 }
 
 const Footer: React.FC = () => {
-  const services: ServiceLink[] = [
-    { name: "Cleaning", href: "/services/cleaning" },
-    { name: "Installation", href: "/services/installation" }
-  ];
+  const [services, setServices] = useState<ServiceLink[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Fetch services from the API
+    const fetchServices = async () => {
+      try {
+        const response = await fetch("/api/services/footer");
+        if (!response.ok) throw new Error("Failed to fetch services");
+
+        const data = await response.json();
+
+        const fetchedServices: ServiceLink[] = data.data.map((service: { name: string }) => {
+          const params = new URLSearchParams();
+          params.append("query", service.name);
+          return {
+            name: service.name,
+            href: `/services?${params.toString()}`,
+          };
+        });
+
+        setServices(fetchedServices);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching services:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
 
   const blogs: ServiceLink[] = [
-    { name: "Latest Posts", href: "/blog/latest" },
-    { name: "Industry News", href: "/blog/news" }
+    { name: "Latest Posts", href: "http://localhost:3000/blogs?page=1" },
+    { name: "Featured Insights", href: "http://localhost:3000/blogs?page=2" }
   ];
 
   const contacts: Contact = {
@@ -74,7 +102,7 @@ const Footer: React.FC = () => {
     { name: "Services", href: "/services" },
     { name: "Blogs", href: "/blog" },
     { name: "About", href: "/about" },
-    { name: "Contact Us", href: "/contact" }
+    { name: "Contact Us", href: "/contactus" }
   ];
 
   return (
@@ -87,7 +115,7 @@ const Footer: React.FC = () => {
             <Image
               src="/logo.png"
               alt="Helper Buddy Logo"
-              width={150}
+              width={50}
               height={50}
               className="mb-6"
             />

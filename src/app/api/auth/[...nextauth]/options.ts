@@ -1,14 +1,13 @@
+
 import NextAuth, { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import { Session as NextAuthSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { JWT } from "next-auth/jwt";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 const SIGNUP_BONUS = 100; // ₹100 signup bonus
 
-// Function to ensure the user has a wallet
 async function ensureWalletExists(userId: string) {
     const existingWallet = await prisma.wallet.findUnique({
         where: { userId },
@@ -42,119 +41,129 @@ interface Session extends NextAuthSession {
         name?: string | null;
         email?: string | null;
         image?: string | null;
-        role: string | null;
-    };
+        role?: string | null;
+    } & NextAuthSession["user"];
 }
 
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
             name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "text", placeholder: "email@example.com" },
-                password: { label: "Password", type: "password" },
-            },
-            async authorize(credentials): Promise<User | null> {
-                if (!credentials?.email || !credentials?.password) {
-                    throw new Error("Email and password are required.");
-                }
-
-                const user = await prisma.user.findUnique({ where: { email: credentials.email } });
-                const partner = await prisma.partner.findUnique({ where: { email: credentials.email } });
-
-                // Validate Admin Email Format
-                const isAdminPattern = /^hbadmin[\w\d]+@gmail\.com$/.test(credentials.email);
-
-                if (user) {
-                    const isValid = await bcrypt.compare(credentials.password, user.password);
-                    if (!isValid) throw new Error("Invalid credentials");
-
-                    let role = user.role.toString();
-
-                    // If the email follows the admin pattern but is not yet approved, request approval
-                    if (isAdminPattern && role !== "ADMIN") {
-                        role = "PENDING_ADMIN";
-                    }
-
-                    return { id: user.id, email: user.email, name: user.name, role };
-                }
-
-                if (partner) {
-                    if (!partner.approved) throw new Error("Your account is pending admin approval.");
-
-                    const isValid = await bcrypt.compare(credentials.password, partner.password);
-                    if (!isValid) throw new Error("Invalid credentials");
-
-                    return { id: partner.id, email: partner.email, name: partner.name, role: "PARTNER" };
-                }
-
-                throw new Error("No account found.");
-            },
+                        credentials: {
+                            email: { label: "Email", type: "text", placeholder: "email@example.com" },
+                            password: { label: "Password", type: "password" },
+                        },
+                        async authorize(credentials): Promise<User | null> {
+                            if (!credentials?.email || !credentials?.password) {
+                                throw new Error("Email and password are required.");
+                            }
+            
+                            const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+                            const partner = await prisma.partner.findUnique({ where: { email: credentials.email } });
+            
+                            // Validate Admin Email Format
+                            const isAdminPattern = /^hbadmin[\w\d]+@gmail\.com$/.test(credentials.email);
+            
+                            if (user) {
+                                const isValid = await bcrypt.compare(credentials.password, user.password);
+                                if (!isValid) throw new Error("Invalid credentials");
+            
+                                let role = user.role.toString();
+            
+                                // If the email follows the admin pattern but is not yet approved, request approval
+                                if (isAdminPattern && role !== "ADMIN") {
+                                    role = "PENDING_ADMIN";
+                                }
+            
+                                return { id: user.id, email: user.email, name: user.name, role };
+                            }
+            
+                            if (partner) {
+                                if (!partner.approved) throw new Error("Your account is pending admin approval.");
+            
+                                const isValid = await bcrypt.compare(credentials.password, partner.password);
+                                if (!isValid) throw new Error("Invalid credentials");
+            
+                                return { id: partner.id, email: partner.email, name: partner.name, role: "PARTNER" };
+                            }
+            
+                            throw new Error("No account found.");
+                        },
         }),
         GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+            authorization: {
+                params: {
+                    prompt: "select_account"
+                }
+            },
             async profile(profile): Promise<User> {
-                const user = await prisma.user.findUnique({ where: { email: profile.email } });
-                const partner = await prisma.partner.findUnique({ where: { email: profile.email } });
+                try {
+                    const user = await prisma.user.findUnique({ where: { email: profile.email } });
+                    const partner = await prisma.partner.findUnique({ where: { email: profile.email } });
+                    const isAdminPattern = /^hbadmin[\w\d]+@gmail\.com$/.test(profile.email);
 
-                // Validate Admin Email Format
-                const isAdminPattern = /^hbadmin[\w\d]+@gmail\.com$/.test(profile.email);
-
-                if (user) {
-                    let role = user.role.toString();
-
-                    // If email follows admin pattern but is not yet approved, request approval
-                    if (isAdminPattern && role !== "ADMIN") {
-                        role = "PENDING_ADMIN";
+                    // If existing user found
+                    if (user) {
+                        let role = user.role.toString();
+                        if (isAdminPattern && role !== "ADMIN") {
+                            role = "PENDING_ADMIN";
+                        }
+                        await ensureWalletExists(user.id);
+                        return { id: user.id, email: user.email, name: user.name, role };
                     }
 
-                    await ensureWalletExists(user.id);
-                    return { id: user.id, email: user.email, name: user.name, role };
-                }
+                    // If approved partner found
+                    if (partner && !partner.approved) {
+                        alert("Your account is pending admin approval.");
+                        return { id: partner.id, email: partner.email, name: partner.name, role: "PARTNER" };
+                    }
 
-                if (partner && partner.approved) {
-                    return { id: partner.id, email: partner.email, name: partner.name, role: "PARTNER" };
-                }
+                    if(partner && partner.approved) {
+                        return { id: partner.id, email: partner.email, name: partner.name, role: "PARTNER" };
+                    }
 
-                // If new user (not in DB), create a new user
-                const newUser = await prisma.user.create({
-                    data: {
-                        id: crypto.randomUUID(),
+                    // For new users
+                    return { 
+                        id: profile.sub,
                         email: profile.email,
                         name: profile.name,
-                        role: "USER", // Always create as USER, handle admin status separately
-                        password: "", // Set a default or random password
-                        referralCode: Math.random().toString(36).substring(7),
-                    },
-                });
-
-                await ensureWalletExists(newUser.id);
-                return { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role };
+                        role: "NEW_USER" // Special role for new users
+                    };
+                } catch (error) {
+                    console.error("Error in Google profile callback:", error);
+                    throw error;
+                }
             },
         }),
     ],
     callbacks: {
-        //@ts-ignore
-        async session({ session, token }: { session: Session; token: JWT }) {
+        async session({ session, token }) {
             if (!session.user) {
-                session.user = { name: null, email: null, image: null, role: token.role as string };
+                session.user = { name: null, email: null, image: null, role: token.role as string } as Session["user"];
             } else {
-                session.user = { ...session.user, role: token.role as string };
+                (session.user as Session["user"]).role = token.role as string;
             }
             return session;
         },
-        async jwt({ token, user}: { token: JWT; user?: User | NextAuthUser }) {
+        async jwt({ token, user }) {
             if (user) {
                 token.role = (user as User).role;
             }
             return token;
         },
-        async signIn({ user }: { user: User | NextAuthUser }) {
+        async signIn({ user, account, profile }) {
             try {
-                if (!user) return false; // Prevent login for new users
-                if ((user as User).role === "USER") {
-                    await ensureWalletExists(user.id);
+                if (account?.provider === "google") {
+                    const existingUser = await prisma.user.findUnique({
+                        where: { email: user.email! }
+                    });
+
+                    if (!existingUser) {
+                        // Store temporary data in session and redirect to signup
+                        return `/signup?email=${user.email}&name=${user.name}`;
+                    }
                 }
                 return true;
             } catch (error) {
@@ -162,13 +171,38 @@ export const authOptions: NextAuthOptions = {
                 return false;
             }
         },
-        async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-            return url.startsWith("/") ? `${baseUrl}${url}` : baseUrl;
-        },
+        async redirect({ url, baseUrl }) {
+            try {
+                // Handle signup redirect
+                if (url.startsWith('/signup')) {
+                    return `${baseUrl}${url}`;
+                }
+
+                // Get user role from session
+                const email = new URL(url).searchParams.get('email');
+                if (email) {
+                    const user = await prisma.user.findUnique({ where: { email } });
+                    const partner = await prisma.partner.findUnique({ where: { email } });
+
+                    // Redirect based on role
+                    if (user?.role === 'ADMIN') return `${baseUrl}/admin/dashboard`;
+                    if (user?.role === 'USER') return `${baseUrl}/dashboard`;
+                    if (partner?.approved) return `${baseUrl}/partner/dashboard`;
+                    if (!user && !partner) return `${baseUrl}/signup`;
+                }
+
+                return url.startsWith('/') ? `${baseUrl}${url}` : baseUrl;
+            } catch (error) {
+                console.error("Error in redirect callback:", error);
+                return baseUrl;
+            }
+        }
     },
     pages: {
         signIn: "/signin",
+        error: "/auth/error",
     },
+    debug: process.env.NODE_ENV === "development",
 };
 
-export const handler = NextAuth(authOptions);
+export default NextAuth(authOptions);

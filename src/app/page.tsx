@@ -14,7 +14,7 @@ const ServiceSection = dynamic(() => import('@/components/ServicesSection'), {
 })
 
 export const metadata: Metadata = {
-  title: 'Home Services - Professional Home Services at Your Doorstep',
+  title: 'Helper Buddy - Professional Home Services at Your Doorstep',
   description: 'Book professional home services including cleaning, repairs, and maintenance. Trusted service providers, competitive prices, and satisfaction guaranteed.',
   keywords: 'home services, cleaning services, repair services, maintenance, professional services',
   openGraph: {
