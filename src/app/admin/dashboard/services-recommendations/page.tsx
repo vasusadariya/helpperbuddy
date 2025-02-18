@@ -33,10 +33,10 @@ export default function ServicesRecommendations() {
     const [isUploading, setIsUploading] = useState(false);
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
     const [selectedServiceType, setSelectedServiceType] = useState<'user' | 'partner' | null>(null);
-    
+
     const [loadingUserServices, setLoadingUserServices] = useState(true);
     const [loadingPartnerServices, setLoadingPartnerServices] = useState(true);
-    
+
     const [errorUserServices, setErrorUserServices] = useState<string | null>(null);
     const [errorPartnerServices, setErrorPartnerServices] = useState<string | null>(null);
     const { edgestore } = useEdgeStore();
@@ -56,7 +56,7 @@ export default function ServicesRecommendations() {
                 });
                 imageUrl = res.url;
             }
-    
+
             const response = await fetch('/api/admin/services', {
                 method: 'POST',
                 headers: {
@@ -64,39 +64,39 @@ export default function ServicesRecommendations() {
                 },
                 body: JSON.stringify({ ...formData, image: imageUrl }),
             });
-    
+
             if (response.ok) {
                 const newService = await response.json();
-    
+
                 if (file && imageUrl) {
                     await edgestore.publicFiles.confirmUpload({
                         url: imageUrl,
                     });
                 }
-    
+
                 // Remove the service based on selectedServiceId and selectedServiceType
                 if (selectedServiceType === 'user') {
-                    setUserRequestedServices(prev => 
+                    setUserRequestedServices(prev =>
                         prev.filter(service => service.id !== selectedServiceId)
                     );
                 } else if (selectedServiceType === 'partner') {
-                    setPartnerRequestedServices(prev => 
+                    setPartnerRequestedServices(prev =>
                         prev.filter(service => service.id !== selectedServiceId)
                     );
                 }
-    
+
                 // Delete the service from the database
                 if (selectedServiceId && selectedServiceType) {
                     await handleDelete(selectedServiceId, selectedServiceType);
                 }
-    
+
                 setIsAddModalOpen(false);
                 setSelectedServiceId(null);
                 setSelectedServiceType(null);
             }
         } catch (error) {
             console.error('Error adding service:', error);
-    
+
             if (formData.image) {
                 await edgestore.publicFiles.delete({
                     url: formData.image,
@@ -105,7 +105,7 @@ export default function ServicesRecommendations() {
         } finally {
             setIsUploading(false);
         }
-    };   
+    };
 
     useEffect(() => {
         fetch('/api/admin/services/requested-services')
@@ -134,23 +134,23 @@ export default function ServicesRecommendations() {
     const handleApprove = async (id: string, type: 'user' | 'partner') => {
         setSelectedServiceId(id);
         setSelectedServiceType(type);
-        
-        const service = type === 'user' 
+
+        const service = type === 'user'
             ? userRequestedServices.find(s => s.id === id)
             : partnerRequestedServices.find(s => s.id === id);
-    
+
         if (service) {
             setIsAddModalOpen(true);
         }
     };
-    
+
     const getInitialData = (): ServiceFormData | undefined => {
         if (!selectedServiceId || !selectedServiceType) return undefined;
-    
+
         const service = selectedServiceType === 'user'
             ? userRequestedServices.find(s => s.id === selectedServiceId)
             : partnerRequestedServices.find(s => s.id === selectedServiceId);
-    
+
         if (service) {
             return {
                 name: service.name,
@@ -161,22 +161,22 @@ export default function ServicesRecommendations() {
                 image: ''
             };
         }
-    
+
         return undefined;
     };
 
     const handleDelete = async (id: string, type: 'user' | 'partner') => {
-        const endpoint = type === 'user' 
+        const endpoint = type === 'user'
             ? `/api/admin/services/requested-services/${id}`
             : `/api/admin/services/partner-requested-services/${id}`;
-    
+
         try {
             const response = await fetch(endpoint, { method: 'DELETE' });
-    
+
             if (!response.ok) {
                 throw new Error(`Failed to delete service: ${response.statusText}`);
             }
-    
+
             if (type === 'user') {
                 setUserRequestedServices(prev => prev.filter(service => service.id !== id));
             } else {
@@ -185,7 +185,7 @@ export default function ServicesRecommendations() {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
             console.error(`[handleDelete] Error deleting ${type} service:`, errorMessage);
-    
+
             if (type === 'user') {
                 setErrorUserServices(errorMessage);
             } else {
@@ -194,17 +194,17 @@ export default function ServicesRecommendations() {
         }
     };
 
-    const ServicesList = ({ 
-        title, 
-        services, 
-        loading, 
-        error, 
-        onDelete, 
+    const ServicesList = ({
+        title,
+        services = [], // Provide a default value for services
+        loading,
+        error,
+        onDelete,
         type,
-        showpartnerName = false 
-    }: { 
+        showpartnerName = false
+    }: {
         title: string;
-        services: RequestedService[] | PartnerRequestedService[];
+        services?: RequestedService[] | PartnerRequestedService[]; // Make services optional
         loading: boolean;
         error: string | null;
         onDelete: (id: string) => void;
@@ -227,38 +227,47 @@ export default function ServicesRecommendations() {
             )}
 
             <div className="space-y-2">
-                {services.map(service => (
-                    <Card key={service.id} className="border-zinc-200 bg-gray-50 hover:bg-gray-100 transition-all">
-                        <CardHeader className="p-4">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <CardTitle className="text-lg font-semibold text-gray-800">
-                                        {service.name}
-                                    </CardTitle>
-                                </div>
+                {services.length > 0 ? (
+                    services.map(service => (
+                        <Card key={service.id} className="border-zinc-200 bg-gray-50 hover:bg-gray-100 transition-all">
+                            <CardHeader className="p-4">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <CardTitle className="text-lg font-semibold text-gray-800">
+                                            {service.name}
+                                        </CardTitle>
+                                    </div>
 
-                                <div className="flex space-x-2">
-                                    <Button 
-                                        onClick={() => handleApprove(service.id, type)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
-                                    >
-                                        <Check className="w-4 h-4" />
-                                    </Button>
-                                    <Button 
-                                        onClick={() => onDelete(service.id)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </Button>
+                                    <div className="flex space-x-2">
+                                        <Button
+                                            onClick={() => handleApprove(service.id, type)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            onClick={() => onDelete(service.id)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
+                            </CardHeader>
+                        </Card>
+                    ))
+                ) : (
+                    <div>
+                        {loading ? (
+                            <div>
                             </div>
-                        </CardHeader>
-                    </Card>
-                ))}
+                        ) : <p className="text-gray-500">No Services Requested</p>}
+                    </div>
+                )}
             </div>
         </div>
     );
