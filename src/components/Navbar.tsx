@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, ShoppingBag, Menu, X, User, LogOut, LayoutDashboard, Wallet } from 'lucide-react';
+import { Search,  Menu, X, User, LogOut, LayoutDashboard, Wallet } from 'lucide-react';
 
 interface ExtendedSession extends Session {
   user: {
@@ -171,7 +171,7 @@ export default function Navbar() {
 
           {/* Navigation Links - Desktop */}
           <div className="hidden lg:flex items-center space-x-8">
-            <NavLink href="/services" icon={ShoppingBag}>Services</NavLink>
+            <NavLink href="/services" >Services</NavLink>
             <NavLink href="/blogs">Blogs</NavLink>
             <NavLink href="/contactus">Contact Us</NavLink>
             <NavLink href="/about">About Us</NavLink>
@@ -454,7 +454,7 @@ export default function Navbar() {
 
               <div className="grid gap-3">
                 <Link href="/services" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-all">
-                  <ShoppingBag className="w-5 h-5 text-gray-600" />
+                  
                   <span className="text-gray-600 hover:text-black">Services</span>
                 </Link>
                 <Link href="/blogs" className="p-3 rounded-lg hover:bg-gray-50 transition-all text-gray-600 hover:text-black">
