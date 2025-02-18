@@ -210,7 +210,7 @@ export default function Navbar() {
                         onClick={() => {
                           const params = new URLSearchParams();
                           params.append("query", service.name);
-                          window.location.href = /services?${params.toString()};
+                          window.location.href = `/services?${params.toString()}`;
                         }}
                       >
                         <h3 className="font-semibold text-gray-900">{service.name}</h3>
@@ -413,7 +413,7 @@ export default function Navbar() {
             onClick={() => {
               const params = new URLSearchParams();
               params.append("query", service.name);
-              window.location.href = /services?${params.toString()};
+              window.location.href = `/services?${params.toString()}`;
               setMobileMenuOpen(false); // Close mobile menu after selection
             }}
           >
