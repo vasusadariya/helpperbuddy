@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        service: true,
-        transaction: true,
+        Service: true,
+        Transaction: true,
         Partner: true,
       },
       orderBy: {
@@ -307,9 +307,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    
-
     
     const totalAmount = service.price;
 
@@ -326,10 +323,10 @@ export async function POST(req: NextRequest) {
       // Create order
       const order = await tx.order.create({
         data: {
-          service: {
+          Service: {
             connect: { id: serviceId }
           },
-          user: {
+          User: {
             connect: { id: user.id }
           },
           date: bookingDateTime,
@@ -343,7 +340,7 @@ export async function POST(req: NextRequest) {
           status: "PENDING",
           currency: "INR",
         },
-        include: { service: true, user: true },
+        include: { Service: true, User: true },
       });
     
         // Create Razorpay order for full amount
@@ -512,7 +509,7 @@ export async function PATCH(req: NextRequest) {
 
     const currentOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { service: true },
+      include: { Service: true },
     });
 
     if (!currentOrder) {
@@ -566,6 +563,30 @@ export async function PATCH(req: NextRequest) {
         details: error instanceof Error ? error.message : "Unknown error",
         timestamp: currentUTCTime,
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  try {
+    const { id: orderId } = context.params;
+
+    // Delete the order
+    const order = await prisma.order.delete({
+      where: {
+        id: orderId,
+      },
+    });
+
+    return NextResponse.json(order);
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    return NextResponse.json(
+      { error: 'Error deleting order' },
       { status: 500 }
     );
   }

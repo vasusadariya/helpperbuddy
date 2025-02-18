@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import Image from "next/image"; // ✅ Import Next.js Image
+import Image from "next/image";
 
 type Blog = {
   id: string;
@@ -46,9 +46,9 @@ export default function BlogsPage() {
   };
 
   return (
-    <div className="bg-black min-h-screen">
+    <div className="bg-white min-h-screen">
       <Navbar />
-      <h1 className="text-3xl font-bold mb-6 pt-40 text-center text-white">Latest Blogs</h1>
+      <h1 className="text-3xl font-bold mb-6 mt-20 text-center text-white">Latest Blogs</h1>
 
       {loading ? (
         <p className="text-center text-white">Loading...</p>
@@ -80,7 +80,7 @@ export default function BlogsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <Pagination className="mt-6 flex justify-center">
+        <Pagination className="mt-6 flex justify-center mb-6">
           <PaginationContent className="flex items-center gap-4">
             <PaginationItem>
               <Button disabled={page === 1} onClick={() => goToPage(page - 1)}>

@@ -94,7 +94,7 @@ const Footer: React.FC = () => {
   const socialLinks: SocialLink[] = [
     { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/profile.php?id=61566410515044" },
     { name: "X", icon: XIcon, href: "https://twitter.com/helperbuddyin" },
-    { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com" },
+    { name: "LinkedIn", icon: Linkedin, href: "https://www.linkedin.com/company/helperbuddy/" },
     { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/helperbuddy.in" }
   ];
 
