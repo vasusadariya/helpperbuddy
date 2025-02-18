@@ -174,7 +174,7 @@ export default function Navbar() {
             <NavLink href="/services" >Services</NavLink>
             <NavLink href="/blogs">Blogs</NavLink>
             <NavLink href="/contactus">Contact Us</NavLink>
-            <NavLink href="/about">About Us</NavLink>
+            <NavLink href="/about-us">About Us</NavLink>
           </div>
 
           {/* Search Bar */}
@@ -463,7 +463,7 @@ export default function Navbar() {
                 <Link href="/contactus" className="p-3 rounded-lg hover:bg-gray-50 transition-all text-gray-600 hover:text-black">
                   Contact Us
                 </Link>
-                <Link href="/about" className="p-3 rounded-lg hover:bg-gray-50 transition-all text-gray-600 hover:text-black">
+                <Link href="/about-us" className="p-3 rounded-lg hover:bg-gray-50 transition-all text-gray-600 hover:text-black">
                   About Us
                 </Link>
               </div>

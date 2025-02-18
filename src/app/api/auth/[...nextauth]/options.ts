@@ -1,4 +1,3 @@
-
 import NextAuth, { NextAuthOptions, User as NextAuthUser } from "next-auth";
 import { Session as NextAuthSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -74,6 +73,10 @@ export const authOptions: NextAuthOptions = {
                                 if (isAdminPattern && role !== "ADMIN") {
                                     role = "PENDING_ADMIN";
                                 }
+                                // Ensure wallet exists for regular users
+            if (role === "USER") {
+                await ensureWalletExists(user.id);
+            }
             
                                 return { id: user.id, email: user.email, name: user.name, role };
                             }
@@ -160,7 +163,13 @@ export const authOptions: NextAuthOptions = {
                         where: { email: user.email! }
                     });
 
-                    if (!existingUser) {
+                    if (existingUser) {
+                        // Ensure wallet exists for existing users
+                        if (existingUser.role === "USER") {
+                            await ensureWalletExists(existingUser.id);
+                        }
+                        return true;
+                    } else {
                         // Store temporary data in session and redirect to signup
                         return `/signup?email=${user.email}&name=${user.name}`;
                     }
