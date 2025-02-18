@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CreditCard, Banknote } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 interface PaymentOptionsProps {
   order: {
@@ -17,39 +18,21 @@ interface PaymentOptionsProps {
 export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCodMessage, setShowCodMessage] = useState(false);
+  const router = useRouter();
 
   const handlePaymentMethod = async (method: 'ONLINE' | 'COD') => {
+    if (method === 'COD') {
+      const confirmCod = window.confirm(`Please confirm that you will pay ₹${order.amount.toFixed(2)} to the service provider in cash.`);
+      if (!confirmCod) {
+        return;
+      }
+    }
+
     setIsProcessing(true);
     try {
       if (method === 'ONLINE') {
-        // Handle online payment
-        const response = await fetch('/api/payment/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            orderId: order.id,
-            paymentMode: 'ONLINE'
-          })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          // Initialize Razorpay
-          const options = {
-            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-            amount: data.amount,
-            currency: "INR",
-            order_id: data.razorpayOrderId,
-            name: "Service Payment",
-            description: "Payment for completed service",
-            handler: function(response: any) {
-              onPaymentComplete();
-            },
-          };
-
-          const rzp = new (window as any).Razorpay(options);
-          rzp.open();
-        }
+        // Redirect to payment page for online payment
+        router.push(`/payment/${order.id}`);
       } else {
         // Handle COD
         const response = await fetch('/api/payment/cod', {
@@ -64,7 +47,7 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
         const data = await response.json();
         if (data.success) {
           setShowCodMessage(true);
-          toast.success(data.data.message || 'Cash on Delivery option selected');
+          toast.success(`Please pay ₹${order.amount.toFixed(2)} to the service provider`);
           onPaymentComplete();
         } else {
           throw new Error(data.error || 'Failed to process COD request');
@@ -113,12 +96,29 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
                 Cash Payment Instructions
               </h4>
               <p className="mt-1 text-sm text-blue-700">
-                Please pay ₹{order.amount.toFixed(2)} to the service provider
+                Please pay ₹{order.amount.toFixed(2)} to the service provider in cash
               </p>
-              <p className="mt-2 text-xs text-blue-600">
-                A transaction record will be created once the payment is confirmed
-              </p>
+              <div className="mt-2 text-xs space-y-1">
+                <p className="text-blue-600">
+                  • The payment will be marked as completed once confirmed
+                </p>
+                <p className="text-blue-600">
+                  • A transaction record will be created for your reference
+                </p>
+                <p className="text-blue-600">
+                  • Make sure to get a confirmation from the service provider
+                </p>
+              </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isProcessing && (
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900 mr-2"></div>
+            <p className="text-sm text-gray-600">Processing payment...</p>
           </div>
         </div>
       )}

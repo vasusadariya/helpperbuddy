@@ -14,6 +14,8 @@ import {
   Mail,
   UserCheck,
   PlayCircle,
+  Banknote,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -267,12 +269,14 @@ export default function UserDashboard() {
           class: "bg-green-100 text-green-800",
           icon: <CheckCircle className="w-4 h-4" />,
         };
-      case "PAYMENT_COMPLETED":
-        return {
-          text: "Payment Completed",
-          class: "bg-green-100 text-green-800",
-          icon: <CheckCircle className="w-4 h-4" />,
-        };
+        case "PAYMENT_COMPLETED":
+          return {
+            text: order.paymentMode === "COD" ? "Paid by Cash" : "Payment Completed",
+            class: "bg-green-100 text-green-800",
+            icon: order.paymentMode === "COD" ? 
+              <Banknote className="w-4 h-4 text-green-600" /> : 
+              <CreditCard className="w-4 h-4 text-green-600" />,
+          };
       case "SERVICE_COMPLETED":
         return {
           text: "Service Completed - Select Payment Method",
@@ -326,18 +330,26 @@ export default function UserDashboard() {
     }
   };
 
-  const shouldShowPaymentButton = (order: Order) => {
-    // Do not show the payment option if payment has been completed (either wallet-only or via Razorpay)
-    if (order.status === "PAYMENT_COMPLETED") return false;
-    // If service is completed but no Razorpay payment id exists, and remaining amount is greater than zero, allow payment.
-    return (
-      ((order.status === "ACCEPTED" && !order.startedAt) ||
-        (order.status === "SERVICE_COMPLETED" && !order.razorpayPaymentId) ||
-        order.status === "PAYMENT_REQUESTED") &&
-      !order.razorpayPaymentId &&
-      (order.remainingAmount !== undefined && order.remainingAmount > 0)
-    );
-  };
+const shouldShowPaymentButton = (order: Order) => {
+  // Show payment options for SERVICE_COMPLETED status only
+  if (order.status === "SERVICE_COMPLETED" && !order.razorpayPaymentId) {
+    return true;
+  }
+
+  // Don't show payment button for these states
+  if (
+    order.status === "PAYMENT_COMPLETED" ||
+    order.status === "COMPLETED" ||
+    order.status === "CANCELLED" ||
+    order.razorpayPaymentId ||
+    order.paymentMode === "COD"
+  ) {
+    return false;
+  }
+
+  // Check if there's a remaining amount to be paid
+  return (order.remainingAmount || order.amount) > 0;
+};
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("en-IN", {

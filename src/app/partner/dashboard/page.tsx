@@ -52,17 +52,29 @@ interface Order {
   };
   date: string;
   time: string;
-  status: "PENDING" | "ACCEPTED" | "IN_PROGRESS" | "SERVICE_COMPLETED" | "PAYMENT_REQUESTED" | "PAYMENT_COMPLETED" | "COMPLETED" | "CANCELLED";
+  status:
+    | "PENDING"
+    | "ACCEPTED"
+    | "IN_PROGRESS"
+    | "SERVICE_COMPLETED"
+    | "PAYMENT_REQUESTED"
+    | "PAYMENT_COMPLETED"
+    | "COMPLETED"
+    | "CANCELLED";
   amount: number;
   razorpayPaymentId?: string;
+  startedAt?: string;
   paidAt?: string;
+  paymentMode: "ONLINE" | "COD";
 }
 
 export default function PartnerDashboard() {
   const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
   const [acceptedOrders, setAcceptedOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState<{ [key: string]: boolean }>({});
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [error, setError] = useState<string | null>(null);
 
   // Keeping all the fetch functions and handlers unchanged
@@ -125,25 +137,43 @@ export default function PartnerDashboard() {
 
   const getOrderStatusDisplay = (order: Order) => {
     switch (order.status) {
-      case 'ACCEPTED':
-        return order.razorpayPaymentId
-          ? { text: "Payment Completed", className: "bg-gray-100 text-gray-800" }
-          : { text: "Waiting for Payment", className: "bg-yellow-100 text-yellow-800" };
-      case 'IN_PROGRESS':
-        return { text: "In Progress", className: "bg-blue-100 text-blue-800" };
-      case 'COMPLETED':
-        return { text: "Completed", className: "bg-green-100 text-green-800" };
+      case "ACCEPTED":
+        return {
+          text: order.razorpayPaymentId ? "Accepted (Prepaid)" : "Accepted",
+          className: "bg-yellow-100 text-yellow-800",
+        };
+      case "IN_PROGRESS":
+        return {
+          text: order.razorpayPaymentId
+            ? "In Progress (Prepaid)"
+            : "In Progress",
+          className: "bg-blue-100 text-blue-800",
+        };
+      case "SERVICE_COMPLETED":
+        return {
+          text: order.razorpayPaymentId
+            ? "Service Completed (Prepaid)"
+            : "Service Completed",
+          className: "bg-green-100 text-green-800",
+        };
+      case "PAYMENT_COMPLETED":
+        return order.paymentMode === "COD"
+          ? { text: "Paid by Cash", className: "bg-green-100 text-green-800" }
+          : {
+              text: "Payment Completed",
+              className: "bg-green-100 text-green-800",
+            };
       default:
-        return { 
-          text: order.status, 
-          className: "bg-gray-100 text-gray-800" 
+        return {
+          text: order.status,
+          className: "bg-gray-100 text-gray-800",
         };
     }
   };
 
   const handleStatusUpdate = async (
     orderId: string,
-    newStatus: "IN_PROGRESS" | "COMPLETED"
+    newStatus: "IN_PROGRESS" | "SERVICE_COMPLETED"
   ) => {
     if (
       !confirm(
@@ -240,7 +270,9 @@ export default function PartnerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Active Services */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 text-black">Your Services</h2>
+            <h2 className="text-xl font-semibold mb-4 text-black">
+              Your Services
+            </h2>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {partnerData.services.length === 0 ? (
                 <p className="text-gray-500">No services added yet</p>
@@ -250,14 +282,21 @@ export default function PartnerDashboard() {
                     <li key={service.id} className="py-3">
                       <div className="flex justify-between items-center">
                         <div>
-                          <h3 className="font-medium text-black">{service.name}</h3>
+                          <h3 className="font-medium text-black">
+                            {service.name}
+                          </h3>
                           <p className="text-sm text-gray-500">
                             ₹{service.price.toFixed(2)}
                           </p>
                         </div>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${service.isActive ? 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {service.isActive ? 'Active' : 'Inactive'}
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            service.isActive
+                              ? "bg-gray-100 text-gray-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {service.isActive ? "Active" : "Inactive"}
                         </span>
                       </div>
                     </li>
@@ -269,13 +308,18 @@ export default function PartnerDashboard() {
 
           {/* Accepted Orders */}
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4 text-black">Accepted Orders</h2>
+            <h2 className="text-xl font-semibold mb-4 text-black">
+              Accepted Orders
+            </h2>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {acceptedOrders.length === 0 ? (
                 <p className="text-gray-500">No accepted orders</p>
               ) : (
                 acceptedOrders.map((order) => {
-                  const { formattedDate, formattedTime } = formatDateTime(order.date, order.time);
+                  const { formattedDate, formattedTime } = formatDateTime(
+                    order.date,
+                    order.time
+                  );
                   const status = getOrderStatusDisplay(order);
                   const isUpdating = isUpdatingStatus[order.id] || false;
 
@@ -283,7 +327,9 @@ export default function PartnerDashboard() {
                     <div key={order.id} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium text-black">{order.service.name}</h3>
+                          <h3 className="font-medium text-black">
+                            {order.service.name}
+                          </h3>
                           <p className="text-sm text-gray-600">
                             Customer: {order.user.name}
                           </p>
@@ -294,7 +340,9 @@ export default function PartnerDashboard() {
                             Time: {formattedTime}
                           </p>
                         </div>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${status.className}`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${status.className}`}
+                        >
                           {status.text}
                         </span>
                       </div>
@@ -305,44 +353,84 @@ export default function PartnerDashboard() {
                           </p>
                           {order.paidAt && (
                             <p className="text-xs text-gray-500">
-                              Paid on: {new Date(order.paidAt).toLocaleDateString()}
+                              Paid on:{" "}
+                              {new Date(order.paidAt).toLocaleDateString()}
                             </p>
                           )}
                         </div>
 
-                        {order.status === 'ACCEPTED' && (
-                          <div className="mt-3">
-                            <button
-                              onClick={() => handleStatusUpdate(order.id, 'IN_PROGRESS')}
-                              disabled={isUpdating}
-                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400 mr-2"
-                            >
-                              {isUpdating ? (
-                                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <PlayCircle className="w-4 h-4 mr-2" />
-                              )}
-                              Start Service
-                            </button>
-                          </div>
-                        )}
+                        {/* Service Status Update Button */}
+<div className="mt-3">
+  {/* Show payment status if prepaid */}
+  {order.razorpayPaymentId && (
+    <div className="mb-2 p-2 bg-blue-50 rounded-lg">
+      <p className="text-xs text-blue-800">
+        Payment received in advance
+      </p>
+    </div>
+  )}
 
-                        {order.status === 'IN_PROGRESS' && (
-                          <div className="mt-3">
-                            <button
-                              onClick={() => handleStatusUpdate(order.id, 'COMPLETED')}
-                              disabled={isUpdating}
-                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
-                            >
-                              {isUpdating ? (
-                                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                              )}
-                              Mark Completed
-                            </button>
-                          </div>
-                        )}
+  {/* Single button based on status */}
+  {(order.status === 'ACCEPTED' || (order.status === 'PAYMENT_COMPLETED' && !order.startedAt)) && (
+    <button
+      onClick={() => handleStatusUpdate(order.id, 'IN_PROGRESS')}
+      disabled={isUpdating}
+      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+    >
+      {isUpdating ? (
+        <Clock className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <PlayCircle className="w-4 h-4 mr-2" />
+      )}
+      Start Service
+    </button>
+  )}
+
+  {order.status === 'IN_PROGRESS' && (
+    <button
+      onClick={() => handleStatusUpdate(order.id, 'SERVICE_COMPLETED')}
+      disabled={isUpdating}
+      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+    >
+      {isUpdating ? (
+        <Clock className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <CheckCircle className="w-4 h-4 mr-2" />
+      )}
+      Complete Service
+    </button>
+  )}
+
+  {/* Status messages for completed states */}
+  {order.status === 'SERVICE_COMPLETED' && (
+    <div className="p-3 bg-yellow-50 rounded-lg">
+      <p className="text-sm text-yellow-800">
+        {order.razorpayPaymentId 
+          ? "Service completed (Payment received in advance)"
+          : "Waiting for customer payment"
+        }
+      </p>
+      {order.razorpayPaymentId && order.paidAt && (
+        <p className="text-xs text-yellow-700 mt-1">
+          Paid on: {new Date(order.paidAt).toLocaleDateString()}
+        </p>
+      )}
+    </div>
+  )}
+
+  {order.status === 'PAYMENT_COMPLETED' && order.startedAt && (
+    <div className="p-3 bg-green-50 rounded-lg">
+      <p className="text-sm text-green-800">
+        {order.paymentMode === 'COD' ? 'Payment received by cash' : 'Payment received online'}
+      </p>
+      {order.paidAt && (
+        <p className="text-xs text-green-700 mt-1">
+          Paid on: {new Date(order.paidAt).toLocaleDateString()}
+        </p>
+      )}
+    </div>
+  )}
+</div>
                       </div>
                     </div>
                   );
@@ -353,10 +441,11 @@ export default function PartnerDashboard() {
         </div>
 
         {/* Bottom Section: New Order Requests */}
-        {/* Bottom Section: New Order Requests */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-black">New Order Requests</h2>
+            <h2 className="text-xl font-semibold text-black">
+              New Order Requests
+            </h2>
             {partnerData?.meta?.pendingRequests !== undefined && (
               <span className="text-sm text-gray-500">
                 {partnerData.meta.pendingRequests} pending
