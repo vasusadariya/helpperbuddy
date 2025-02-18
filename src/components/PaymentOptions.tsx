@@ -16,6 +16,7 @@ interface PaymentOptionsProps {
 
 export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showCodMessage, setShowCodMessage] = useState(false);
 
   const handlePaymentMethod = async (method: 'ONLINE' | 'COD') => {
     setIsProcessing(true);
@@ -62,7 +63,8 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
 
         const data = await response.json();
         if (data.success) {
-          toast.success('Cash on Delivery option selected');
+          setShowCodMessage(true);
+          toast.success(data.data.message || 'Cash on Delivery option selected');
           onPaymentComplete();
         } else {
           throw new Error(data.error || 'Failed to process COD request');
@@ -77,28 +79,49 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
   };
 
   return (
-    <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-      <h3 className="text-sm font-medium text-yellow-800 mb-3">
-        Select Payment Method
-      </h3>
-      <div className="flex space-x-3">
-        <button
-          onClick={() => handlePaymentMethod('ONLINE')}
-          disabled={isProcessing}
-          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          <CreditCard className="w-4 h-4 mr-2" />
-          Pay Online
-        </button>
-        <button
-          onClick={() => handlePaymentMethod('COD')}
-          disabled={isProcessing}
-          className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-        >
-          <Banknote className="w-4 h-4 mr-2" />
-          Cash on Delivery
-        </button>
+    <div className="space-y-4">
+      <div className="p-4 bg-yellow-50 rounded-lg">
+        <h3 className="text-sm font-medium text-yellow-800 mb-3">
+          Select Payment Method
+        </h3>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => handlePaymentMethod('ONLINE')}
+            disabled={isProcessing}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            <CreditCard className="w-4 h-4 mr-2" />
+            Pay Online
+          </button>
+          <button
+            onClick={() => handlePaymentMethod('COD')}
+            disabled={isProcessing}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+          >
+            <Banknote className="w-4 h-4 mr-2" />
+            Cash on Delivery
+          </button>
+        </div>
       </div>
+
+      {showCodMessage && (
+        <div className="p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-start">
+            <Banknote className="w-5 h-5 text-blue-600 mt-0.5 mr-3" />
+            <div>
+              <h4 className="text-sm font-medium text-blue-900">
+                Cash Payment Instructions
+              </h4>
+              <p className="mt-1 text-sm text-blue-700">
+                Please pay ₹{order.amount.toFixed(2)} to the service provider
+              </p>
+              <p className="mt-2 text-xs text-blue-600">
+                A transaction record will be created once the payment is confirmed
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

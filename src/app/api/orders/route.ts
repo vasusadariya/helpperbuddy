@@ -313,7 +313,7 @@ export async function POST(req: NextRequest) {
     
     const totalAmount = service.price;
 
-    // Get wallet balance before transaction
+    // Get wallet balance (but don't deduct yet)
     const wallet = await prisma.wallet.findUnique({
       where: { userId: user.id },
       select: {
@@ -321,6 +321,11 @@ export async function POST(req: NextRequest) {
         id: true
       }
     });
+
+    // Calculate potential wallet usage (but don't apply yet)
+    const walletBalance = wallet?.balance || 0;
+    const potentialWalletUse = Math.min(walletBalance, totalAmount);
+    const remainingAmount = totalAmount - potentialWalletUse;
 
     const result = await prisma.$transaction(async (tx) => {
       // Create order
@@ -338,31 +343,34 @@ export async function POST(req: NextRequest) {
           address: address,
           pincode: pincode,
           amount: totalAmount,
-          walletAmount: 0, // Will be updated during payment
-          remainingAmount: totalAmount,
+          walletAmount: potentialWalletUse, // This is what will be deducted later
+          remainingAmount: remainingAmount,
           status: "PENDING",
           currency: "INR",
         },
         include: { service: true, user: true },
       });
     
-        // Create Razorpay order for full amount
-      const razorpayOrder = await razorpay.orders.create({
-        amount: Math.round(totalAmount * 100),
-        currency: "INR",
-        receipt: `order_rcpt_${order.id}`,
-        notes: {
-          orderId: order.id,
-          serviceId: serviceId,
-          userId: user.id,
-        },
-      });
+      // Create Razorpay order for remaining amount
+      let razorpayOrder = null;
+      if (remainingAmount > 0) {
+        razorpayOrder = await razorpay.orders.create({
+          amount: Math.round(remainingAmount * 100),
+          currency: "INR",
+          receipt: `order_rcpt_${order.id}`,
+          notes: {
+            orderId: order.id,
+            serviceId: serviceId,
+            userId: user.id,
+            walletAmountToUse: potentialWalletUse
+          },
+        });
     
-        // Update order with Razorpay order ID
-      const updatedOrder = await tx.order.update({
-        where: { id: order.id },
-        data: { razorpayOrderId: razorpayOrder.id },
-      });
+        await tx.order.update({
+          where: { id: order.id },
+          data: { razorpayOrderId: razorpayOrder.id },
+        });
+      }
 
       // Increment service order count
       await tx.service.update({
@@ -371,13 +379,17 @@ export async function POST(req: NextRequest) {
       });
 
       return {
-        order: updatedOrder,
+        order,
         razorpayOrder,
+        potentialWalletUse,
+        remainingAmount
       };
     }, {
       timeout: 10000,
       maxWait: 15000,
     });
+
+  
 
       // try {
       //   await awardReferralBonus(user.id);
@@ -417,11 +429,13 @@ export async function POST(req: NextRequest) {
       data: {
         orderId: result.order.id,
         totalAmount,
-        walletBalance: wallet?.balance || 0,
-        razorpayOrderId: result.razorpayOrder.id,
-        razorpayAmount: Math.round(totalAmount * 100),
+        availableWalletBalance: walletBalance,
+        potentialWalletUse: result.potentialWalletUse,
+        remainingAmount: result.remainingAmount,
+        razorpayOrderId: result.razorpayOrder?.id,
+        razorpayAmount: result.remainingAmount > 0 ? Math.round(result.remainingAmount * 100) : 0,
         status: result.order.status,
-        razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+        razorpayKeyId: result.razorpayOrder ? process.env.RAZORPAY_KEY_ID : undefined,
         serviceDetails: {
           name: service.name,
           description: service.description || "",
