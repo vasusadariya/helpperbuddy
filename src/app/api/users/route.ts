@@ -82,10 +82,19 @@ export async function POST(request: NextRequest) {
       { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
       { status: 201 }
     );
-    }catch (error: any) {
-      if (error.code === 'P2002') {
-        // This error code means unique constraint violation
-        const field = error.meta?.target?.[0];
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002' &&
+        'meta' in error &&
+        error.meta &&
+        typeof error.meta === 'object' &&
+        'target' in error.meta
+      ) {
+        const prismaError = error as { meta: { target: string[] } };
+        const field = prismaError.meta.target[0];
         return NextResponse.json(
           { Error: `${field} already exists` },
           { status: 409 }

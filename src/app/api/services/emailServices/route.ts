@@ -181,6 +181,7 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
         // support_url: `${process.env.NEXT_PUBLIC_BASE_URL}/support`,
       }
     );
+    console.log('Order acceptance email response:', acceptanceTime);
 
     return {
       success: true,

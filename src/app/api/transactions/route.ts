@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET() {
   const currentUTCTime = new Date("2025-02-17 17:56:28");
+  console.log(req); 
 
   try {
     const session = await getServerSession(authOptions);

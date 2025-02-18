@@ -18,7 +18,10 @@ export function apiResponse<T>(data: T, status: number = 200) {
   if (status >= 400) {
     const errorResponse: ErrorResponse = {
       success: false,
-      error: data,
+      error: {
+        message: data instanceof Error ? data.message : String(data),
+        details: data
+      },
       timestamp: currentUTCTime
     };
     return NextResponse.json(errorResponse, { status });
