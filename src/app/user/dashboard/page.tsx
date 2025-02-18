@@ -19,7 +19,6 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import { OrderCancellationStatus } from "@/components/OrderCancellation";
-33;
 import { PaymentOptions } from "@/components/PaymentOptions";
 
 type DashboardStats = {
@@ -96,6 +95,33 @@ interface Transaction {
   createdAt: string;
   orderId?: string | null; // Add this to track if transaction is related to an order
   status: "PENDING" | "COMPLETED" | "FAILED"; // Add this to track transaction status
+  Order?: {
+    id: string;
+    status: string;
+    service: {
+      name: string;
+    };
+  };
+}
+
+interface TransactionsResponse {
+  success: boolean;
+  data: {
+    transactions: Transaction[];
+    timestamp: string;
+  };
+}
+
+function formatDate(dateString: string) {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
+  }).format(new Date(dateString));
 }
 
 interface WalletData {
@@ -129,6 +155,7 @@ export default function UserDashboard() {
     completedOrders: 0,
     averageRating: 0,
   });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [walletData, setWalletData] = useState<WalletData>({
     balance: 0,
     transactions: [],
@@ -142,41 +169,43 @@ export default function UserDashboard() {
       try {
         setIsLoading(true);
         setError(null);
-
-        // Fetch orders with partner details and wallet data in parallel
-        const [ordersResponse, walletResponse] = await Promise.all([
-          fetch("/api/user/orders?limit=5&include=partner"), // Add include=partner to get partner details
+  
+        // Fetch orders, wallet data, and transactions in parallel
+        const [ordersResponse, walletResponse, transactionsResponse] = await Promise.all([
+          fetch("/api/user/orders?limit=5&include=partner"),
           fetch("/api/wallet"),
+          fetch("/api/transactions") // Add this new endpoint
         ]);
-
+  
         const ordersData: OrdersResponse = await ordersResponse.json();
         const walletData: WalletResponse = await walletResponse.json();
-
+        const transactionsData: TransactionsResponse = await transactionsResponse.json();
+  
+        // Handle orders data
         if (ordersResponse.ok && ordersData.success) {
-          // Process orders with partner details
           const orders = ordersData.data.orders || [];
-          console.log("Fetched orders with partners:", orders); // Debug log
-
+          console.log("Fetched orders with partners:", orders);
+  
           setRecentOrders(orders);
-
+  
           const completedOrders = orders.filter(
             (order) =>
-              order.status === "COMPLETED" ||
-              order.status === "PAYMENT_COMPLETED"
+              order.status === "COMPLETED"
+              // || order.status === "PAYMENT_COMPLETED"
           );
-
+  
           const pendingOrders = orders.filter(
             (order) =>
               order.status === "PENDING" ||
               order.status === "ACCEPTED" ||
               order.status === "IN_PROGRESS"
           );
-
+  
           const totalRating = completedOrders.reduce(
             (sum, order) => sum + (order.review?.rating || 0),
             0
           );
-
+  
           setStats({
             totalOrders: ordersData.data.pagination.total,
             completedOrders: completedOrders.length,
@@ -188,31 +217,33 @@ export default function UserDashboard() {
         } else {
           throw new Error(ordersData.data?.error || "Failed to fetch orders");
         }
-
+  
+        // Handle wallet data
         if (walletResponse.ok && walletData.success) {
           const wallet = walletData.data.wallet;
-          console.log("Fetched wallet data:", wallet); // Debug log
-
-          const completedTransactions = wallet.transactions.filter(
-            (transaction) => {
-              if (transaction.type === "DEBIT") {
-                return transaction.status === "COMPLETED";
-              }
-              return ["CREDIT", "SIGNUP_BONUS", "REFERRAL_BONUS"].includes(
-                transaction.type
-              );
-            }
-          );
-
+          console.log("Fetched wallet data:", wallet);
+  
           setWalletData({
             balance: Number(wallet.balance) || 0,
-            transactions: completedTransactions || [],
+            transactions: [], // We'll use separate transactions state now
           });
         } else {
+          throw new Error(walletData.data?.error || "Failed to fetch wallet data");
+        }
+  
+        // Handle transactions data
+        if (transactionsResponse.ok && transactionsData.success) {
+          const transactions = transactionsData.data.transactions;
+          console.log("Fetched transactions:", transactions);
+  
+          // Set all transactions without filtering
+          setTransactions(transactions);
+        } else {
           throw new Error(
-            walletData.data?.error || "Failed to fetch wallet data"
+            "Failed to fetch transactions"
           );
         }
+  
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setError(error instanceof Error ? error.message : "An error occurred");
@@ -220,7 +251,7 @@ export default function UserDashboard() {
         setIsLoading(false);
       }
     };
-
+  
     fetchDashboardData();
   }, []);
 
@@ -430,96 +461,96 @@ export default function UserDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Transactions */}
-        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Transactions
-              </h2>
-              <Link
-                href="/user/dashboard/wallet"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                View All
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-            <div className="space-y-4">
-              {walletData.transactions.length > 0 ? (
-                walletData.transactions
-                  .filter(
-                    (transaction) =>
-                      // Show all credit type transactions
-                      transaction.type === "CREDIT" ||
-                      transaction.type === "REFERRAL_BONUS" ||
-                      transaction.type === "SIGNUP_BONUS" ||
-                      // Only show completed debit transactions
-                      (transaction.type === "DEBIT" &&
-                        transaction.status === "COMPLETED")
+<div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+  <div className="p-6">
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-lg font-semibold text-gray-900">
+        Recent Transactions
+      </h2>
+      <Link
+        href="/user/dashboard/wallet"
+        className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+      >
+        View All
+        <ArrowUpRight className="w-4 h-4 ml-1" />
+      </Link>
+    </div>
+    <div className="space-y-4">
+      {isLoading ? (
+        <div className="flex items-center justify-center p-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : transactions.length > 0 ? (
+        transactions.map((transaction) => (
+          <div
+            key={transaction.id}
+            className="flex items-center justify-between border-b last:border-b-0 pb-4 last:pb-0"
+          >
+            <div className="flex items-center">
+              <div
+                className={`p-2 rounded-full mr-3 ${
+                  ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                    transaction.type
                   )
-                  .slice(0, 5)
-                  .map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between border-b last:border-b-0 pb-4 last:pb-0"
-                    >
-                      <div className="flex items-center">
-                        <div
-                          className={`p-2 rounded-full mr-3 ${
-                            [
-                              "CREDIT",
-                              "REFERRAL_BONUS",
-                              "SIGNUP_BONUS",
-                            ].includes(transaction.type)
-                              ? "bg-green-100"
-                              : "bg-red-100"
-                          }`}
-                        >
-                          {[
-                            "CREDIT",
-                            "REFERRAL_BONUS",
-                            "SIGNUP_BONUS",
-                          ].includes(transaction.type) ? (
-                            <ArrowUpRight className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <ArrowDownRight className="w-4 h-4 text-red-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {transaction.description}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {formatDate(transaction.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                      <p
-                        className={`font-medium ${
-                          ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                            transaction.type
-                          )
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                          transaction.type
-                        )
-                          ? "+"
-                          : "-"}
-                        ₹{Math.abs(transaction.amount).toFixed(2)}
-                      </p>
-                    </div>
-                  ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No transactions yet
+                    ? "bg-green-100"
+                    : "bg-red-100"
+                }`}
+              >
+                {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                  transaction.type
+                ) ? (
+                  <ArrowUpRight className="w-4 h-4 text-green-600" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 text-red-600" />
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">
+                  {transaction.description}
                 </p>
-              )}
+                <p className="text-sm text-gray-600">
+                  {formatDate(transaction.createdAt)}
+                </p>
+                {transaction.Order && (
+                  <p className="text-xs text-gray-500">
+                    {transaction.Order.service.name} - Order #{transaction.Order.id}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div>
+              <p
+                className={`font-medium ${
+                  ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                    transaction.type
+                  )
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                  transaction.type
+                )
+                  ? "+"
+                  : "-"}
+                ₹{Math.abs(transaction.amount).toFixed(2)}
+              </p>
+              <p className="text-xs text-gray-500 text-right">
+                {transaction.type.split('_').map(word => 
+                  word.charAt(0) + word.slice(1).toLowerCase()
+                ).join(' ')}
+              </p>
             </div>
           </div>
-        </div>
+        ))
+      ) : (
+        <p className="text-gray-500 text-center py-4">
+          No transactions yet
+        </p>
+      )}
+    </div>
+  </div>
+</div>
 
         {/* Recent Orders */}
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">

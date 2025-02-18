@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
 export async function GET(request: NextRequest) {
-  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const currentUTCTime = new Date("2025-02-17 18:59:06");
 
   try {
     const session = await getServerSession(authOptions);
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
     const partner = await prisma.partner.findUnique({
       where: { 
         email: session.user.email,
-        approved: true, // Added approved check
-        isActive: true  // Added active check
+        approved: true,
+        isActive: true
       }
     });
 
@@ -32,11 +32,12 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
+    // Updated to include ACCEPTED, IN_PROGRESS, and PAYMENT_COMPLETED status
     const acceptedOrders = await prisma.order.findMany({
       where: {
         partnerId: partner.id,
         status: {
-          in: ['ACCEPTED', 'COMPLETED']
+          in: ['ACCEPTED', 'IN_PROGRESS', 'PAYMENT_COMPLETED']
         }
       },
       include: {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
           select: {
             name: true,
             email: true,
-            phoneno: true // Added phone number
+            phoneno: true
           }
         }
       },
@@ -78,8 +79,8 @@ export async function GET(request: NextRequest) {
           time: order.time,
           status: order.status,
           amount: order.amount,
-          address: order.address, // Added address
-          pincode: order.pincode, // Added pincode
+          address: order.address,
+          pincode: order.pincode,
           razorpayOrderId: order.razorpayOrderId,
           razorpayPaymentId: order.razorpayPaymentId,
           paidAt: order.paidAt?.toISOString() || null,
