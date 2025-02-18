@@ -27,6 +27,7 @@ export async function PUT(request: Request) {
       try {
         body = await request.json();
       } catch (e) {
+        console.log(e);
         return NextResponse.json(
           { success: false, error: "Invalid JSON in request body" },
           { status: 400 }
@@ -88,12 +89,16 @@ export async function PUT(request: Request) {
         typeof error === 'object' &&
         'code' in error &&
         error.code === 'P2002' &&
-        'meta' in error
+        'meta' in error &&
+        error.meta &&
+        typeof error.meta === 'object' &&
+        'target' in error.meta
       ) {
+        const prismaError = error as { meta: { target: string[] } };
         return NextResponse.json(
           { 
             success: false, 
-            error: `The ${(error as any).meta?.target?.[0]} is already taken` 
+            error: `The ${prismaError.meta.target[0]} is already taken` 
           },
           { status: 409 }
         );

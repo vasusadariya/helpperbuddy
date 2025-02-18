@@ -65,7 +65,14 @@ export async function POST(req: Request) {
     }
 
     // Update order status
-    const updateData: any = {
+    interface OrderUpdateData {
+      status: 'ACCEPTED' | 'PAYMENT_COMPLETED' | 'IN_PROGRESS' | 'COMPLETED';
+      updatedAt: Date;
+      startedAt?: Date;
+      completedAt?: Date;
+    }
+
+    const updateData: OrderUpdateData = {
       status,
       updatedAt: currentUTCTime
     };

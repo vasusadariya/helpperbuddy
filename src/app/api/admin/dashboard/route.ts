@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
     // Calculate date range based on timeframe
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
     if (timeframe === 'day') {
       startDate.setDate(now.getDate() - 7);
     } else if (timeframe === 'week') {
