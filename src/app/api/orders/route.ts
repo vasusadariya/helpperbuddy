@@ -19,6 +19,7 @@ const validateServerDateTime = (
 ): { isValid: boolean; error?: string } => {
   try {
     // Parse the incoming ISO date string
+    console.log("Date:", timeString);
     const selectedDateTime = new Date(dateTimeString);
     const now = new Date();
     timeString + 1;
@@ -60,6 +61,7 @@ const validateServerDateTime = (
 
     return { isValid: true };
   } catch (error) {
+    console.error("Error validating date and time:", error);
     return {
       isValid: false,
       error: `${error}`,
@@ -104,8 +106,8 @@ export async function GET() {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        Service: true,
-        Transaction: true,
+        service: true,
+        transaction: true,
         Partner: true,
       },
       orderBy: {
@@ -329,10 +331,10 @@ export async function POST(req: NextRequest) {
       // Create order
       const order = await tx.order.create({
         data: {
-          Service: {
+          service: {
             connect: { id: serviceId }
           },
-          User: {
+          user: {
             connect: { id: user.id }
           },
           date: bookingDateTime,
@@ -346,7 +348,7 @@ export async function POST(req: NextRequest) {
           status: "PENDING",
           currency: "INR",
         },
-        include: { Service: true, User: true },
+        include: { service: true, user: true },
       });
     
       // Create Razorpay order for remaining amount
@@ -524,7 +526,7 @@ export async function PATCH(req: NextRequest) {
 
     const currentOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { Service: true },
+      include: { service: true },
     });
 
     if (!currentOrder) {
@@ -539,7 +541,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const updateData: any = { status };
+      const updateData: { status: 'PENDING' | 'COMPLETED' | 'CANCELLED'; razorpayPaymentId?: string; paidAt?: Date } = { status: status as 'PENDING' | 'COMPLETED' | 'CANCELLED' };
 
       if (status === "COMPLETED" && razorpayPaymentId) {
         updateData.razorpayPaymentId = razorpayPaymentId;
