@@ -129,9 +129,9 @@ export default function PartnerDashboard() {
           ? { text: "Payment Completed", className: "bg-gray-100 text-gray-800" }
           : { text: "Waiting for Payment", className: "bg-yellow-100 text-yellow-800" };
       case 'IN_PROGRESS':
-        return { text: "In Progress", className: "bg-gray-100 text-gray-800" };
+        return { text: "In Progress", className: "bg-blue-100 text-blue-800" };
       case 'COMPLETED':
-        return { text: "Completed", className: "bg-gray-100 text-gray-800" };
+        return { text: "Completed", className: "bg-green-100 text-green-800" };
       default:
         return { text: order.status, className: "bg-gray-100 text-gray-800" };
     }
