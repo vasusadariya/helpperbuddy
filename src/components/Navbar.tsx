@@ -19,6 +19,13 @@ interface ExtendedSession extends Session {
   };
 }
 
+interface ServiceResult {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+}
+
 export default function Navbar() {
   const { data: session } = useSession() as { data: ExtendedSession | null };
   const router = useRouter();
@@ -30,17 +37,73 @@ export default function Navbar() {
 
   const [scrolling, setScrolling] = useState(false);
   const [query, setQuery] = useState<string>('');
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<ServiceResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [requested, setRequested] = useState<boolean>(false);
+  const [isClicked, setIsClicked] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [showWalletTooltip, setShowWalletTooltip] = useState(false);
+  const [showRequestButton, setShowRequestButton] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolling(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolling(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const fetchServices = async (query: string) => {
+    if (!query) return setResults([]);
+    setIsClicked(false);
+    setRequested(false);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/services/home-page', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      setResults(data);
+    } catch (error) {
+      console.error('Error fetching search results:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestService = async () => {
+    if (query.length < 3 || query.length > 50) return;
+    setRequested(true);
+
+    try {
+      await fetch('/api/services/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: query }),
+      });
+    } catch (error) {
+      console.error('Error requesting service:', error);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchServices(query);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
 
   const handleDashboardRedirect = () => {
     switch (userRole) {
@@ -58,6 +121,21 @@ export default function Navbar() {
         break;
     }
     setDropdownOpen(false);
+    setLoading(false);
+  };
+
+  const handleRequestClick = async () => {
+    try {
+      const response = await fetch("/api/services/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: query }),
+      });
+    } catch (error) {
+      console.error("Error requesting service:", error);
+    }
   };
 
   const NavLink = ({ href, children, icon: Icon }: { href: string; children: React.ReactNode; icon?: any }) => (
@@ -75,23 +153,32 @@ export default function Navbar() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-30 ${
-        scrolling ? 'backdrop-blur-lg bg-white/50 shadow-md' : 'bg-white'
-      }`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrolling ? 'backdrop-blur-lg bg-white/50 shadow-md' : 'bg-white'
+        }`}
     >
       <div className="bg-black text-white border-b text-center py-2 text-sm font-medium">
         We are AVAILABLE in Mumbai, Surat
       </div>
 
-      <div className="max-w-auto mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-        <div className="flex items-center space-x-2">
-          <Link href="/" className='flex justify-between'>
-            <Image className="h-8 w-auto" src="/logo.png" alt="Helper Buddy" width={32} height={32} />
-            <span className="text-2xl font-extrabold text-black tracking-wide ml-2">Helper Buddy</span>
-          </Link>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-20 gap-8">
+          {/* Logo */}
+          {/* Logo */}
+<Link href="/" className="flex items-center space-x-3 shrink-0">
+  <Image className="h-10 w-auto" src="/logo.png" alt="Helper Buddy" width={40} height={40} />
+  <span className="hidden md:block text-2xl font-extrabold text-black tracking-wide">Helper Buddy</span>
+</Link>
+
+          {/* Navigation Links - Desktop */}
+          <div className="hidden lg:flex items-center space-x-8">
+            <NavLink href="/services" icon={ShoppingBag}>Services</NavLink>
+            <NavLink href="/blogs">Blogs</NavLink>
+            <NavLink href="/contactus">Contact Us</NavLink>
+            <NavLink href="/about">About Us</NavLink>
+          </div>
 
           {/* Search Bar */}
+          {/* Search Bar with Dropdown */}
           <div className="hidden md:flex flex-1 justify-center max-w-md">
             <div className="w-full max-w-sm relative">
               <input
@@ -101,15 +188,68 @@ export default function Navbar() {
                 placeholder="Search for a service..."
                 className="w-full px-6 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all shadow-sm"
               />
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              {loading ? (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-400 animate-spin" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8V12H4z"></path>
+                  </svg>
+                </div>
+              ) : (
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              )}
+
+              {/* Search Results Dropdown */}
+              {query && (
+                <div className="absolute left-0 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {results.length > 0 ? (
+                    results.map((service) => (
+                      <div
+                        key={service.id}
+                        className="p-4 border-b last:border-none hover:bg-gray-50 cursor-pointer transition"
+                        onClick={() => {
+                          const params = new URLSearchParams();
+                          params.append("query", service.name);
+                          window.location.href = /services?${params.toString()};
+                        }}
+                      >
+                        <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      {loading ? (
+                        <p className="text-gray-500 text-center">Loading services...</p>
+                      ) : (
+                        <div>
+                          <p className="text-gray-500 text-center">No services found.</p>
+                          {query.length > 4 && (
+                            <button
+                              onClick={() => { handleRequestClick(); setIsClicked(true); }}
+                              disabled={isClicked}
+                              className={`w-full h-8 rounded-lg font-bold text-lg transition-all duration-300
+                              ${isClicked
+                                  ? 'bg-gray-400 text-gray-800 cursor-not-allowed'
+                                  : 'bg-black text-white cursor-pointer hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500'
+                                }`}
+                            >
+                              {isClicked ? "Service Requested" : "Request Service"}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Right Section */}
           <div className="flex items-center space-x-6">
-            <button className="hover:scale-110 transition-transform duration-300">
+            {/* <button className="hover:scale-110 transition-transform duration-300">
               <MapPin className="w-6 h-6 text-gray-600 hover:text-black transition-colors duration-300" />
-            </button>
+            </button> */}
 
             {!isAuthenticated && (
               <Link href="/register">
@@ -153,7 +293,7 @@ export default function Navbar() {
             <div className="relative">
               <motion.button
                 whileHover={{ scale: 1.05 }}
-                onClick={() => setDropdownOpen(!dropdownOpen)}
+                onClick={() => {setDropdownOpen(!dropdownOpen); setLoading(true);}}
                 className="p-2 rounded-full hover:bg-gray-100 transition-all flex items-center space-x-3"
               >
                 {isAuthenticated ? (
@@ -242,16 +382,75 @@ export default function Navbar() {
           >
             <div className="max-w-7xl mx-auto p-4 space-y-4">
               {/* Mobile Search */}
-              <div className="relative">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search for a service..."
-                  className="w-full px-6 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                />
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              </div>
+              {/* Mobile Search */}
+<div className="relative">
+  <input
+    type="text"
+    value={query}
+    onChange={(e) => setQuery(e.target.value)}
+    placeholder="Search for a service..."
+    className="w-full px-6 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+  />
+  {loading ? (
+    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+      <svg className="w-5 h-5 text-gray-400 animate-spin" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8V12H4z"></path>
+      </svg>
+    </div>
+  ) : (
+    <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+  )}
+
+  {/* Mobile Search Results Dropdown */}
+  {query && (
+    <div className="absolute left-0 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+      {results.length > 0 ? (
+        results.map((service) => (
+          <div
+            key={service.id}
+            className="p-4 border-b last:border-none hover:bg-gray-50 cursor-pointer transition"
+            onClick={() => {
+              const params = new URLSearchParams();
+              params.append("query", service.name);
+              window.location.href = /services?${params.toString()};
+              setMobileMenuOpen(false); // Close mobile menu after selection
+            }}
+          >
+            <h3 className="font-semibold text-gray-900">{service.name}</h3>
+          </div>
+        ))
+      ) : (
+        <div className="p-4 text-center text-gray-500">
+          {loading ? (
+            <p className="text-gray-500 text-center">Loading services...</p>
+          ) : (
+            <div>
+              <p className="text-gray-500 text-center">No services found.</p>
+              {query.length > 4 && (
+                <button
+                  onClick={() => {
+                    handleRequestClick();
+                    setIsClicked(true);
+                    setMobileMenuOpen(false); // Close mobile menu after request
+                  }}
+                  disabled={isClicked}
+                  className={`w-full h-8 mt-2 rounded-lg font-bold text-lg transition-all duration-300
+                    ${isClicked
+                      ? 'bg-gray-400 text-gray-800 cursor-not-allowed'
+                      : 'bg-black text-white cursor-pointer hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-500'
+                    }`}
+                >
+                  {isClicked ? "Service Requested" : "Request Service"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )}
+</div>
 
               <div className="grid gap-3">
                 <Link href="/services" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-all">
@@ -270,7 +469,7 @@ export default function Navbar() {
               </div>
 
               {!isAuthenticated ? (
-                <div className="grid gap-3 pt-4 border-t">
+                <div className="grid gap-3 pt-4 border-t z-20">
                   <Link href="/signin">
                     <button className="w-full px-4 py-3 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all">
                       Login
@@ -319,15 +518,6 @@ export default function Navbar() {
                   </button>
                 </div>
               )}
-              {/* Register as Partner Button inside Mobile Menu */}
-              <Link href="/register">
-                <button
-                  className="w-full px-4 py-2 text-white bg-gray-800 rounded-md transition-all hover:bg-gray-900"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Register as Partner
-                </button>
-              </Link>
             </div>
           </motion.div>
         )}
