@@ -1,51 +1,32 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useRive, Layout, Fit, Alignment } from "@rive-app/react-canvas";
 
 interface LoaderProps {
   size?: string;
 }
 
 export default function Loader({ size = "400px" }: LoaderProps) {
-  const [isVisible, setIsVisible] = useState(true);
-  const [isFading, setIsFading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.play().catch(error => {
-        console.error("Video autoplay failed:", error);
-      });
-    }
-
-    const minDisplayTime = setTimeout(() => {
-      setIsFading(true); // Start fade out
-      setTimeout(() => {
-        setIsVisible(false); // Remove from DOM after fade
-      }, 500); // Match this with CSS animation duration
-    }, 3500);
-
-    return () => {
-      clearTimeout(minDisplayTime);
-    };
-  }, []);
-
-  if (!isVisible) return null;
+  const { RiveComponent } = useRive({
+    src: "/loader_icon.riv",
+    stateMachines: "State machine 1",
+    layout: new Layout({
+      fit: Fit.Contain,
+      alignment: Alignment.Center,
+    }),
+    autoplay: true,
+  });
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black transition-opacity duration-500 ${isFading ? 'opacity-0' : 'opacity-100'}`}>
-      <div style={{ width: size, height: size }} className="flex items-center justify-center">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className="max-w-full max-h-full object-contain"
-          onError={(e) => console.error("Video error:", e)}
-        >
-          <source src="/Loader.webm" type="video/webm" />
-          Your browser does not support the video tag.
-        </video>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
+      <div style={{ width: size, height: size }} className="relative flex items-center justify-center">
+        <div className="w-full h-full">
+          <div className="relative w-full h-full overflow-hidden">
+            <div className="w-[calc(100%+20px)] -mx-2.5">
+              <RiveComponent className="w-full h-full brightness-125" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

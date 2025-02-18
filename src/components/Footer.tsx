@@ -102,7 +102,7 @@ const Footer: React.FC = () => {
     { name: "Services", href: "/services" },
     { name: "Blogs", href: "/blog" },
     { name: "About", href: "/about" },
-    { name: "Contact Us", href: "/contact" }
+    { name: "Contact Us", href: "/contactus" }
   ];
 
   return (
@@ -115,7 +115,7 @@ const Footer: React.FC = () => {
             <Image
               src="/logo.png"
               alt="Helper Buddy Logo"
-              width={150}
+              width={50}
               height={50}
               className="mb-6"
             />
