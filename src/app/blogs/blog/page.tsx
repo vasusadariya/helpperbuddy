@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation"; // Fetch ID from URL query
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -20,13 +20,23 @@ type Blog = {
 };
 
 export default function BlogPage() {
-  const { id } = useParams();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id"); // Fetch ID from query parameter
   const [blog, setBlog] = useState<Blog | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) return notFound();
+
     const fetchBlog = async () => {
-      const res = await fetch(`/api/blogs/${id}`);
+      const res = await fetch(`/api/blogs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }), // Send ID in body
+      });
+
       if (!res.ok) return notFound();
       const data = await res.json();
       setBlog(data);
@@ -42,11 +52,10 @@ export default function BlogPage() {
   return (
     <div className="bg-black min-h-screen text-white">
       <Navbar />
-      
+
       {/* Main Content Section */}
-      <div className="max-w-4xl mx-auto px-6 pt-32 md:pt-40">  
+      <div className="max-w-4xl mx-auto px-6 pt-32 md:pt-40">
         <Card className="bg-gray-900 text-white shadow-lg rounded-xl p-6">
-          
           {/* Blog Image */}
           {blog.image && (
             <div className="relative w-full h-96 mb-6">

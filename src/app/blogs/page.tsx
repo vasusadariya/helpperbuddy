@@ -76,7 +76,7 @@ export default function BlogsPage() {
                 transition={{ delay: index * 0.15, duration: 0.6, ease: "easeOut" }}
                 viewport={{ once: true }}
               >
-                <Link href={`/blogs/${blog.id}`}>
+                <Link href={`/blogs/blog?id=${blog.id}`}>
                   <div className="group bg-gray-900 border border-gray-700 rounded-xl overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
                     {blog.image && (
                       <div className="relative w-full h-48 overflow-hidden">
