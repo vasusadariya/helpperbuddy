@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { SingleImageDropzone } from '@/components/SingleImageDropzone';
+import Image from 'next/image';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export default function ServiceModal({
     if (isOpen) {
       fetchCategories();
     }
-  }, [isOpen]);
+  }, [isOpen,formData.category]);
 
   useEffect(() => {
     if (initialData) {
@@ -130,7 +131,7 @@ export default function ServiceModal({
             {initialData?.image && !file && (
               <div className="mt-2">
                 <p className="text-sm text-gray-500">Current image:</p>
-                <img 
+                <Image 
                   src={initialData.image} 
                   alt="Current service" 
                   className="mt-1 h-32 w-32 object-cover rounded-md"

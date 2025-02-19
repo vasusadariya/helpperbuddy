@@ -20,7 +20,7 @@ interface Service {
 // Reusable search function
 async function searchServices(query: string = "", category: string = "") {
   try {
-    let results = await prisma.service.findMany({
+    const results = await prisma.service.findMany({
       where: {
         isActive: true,
         ...(query ? { name: { contains: query, mode: "insensitive" } } : {}),

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const query = searchParams.get("query") || "";
     const category = searchParams.get("category");
 
-    let services = await prisma.service.findMany({
+    const services = await prisma.service.findMany({
       where: {
         isActive: true,
         ...(query ? { name: { contains: query, mode: "insensitive" } } : {}),

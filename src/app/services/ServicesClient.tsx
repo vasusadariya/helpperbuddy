@@ -2,10 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Category } from "@prisma/client";
-import { toast, Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import CheckoutModal from "@/components/CheckoutModal";
 import { validateDateTime, validateDateTimeForServices } from "@/lib/utils/validation";
 import { useSession } from "next-auth/react";
@@ -59,7 +59,6 @@ export default function ServicesClient({
   initialCategory: string;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { data: session } = useSession();
   
   const [services, setServices] = useState<Service[]>(initialServices);
@@ -416,43 +415,55 @@ export default function ServicesClient({
 
             {isSortOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                  <button
-                    onClick={() => {
-                      handleSort('high-to-low');
-                      setIsSortOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h9" />
-                    </svg>
-                    Price (High to Low)
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleSort('low-to-high');
-                      setIsSortOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-t-lg flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h5" />
-                    </svg>
-                    Price (Low to High)
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleSort('top-orders');
-                      setIsSortOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-b-lg flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h9" />
-                    </svg>
-                    Top Orders
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    handleSort('high-to-low');
+                    setSortType('high-to-low');
+                    setIsSortOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 flex items-center gap-2 rounded-t-lg hover:bg-gray-100 ${
+                    sortType === 'high-to-low' ? 'bg-gray-200' : ''
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h9" />
+                  </svg>
+                  Price (High to Low)
+                </button>
+              
+                <button
+                  onClick={() => {
+                    handleSort('low-to-high');
+                    setSortType('low-to-high');
+                    setIsSortOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 flex items-center gap-2 hover:bg-gray-100 ${
+                    sortType === 'low-to-high' ? 'bg-gray-200' : ''
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h5" />
+                  </svg>
+                  Price (Low to High)
+                </button>
+              
+                <button
+                  onClick={() => {
+                    handleSort('top-orders');
+                    setSortType('top-orders');
+                    setIsSortOpen(false);
+                  }}
+                  className={`w-full text-left px-4 py-3 flex items-center gap-2 rounded-b-lg hover:bg-gray-100 ${
+                    sortType === 'top-orders' ? 'bg-gray-200' : ''
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h9" />
+                  </svg>
+                  Top Orders
+                </button>
+              </div>
+              
               )}
             </div>
           </div>
