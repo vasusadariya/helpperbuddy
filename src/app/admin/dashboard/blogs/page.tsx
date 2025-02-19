@@ -140,7 +140,7 @@ export default function AdminBlogManager() {
                     onChange={(file) => setFile(file ?? null)} 
                 />
 
-                <button onClick={handleCreateBlog} disabled={uploading} className="bg-blue-500 text-white px-4 py-2 rounded w-full">
+                <button onClick={handleCreateBlog} disabled={uploading} className="bg-black text-white px-4 py-2 rounded w-full">
                     {uploading ? 'Uploading...' : 'Create Blog'}
                 </button>
             </div>
