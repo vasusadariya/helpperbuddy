@@ -13,8 +13,6 @@ import {
   Phone,
   Mail,
   UserCheck,
-
-
   Banknote,
   CreditCard,
   Star,
@@ -22,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { OrderCancellationStatus } from "@/components/OrderCancellation";
+// import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
 import { Review } from "@/components/review";
 import toast from "react-hot-toast";
@@ -248,37 +246,37 @@ export default function UserDashboard() {
     }
   };
   // Add handleCODPayment function
-  const handleCODPayment = async (order: Order) => {
-    const amount = order.remainingAmount || order.amount;
-    const confirmed = window.confirm(
-      `Please pay ₹${amount.toFixed(2)} to the service provider`
-    );
+  // const handleCODPayment = async (order: Order) => {
+  //   const amount = order.remainingAmount || order.amount;
+  //   const confirmed = window.confirm(
+  //     `Please pay ₹${amount.toFixed(2)} to the service provider`
+  //   );
     
-    if (!confirmed) return;
+  //   if (!confirmed) return;
   
-    try {
-      const response = await fetch('/api/payment/cod', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          orderId: order.id
-        }),
-        credentials: 'include' // Important for authentication
-      });
+  //   try {
+  //     const response = await fetch('/api/payment/cod', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Accept': 'application/json'
+  //       },
+  //       body: JSON.stringify({ 
+  //         orderId: order.id
+  //       }),
+  //       credentials: 'include' // Important for authentication
+  //     });
   
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.error || 
-          `HTTP error! status: ${response.status}`
-        );
-      }
+  //     if (!response.ok) {
+  //       const errorData = await response.json().catch(() => null);
+  //       throw new Error(
+  //         errorData?.error || 
+  //         `HTTP error! status: ${response.status}`
+  //       );
+  //     }
   
-      const data = await response.json();
-      
+  //     const data = await response.json();
+     
       if (data.success) {
         toast.success('Payment confirmed and order completed');
         window.location.reload();
@@ -295,7 +293,6 @@ export default function UserDashboard() {
     }
   };
   console.log(handleCODPayment);
-
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -658,7 +655,7 @@ export default function UserDashboard() {
                             </div>
                           </div>
 
-                          {order.status === "PENDING" && (
+                          {/* {order.status === "PENDING" && (
                             <OrderCancellationStatus
                               order={{
                                 id: order.id,
@@ -674,7 +671,7 @@ export default function UserDashboard() {
                                 Partner: order.Partner,
                               }}
                             />
-                          )}
+                          )} */}
 
                           {order.Partner && (
                             <div className="bg-gray-50 rounded-lg p-4 mt-3">
@@ -901,7 +898,7 @@ export default function UserDashboard() {
     )}
   </div>
 )}
-                    </div>
+                      </div>
                   );
                 })
               ) : (

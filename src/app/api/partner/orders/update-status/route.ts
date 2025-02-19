@@ -3,8 +3,6 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 
-
-
 export async function POST(req: Request) {
   const currentUTCTime = new Date('2025-02-17 18:59:06');
 

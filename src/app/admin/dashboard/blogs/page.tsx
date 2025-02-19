@@ -102,7 +102,7 @@ export default function AdminBlogManager() {
             const res = await fetch('/api/admin/blogs', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }), // Sending ID in the request body
+                body: JSON.stringify({ id }),
             });
     
             if (res.ok) {
