@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
 export async function GET() {
-  const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const currentUTCTime = new Date().toISOString();
 
   try {
     const session = await getServerSession(authOptions);

@@ -3,20 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, FileText, ArrowUpRight, LogOut } from "lucide-react";
+import { User, FileText, ArrowUpRight} from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { signOut } from "next-auth/react";
-
-const handleLogout = async () => {
-  await signOut({ callbackUrl: '/' });
-};
-
 
 const sidebarItems = [
   { name: "Profile", href: "/user/dashboard/profile", icon: User },
   { name: "Orders", href: "/user/dashboard/orders", icon: FileText },
   { name: "Transactions", href: "/user/dashboard/transactions", icon: ArrowUpRight },
-  { name: "Logout", onclick: { handleLogout }, href: "/user/dashboard/transactions", icon:  LogOut},
 ];
 
 export default function DashboardLayout({
