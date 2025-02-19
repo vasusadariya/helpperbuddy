@@ -23,6 +23,7 @@ import Image from "next/image";
 // import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
 import { Review } from "@/components/review";
+import toast from "react-hot-toast";
 
 type DashboardStats = {
   totalOrders: number;
@@ -275,23 +276,23 @@ export default function UserDashboard() {
   //     }
   
   //     const data = await response.json();
-      
-  //     if (data.success) {
-  //       toast.success('Payment confirmed and order completed');
-  //       window.location.reload();
-  //     } else {
-  //       throw new Error(data.error || 'Failed to confirm payment');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error confirming payment:', error);
-  //     toast.error(
-  //       error instanceof Error 
-  //         ? error.message 
-  //         : 'Failed to confirm payment'
-  //     );
-  //   }
-  // };
-
+     
+      if (data.success) {
+        toast.success('Payment confirmed and order completed');
+        window.location.reload();
+      } else {
+        throw new Error(data.error || 'Failed to confirm payment');
+      }
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to confirm payment'
+      );
+    }
+  };
+  console.log(handleCODPayment);
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -892,12 +893,12 @@ export default function UserDashboard() {
     </div>
     {order.Review.description && (
       <p className="mt-2 text-sm text-gray-600">
-        &ldquo;{order.Review.description}&ldquo;
+        &quot;{order.Review.description}&quot;
       </p>
     )}
   </div>
 )}
-                    </div>
+                      </div>
                   );
                 })
               ) : (
