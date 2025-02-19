@@ -26,15 +26,13 @@ const ServiceSection: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoPlay, setAutoPlay] = useState(true);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
-  
-  // Responsive cards to show based on screen size
   const [cardsToShow, setCardsToShow] = useState(3);
 
   useEffect(() => {
     fetchServices().then(setServices).catch(console.error);
   }, []);
 
-  // Handle responsive cardsToShow
+  // Enhanced responsive handling
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 640) {
@@ -46,7 +44,7 @@ const ServiceSection: React.FC = () => {
       }
     };
 
-    handleResize(); // Initial check
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -67,24 +65,21 @@ const ServiceSection: React.FC = () => {
     });
   }, [services.length, cardsToShow]);
 
-  // Auto-sliding functionality
   useEffect(() => {
     if (!autoPlay || !services.length) return;
     
     const intervalId = setInterval(() => {
       setSlideDirection('right');
       nextSlide();
-    }, 4000); // Slide every 5 seconds
+    }, 4000);
     
     return () => clearInterval(intervalId);
   }, [autoPlay, nextSlide, services.length]);
 
   if (!services.length) return null;
 
-  // Get visible services based on current index
   const visibleServices = [...services.slice(currentIndex, currentIndex + cardsToShow)];
   
-  // If we need more items to fill the view, add from the beginning
   if (visibleServices.length < cardsToShow) {
     visibleServices.push(...services.slice(0, cardsToShow - visibleServices.length));
   }
@@ -105,10 +100,10 @@ const ServiceSection: React.FC = () => {
   };
 
   return (
-    <section className="py-20 bg-white dark:bg-gray-900">
+    <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-white dark:bg-gray-900">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-12">
-          <h2 className="text-4xl font-bold text-center dark:text-white">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 sm:mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center dark:text-white mb-4 sm:mb-0">
             Our Services
           </h2>
           <Link 
@@ -129,10 +124,10 @@ const ServiceSection: React.FC = () => {
               className="p-2 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors z-10"
               aria-label="Previous slide"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-4 h-4 sm:w-6 sm:h-6" />
             </button>
             
-            <div className="overflow-hidden mx-4 flex-1">
+            <div className="overflow-hidden mx-2 sm:mx-4 flex-1">
               <AnimatePresence
                 mode="wait"
                 initial={false}
@@ -149,7 +144,7 @@ const ServiceSection: React.FC = () => {
                     x: { type: "spring", stiffness: 300, damping: 30 },
                     opacity: { duration: 0.2 }
                   }}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
                 >
                   {visibleServices.map((service) => (
                     <motion.div
@@ -157,9 +152,9 @@ const ServiceSection: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       className="w-full"
                     >
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg h-[500px] flex flex-col">
+                      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg h-[400px] sm:h-[500px] flex flex-col">
                         {service.image ? (
-                          <div className="relative h-48 w-full flex-shrink-0">
+                          <div className="relative h-36 sm:h-48 w-full flex-shrink-0">
                             <Image
                               src={service.image}
                               alt={service.name}
@@ -170,22 +165,22 @@ const ServiceSection: React.FC = () => {
                             />
                           </div>
                         ) : (
-                          <div className="h-48 bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                          <div className="h-36 sm:h-48 bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
                         )}
-                        <div className="p-6 flex flex-col flex-grow">
-                          <h3 className="text-xl font-semibold mb-2 dark:text-white">
+                        <div className="p-4 sm:p-6 flex flex-col flex-grow">
+                          <h3 className="text-lg sm:text-xl font-semibold mb-2 dark:text-white">
                             {service.name}
                           </h3>
-                          <p className="text-gray-600 dark:text-gray-300 flex-grow">
+                          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 flex-grow line-clamp-4">
                             {service.description}
                           </p>
-                          <div className="flex items-center justify-between mt-4">
-                            <span className="text-2xl font-bold dark:text-white">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mt-4">
+                            <span className="text-xl sm:text-2xl font-bold dark:text-white">
                               ₹{service.price}
                             </span>
                             <Link
                               href={`/book/${service.id}`}
-                              className="bg-black dark:bg-white text-white dark:text-black px-6 py-2 rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                              className="w-full sm:w-auto bg-black dark:bg-white text-white dark:text-black px-4 sm:px-6 py-2 rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors text-center text-sm sm:text-base"
                             >
                               Book Now
                             </Link>
@@ -206,7 +201,7 @@ const ServiceSection: React.FC = () => {
               className="p-2 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors z-10"
               aria-label="Next slide"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-4 h-4 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>

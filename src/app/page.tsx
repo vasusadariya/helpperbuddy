@@ -3,15 +3,19 @@ import dynamic from 'next/dynamic'
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import HeroSection from "@/components/HeroSection"
-import ReviewSection from "@/components/ReviewSection"
 import FAQSection from "@/components/FAQSection"
 import HowItWorksSection from "@/components/HowItWorksSection"
 import LatestArticles from "@/components/LatestBlogs"
 
-// Dynamically import ServiceSection with SSR disabled
+// Dynamically import ServiceSection with SSR enabled
 const ServiceSection = dynamic(() => import('@/components/ServicesSection'), {
   ssr: true
 })
+
+const ReviewSection = dynamic(() => import('@/components/ReviewSection'), {
+  ssr: true
+})
+
 
 export const metadata: Metadata = {
   title: 'Helper Buddy - Professional Home Services at Your Doorstep',
