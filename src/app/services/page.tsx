@@ -61,7 +61,7 @@ export default async function ServicesPage({
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <div className="h-5"></div>
+      <div className="h-5 mt-10"></div>
       <div className="flex flex-1 mt-16">
         <Suspense fallback={<div>Loading...</div>}>
           <ServicesClient 
