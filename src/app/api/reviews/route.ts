@@ -35,6 +35,9 @@ export async function POST(req: Request) {
           email: session.user.email
         },
         status: "COMPLETED"
+      },
+      include: {
+        review: true // Include to check if review exists
       }
     });
 
@@ -46,17 +49,11 @@ export async function POST(req: Request) {
     }
 
     // Check if review already exists
-    const existingReview = await prisma.review.findUnique({
-      where: {
-        orderId
-      }
-    });
-
-    if (existingReview) {
-      return NextResponse.json(
-        { error: "Review already exists for this order" },
-        { status: 400 }
-      );
+    if (order.review) {
+      return NextResponse.json({ 
+        success: false,
+        error: "Review already exists for this order",
+      }, { status: 400 });
     }
 
     // Create review
@@ -80,6 +77,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+
     const reviews = await prisma.review.findMany({
       where: {
         rating: 5,
@@ -113,5 +111,6 @@ export async function GET() {
       { error: "Failed to fetch reviews" +error },
       { status: 500 }
     );
+
   }
 }

@@ -35,7 +35,7 @@ export async function GET() {
       );
     }
 
-    // Get all wallet transactions
+    // Get all wallet transactions with more details
     const walletTransactions = await prisma.transaction.findMany({
       where: {
         userId: user.id,
@@ -45,11 +45,22 @@ export async function GET() {
           select: {
             id: true,
             status: true,
+            amount: true,
+            walletAmount: true,
+            remainingAmount: true,
+            paymentMode: true,
             service: {
               select: {
-                name: true
+                name: true,
+                description: true,
+                price: true
               }
             }
+          }
+        },
+        Wallet: {
+          select: {
+            balance: true
           }
         }
       },
@@ -58,13 +69,20 @@ export async function GET() {
       }
     });
 
-    // Get all orders with Razorpay payments
+    // Get all orders with payments (both Razorpay and Wallet)
     const ordersWithPayments = await prisma.order.findMany({
       where: {
         userId: user.id,
-        razorpayPaymentId: {
-          not: null
-        },
+        OR: [
+          {
+            razorpayPaymentId: {
+              not: null
+            }
+          },
+          {
+            paymentMode: 'ONLINE'
+          }
+        ],
         paidAt: {
           not: null
         }
@@ -73,11 +91,16 @@ export async function GET() {
         id: true,
         razorpayPaymentId: true,
         remainingAmount: true,
+        walletAmount: true,
+        amount: true,
+        paymentMode: true,
         paidAt: true,
         status: true,
         service: {
           select: {
-            name: true
+            name: true,
+            description: true,
+            price: true
           }
         }
       },
@@ -86,19 +109,27 @@ export async function GET() {
       }
     });
 
-    // Transform orders into transaction format
+    // Transform orders into transaction format with more details
     const paymentTransactions = ordersWithPayments.map(order => ({
-      id: order.razorpayPaymentId!,
-      amount: order.remainingAmount,
+      id: order.razorpayPaymentId || `wallet-${order.id}`,
+      amount: order.paymentMode === 'ONLINE' ? order.walletAmount : order.remainingAmount,
       type: "DEBIT" as const,
-      description: `Razorpay payment for order #${order.id}`,
+      description: order.paymentMode === 'ONLINE' 
+        ? `Wallet payment for order #${order.id}`
+        : `Razorpay payment for order #${order.id}`,
       createdAt: order.paidAt!,
       orderId: order.id,
       Order: {
         id: order.id,
         status: order.status,
+        amount: order.amount,
+        walletAmount: order.walletAmount,
+        remainingAmount: order.remainingAmount,
+        paymentMode: order.paymentMode,
         service: {
-          name: order.service.name
+          name: order.service.name,
+          description: order.service.description,
+          price: order.service.price
         }
       }
     }));
@@ -107,10 +138,29 @@ export async function GET() {
     const allTransactions = [...walletTransactions, ...paymentTransactions]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+    // Calculate some useful statistics
+    const statistics = {
+      totalTransactions: allTransactions.length,
+      totalDebited: allTransactions
+        .filter(t => t.type === 'DEBIT')
+        .reduce((sum, t) => sum + (t.amount || 0), 0),
+      totalCredited: allTransactions
+        .filter(t => t.type === 'CREDIT')
+        .reduce((sum, t) => sum + (t.amount || 0), 0),
+      walletBalance: walletTransactions[0]?.Wallet?.balance || 0
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        transactions: allTransactions,
+        transactions: allTransactions.map(t => ({
+          ...t,
+          formattedAmount: `₹${t.amount?.toFixed(2)}`,
+          formattedDate: new Date(t.createdAt).toLocaleDateString('en-IN'),
+          transactionType: t.type === 'DEBIT' ? 'Payment' : 'Credit',
+          paymentMethod: t.Order?.paymentMode || t.type
+        })),
+        statistics,
         timestamp: currentUTCTime,
       }
     });
