@@ -30,7 +30,7 @@ const getLatestBlogs = unstable_cache(
   },
   ['latest-blogs'],
   {
-    revalidate: 3600, // Cache for 1 hour
+    revalidate: 3600,
     tags: ['blogs']
   }
 )
@@ -59,7 +59,7 @@ export default async function LatestBlogs() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Featured Blog */}
           {featuredBlog && (
-            <Link href={`/blogs/${featuredBlog.id}`} className="relative group">
+            <Link href={`/blogs/blog?id=${featuredBlog.id}`} className="relative group">
               <div className="relative h-[600px] overflow-hidden rounded-2xl">
                 <Image
                   src={featuredBlog.image || '/placeholder-blog.jpg'}
@@ -93,7 +93,7 @@ export default async function LatestBlogs() {
             {otherBlogs.map((blog) => (
               <Link 
                 key={blog.id} 
-                href={`/blogs/${blog.id}`} 
+                href={`/blogs/blog?id=${blog.id}`} 
                 className="flex gap-6 group hover:bg-white rounded-xl p-3 transition-colors"
               >
                 <div className="w-1/3 h-[120px] overflow-hidden rounded-xl flex-shrink-0">
