@@ -137,63 +137,121 @@ export const sendApprovalEmail = async (partnerData: {
 
 export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
   try {
+    // Initialize EmailJS
     initializeMainService();
 
+    // Fetch order with related data
     const order = await prisma.order.findUnique({
-      where: {
-        id: data.orderId,
-      },
+      where: { id: data.orderId },
       include: {
-        user: true,
-        Partner: true,
-        service: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phoneno: true
+          }
+        },
+        Partner: {
+          select: {
+            name: true,
+            email: true,
+            phoneno: true
+          }
+        },
+        service: {
+          select: {
+            name: true,
+            description: true,
+            category: true,
+          }
+        },
       },
     });
 
     if (!order || !order.Partner || !order.user) {
-      throw new Error('Order, partner, or user details not found');
+      throw new Error('Required order details not found');
     }
 
+    // Format date and time
     const formattedDate = new Date(order.date).toLocaleDateString('en-IN', {
+      weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
 
+    const formattedTime = order.time;
+
+    // Format amount with currency
+    const formattedAmount = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR'
+    }).format(order.amount);
+
+    // Send email
     const response = await emailjs.send(
       process.env.EMAILJS_SERVICE_ID!,
       process.env.EMAILJS_ORDER_ACCEPTED_TEMPLATE_ID!,
       {
+        // User Details
         to_name: order.user.name,
         to_email: order.user.email,
+        user_phone: order.user.phoneno || 'Not provided',
+
+        // Order Details
         order_id: order.id,
+        order_status: 'Accepted',
+        
+        // Service Details
         service_name: order.service.name,
+        service_description: order.service.description,
+        service_category: order.service.category,
         service_date: formattedDate,
-        service_time: order.time,
+        service_time: formattedTime,
+        
+        // Location Details
         service_address: order.address,
         service_pincode: order.pincode,
-        amount: order.amount.toFixed(2),
-        remarks: order.remarks || undefined,
+        
+        // Payment Details
+        amount: formattedAmount,
+        payment_status: order.paidAt ? 'Paid' : 'Pending',
+        
+        // Partner Details
         partner_name: order.Partner.name,
         partner_phone: order.Partner.phoneno || 'Not provided',
         partner_email: order.Partner.email,
+        partner_image: '',
+        
+        // Additional Info
+        remarks: order.remarks || 'No special instructions',
+        
+        // URLs
         dashboard_url: `${process.env.NEXT_PUBLIC_BASE_URL}/user/dashboard`,
-        // support_url: `${process.env.NEXT_PUBLIC_BASE_URL}/support`,
+        
+        // Current Time
+        sent_at: new Date().toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata'
+        }),
       }
     );
-    
 
     return {
       success: true,
       messageId: response.status,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      details: {
+        recipient: order.user.email,
+        orderId: order.id,
+        serviceName: order.service.name
+      }
     };
 
   } catch (error) {
     console.error('Error sending order acceptance email:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : 'Failed to send email',
       timestamp: new Date().toISOString()
     };
   }
