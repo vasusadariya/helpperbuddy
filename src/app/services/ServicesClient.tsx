@@ -368,9 +368,9 @@ export default function ServicesClient({
   return (
     <>
       {/* Categories Sidebar - Desktop */}
-      <div className="hidden md:block w-64 bg-white p-4 shadow-lg h-full fixed top-16">
+      <div className="hidden md:block w-64 bg-white p-4 shadow-lg h-full fixed top-24">
         <h2 className="text-xl font-semibold mb-4">Categories</h2>
-        <ul className="space-y-2">
+        <ul className="space-y-1">
           {["all", ...Object.values(Category)].map((cat) => (
             <li
               key={cat}
@@ -567,7 +567,7 @@ export default function ServicesClient({
 
       {/* Cart Sidebar */}
       <aside
-        className={`fixed right-0 top-0 h-full w-80 bg-white z-20 shadow-lg transform transition-transform duration-300 ${
+        className={`fixed right-0 top-0 h-full w-80 bg-white z-20 shadow-lg pt-[calc(6rem)] transform transition-transform duration-300 ${
           isCartOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
