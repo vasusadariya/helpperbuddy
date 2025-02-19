@@ -8,6 +8,13 @@ import { Session } from 'next-auth';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search,  Menu, X, User, LogOut, LayoutDashboard, Wallet } from 'lucide-react';
+import { LucideIcon } from "lucide-react";
+
+interface NavLinkProps {
+  href: string;
+  children: React.ReactNode;
+  icon?: LucideIcon;
+}
 
 interface ExtendedSession extends Session {
   user: {
@@ -106,7 +113,7 @@ export default function Navbar() {
 
   const handleRequestClick = async () => {
     try {
-      const response = await fetch("/api/services/request", {
+        await fetch("/api/services/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +125,7 @@ export default function Navbar() {
     }
   };
 
-  const NavLink = ({ href, children, icon: Icon }: { href: string; children: React.ReactNode; icon?: any }) => (
+  const NavLink = ({ href, children, icon: Icon }: NavLinkProps) => (
     <Link href={href} className="group flex items-center space-x-2">
       {Icon && <Icon className="w-5 h-5 text-gray-600 group-hover:text-black transition-colors duration-300" />}
       <span className="font-light text-gray-700 group-hover:text-black transition-colors duration-300 relative">

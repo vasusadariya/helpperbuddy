@@ -84,11 +84,11 @@ export default function AdminBlogManager() {
         }
     };
 
-    const handleDeleteBlog = async (id: string, image: string | undefined) => {
+    const handleDeleteBlog = async (id: string, image?: string) => {
         if (!confirm('Are you sure?')) return;
-
+    
         setDeletingId(id);
-        
+    
         try {
             if (image) {
                 await fetch('/api/edgestore/delete', {
@@ -98,12 +98,18 @@ export default function AdminBlogManager() {
                 });
                 console.log('Image deleted successfully');
             }
-
-            const res = await fetch(`/api/admin/blogs/${id}`, { method: 'DELETE' });
+    
+            const res = await fetch('/api/admin/blogs', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }), // Sending ID in the request body
+            });
+    
             if (res.ok) {
                 setBlogs((prev) => prev.filter((blog) => blog.id !== id));
             } else {
-                alert('Failed to delete blog');
+                const errorData = await res.json();
+                alert(`Failed to delete blog: ${errorData.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error deleting blog:', error);
@@ -111,6 +117,7 @@ export default function AdminBlogManager() {
             setDeletingId(null);
         }
     };
+    
 
     return (
         <div className="p-6 max-w-4xl mx-auto bg-white shadow-lg rounded-lg">
