@@ -3,6 +3,19 @@
 import { useState, useEffect } from 'react';
 import { Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 
+interface Partner {
+  id: string;
+  name: string;
+  email: string;
+  service: string[];
+  approved: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  phoneno?: string;
+  isActive: boolean;
+  lastActiveAt: Date;
+}
+
 interface OrderCancellationStatusProps {
   order: {
     id: string;
@@ -15,27 +28,22 @@ interface OrderCancellationStatusProps {
     date: string | Date;
     time: string;
     amount: number;
-    Partner: any | null;
+    Partner: Partner | null;
   };
 }
 
 export const OrderCancellationStatus = ({ order }: OrderCancellationStatusProps) => {
-    const [cancellationStatus, setCancellationStatus] = useState<{
-      isCancellable: boolean;
-      timeRemaining: number;
-      thresholdHours: number;
-    } | null>(null);
-    const [isCancelling, setIsCancelling] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-  if (order.status !== "PENDING") {
-    return null;
-  }
+  const [cancellationStatus, setCancellationStatus] = useState<{
+    isCancellable: boolean;
+    timeRemaining: number;
+    thresholdHours: number;
+  } | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkCancellationStatus = async () => {
-      // Don't check if order is not pending or has a partner
       if (order.status !== "PENDING" || order.Partner) {
         setLoading(false);
         return;
@@ -49,7 +57,7 @@ export const OrderCancellationStatus = ({ order }: OrderCancellationStatusProps)
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
           setCancellationStatus({
             isCancellable: data.data.isCancellable,
@@ -67,68 +75,65 @@ export const OrderCancellationStatus = ({ order }: OrderCancellationStatusProps)
       }
     };
 
-    if (order.status === "PENDING" && !order.Partner) {
-        checkCancellationStatus();
-        const interval = setInterval(checkCancellationStatus, 60000); // Check every minute
-        return () => clearInterval(interval);
-      } else {
-        setLoading(false);
-      }
-    }, [order.id, order.status, order.Partner]);
+    checkCancellationStatus();
+    const interval = setInterval(checkCancellationStatus, 60000); // Check every minute
 
-    const handleCancelOrder = async () => {
-        if (!confirm('Are you sure you want to cancel this order?')) {
-          return;
-        }
-    
-        setIsCancelling(true);
-        try {
-          const response = await fetch('/api/orders/cancel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: order.id })
-          });
-    
-          const data = await response.json();
-          
-          if (data.success) {
-            // Instead of reloading the whole page, you could use a callback
-            // to update just the order status
-            window.location.reload();
-          } else {
-            alert(data.error || 'Failed to cancel order');
-          }
-        } catch (error) {
-          console.error('Error cancelling order:', error);
-          alert('Failed to cancel order. Please try again.');
-        } finally {
-          setIsCancelling(false);
-        }
-      };
-      const formatTimeRemaining = (hours: number): string => {
-        if (hours <= 0) return "Can be cancelled now";
-        
-        const fullHours = Math.floor(hours);
-        const minutes = Math.round((hours - fullHours) * 60);
-        
-        if (fullHours === 0) {
-          return `${minutes} minutes until cancellation available`;
-        } else if (minutes === 0) {
-          return `${fullHours} hour${fullHours > 1 ? 's' : ''} until cancellation available`;
-        }
-        return `${fullHours} hour${fullHours > 1 ? 's' : ''} and ${minutes} minutes until cancellation available`;
-      };
-    
-      // Early return for non-pending orders
-      if (order.status !== "PENDING") {
-        return null;
+    return () => clearInterval(interval);
+  }, [order.id, order.status, order.Partner]);
+
+  const handleCancelOrder = async () => {
+    if (!confirm('Are you sure you want to cancel this order?')) {
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const response = await fetch('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.id })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Instead of reloading the whole page, you could use a callback
+        // to update just the order status
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to cancel order');
       }
-    
-      // Early return if there's a partner assigned
-      if (order.Partner) {
-        return null;
-      }
-    
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert('Failed to cancel order. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+  const formatTimeRemaining = (hours: number): string => {
+    if (hours <= 0) return "Can be cancelled now";
+
+    const fullHours = Math.floor(hours);
+    const minutes = Math.round((hours - fullHours) * 60);
+
+    if (fullHours === 0) {
+      return `${minutes} minutes until cancellation available`;
+    } else if (minutes === 0) {
+      return `${fullHours} hour${fullHours > 1 ? 's' : ''} until cancellation available`;
+    }
+    return `${fullHours} hour${fullHours > 1 ? 's' : ''} and ${minutes} minutes until cancellation available`;
+  };
+
+  // Early return for non-pending orders
+  if (order.status !== "PENDING") {
+    return null;
+  }
+
+  // Early return if there's a partner assigned
+  if (order.Partner) {
+    return null;
+  }
+
 
   if (loading) {
     return (
@@ -164,7 +169,7 @@ export const OrderCancellationStatus = ({ order }: OrderCancellationStatusProps)
             <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <div className="flex-grow">
               <p className="text-sm text-yellow-800 mb-3">
-                No service provider has accepted this order yet. 
+                No service provider has accepted this order yet.
                 You can cancel this order or continue waiting.
               </p>
               <div className="flex flex-wrap gap-3">

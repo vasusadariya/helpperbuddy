@@ -20,6 +20,7 @@ export async function GET() {
       });
       return NextResponse.json(services);
     } catch (error) {
+      console.error('Error fetching services:', error);
       return NextResponse.json({ error: 'Error fetching services' }, { status: 500 });
     }
 }

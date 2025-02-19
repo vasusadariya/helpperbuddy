@@ -75,67 +75,42 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
-    const { searchParams } = new URL(req.url);
-    const orderId = searchParams.get("orderId");
-
-    if (!orderId) {
-      return NextResponse.json({ 
-        error: "Order ID is required",
-      }, { status: 400 });
-    }
-
-    const order = await prisma.order.findFirst({
+    const reviews = await prisma.review.findMany({
       where: {
-        id: orderId,
-        user: {
-          email: session.user.email
-        }
+        rating: 5,
       },
       include: {
-        review: true
-      }
+        Order: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10, // Limit to 10 most recent reviews
     });
 
-    if (!order) {
-      return NextResponse.json({ 
-        success: false,
-        error: "Order not found"
-      }, { status: 404 });
-    }
+    const formattedReviews = reviews.map((review) => ({
+      name: review.Order.user.name,
+      rating: review.rating,
+      review: review.description || "",
+    }));
 
-    if (!order.review) {
-      return NextResponse.json({ 
-        success: false,
-        error: "Review not found for this order",
-      }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        review: order.review
-      }
-    });
-
+    return NextResponse.json(formattedReviews);
   } catch (error) {
-    console.error("Review fetch error:", error);
-    return NextResponse.json({ 
-      success: false,
-      error: "Failed to fetch review",
-      details: error instanceof Error ? error.message : "Unknown error",
-    }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json(
+      { error: "Failed to fetch reviews" },
+      { status: 500 }
+    );
+
   }
 }

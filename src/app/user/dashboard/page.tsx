@@ -13,13 +13,14 @@ import {
   Phone,
   Mail,
   UserCheck,
+
   PlayCircle,
   Banknote,
   CreditCard,
   Star,
+
 } from "lucide-react";
 import Link from "next/link";
-import toast from "react-hot-toast";
 import Image from "next/image";
 import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
@@ -535,6 +536,7 @@ export default function UserDashboard() {
                           <ArrowUpRight className="w-4 h-4 text-red-600" />
                         )}
                       </div>
+
                       <div>
                         <p className="font-medium text-gray-900">
                           {transaction.description}

@@ -44,6 +44,7 @@ function WalletStatistics() {
     try {
       return format(new Date(dateString), 'yyyy-MM-dd HH:mm:ss');
     } catch (error) {
+      console.error('Error formatting date:', error); // Log the error
       return 'Invalid date';
     }
   };

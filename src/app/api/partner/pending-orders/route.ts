@@ -1,13 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 50;
-const ORDER_WINDOW_HOURS = 48;
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   try {
@@ -87,7 +83,6 @@ export async function GET(request: NextRequest) {
       ]
     });
 
-    // Format orders
     const formattedOrders = pendingOrders.map(order => ({
       id: order.id,
       serviceDetails: {

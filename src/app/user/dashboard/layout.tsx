@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, FileText, Star, Wallet, Settings } from "lucide-react";
+import { User, FileText } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
 const sidebarItems = [

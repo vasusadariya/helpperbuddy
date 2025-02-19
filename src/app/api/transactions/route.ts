@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
-  const currentUTCTime = new Date("2025-02-17 17:56:28");
+export async function GET() {
+  const currentUTCTime = new Date("2025-02-17 17:56:28"); 
 
   try {
     const session = await getServerSession(authOptions);

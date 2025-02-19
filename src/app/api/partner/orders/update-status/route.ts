@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
+import { Status } from '@prisma/client';
+
+interface UpdateData {
+  status: Status;
+  updatedAt: Date;
+  startedAt?: Date;
+  completedAt?: Date;
+}
 
 export async function POST(req: Request) {
   const currentUTCTime = new Date('2025-02-17 18:59:06');
@@ -64,6 +72,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+
     if (status === 'SERVICE_COMPLETED') {
       const isPaymentCompleted = 
         // Full wallet payment
@@ -74,6 +83,7 @@ export async function POST(req: Request) {
         order.status === 'PAYMENT_COMPLETED' ||
         // Has payment timestamp
         order.paidAt !== null;
+
 
       if (isPaymentCompleted) {
         // Update order to COMPLETED status directly

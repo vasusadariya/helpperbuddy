@@ -15,6 +15,10 @@ interface PaymentOptionsProps {
   onPaymentComplete: () => void;
 }
 
+  // interface Window {
+  //   Razorpay: any;
+  // }
+
 export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCodMessage, setShowCodMessage] = useState(false);
@@ -35,7 +39,9 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
     setIsProcessing(true);
     try {
       if (method === 'ONLINE') {
+
         router.push(`/payment/${order.id}`);
+
       } else {
         const response = await fetch('/api/payment/cod', {
           method: 'POST',
