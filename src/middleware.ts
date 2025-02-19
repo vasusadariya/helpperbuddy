@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
 
     // CORS Headers
     response.headers.set("Access-Control-Allow-Origin", "*"); // Set to your domain in production
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PATCH, DELETE");
     response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
     // Handle CORS Preflight Requests

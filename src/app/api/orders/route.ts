@@ -455,8 +455,8 @@ export async function POST(req: NextRequest) {
         fullyPaidByWallet: totalAmount <= walletBalance
       };
     }, {
-      timeout: 20000,
-      maxWait: 25000,
+      timeout: 40000,
+      maxWait: 45000,
     });
 
   
