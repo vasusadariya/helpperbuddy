@@ -3,13 +3,12 @@ import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: Request) {
   try {
-    // Await the params to get the id
-    const { id } = await params;
+    // Get the params from the URL
+    const url = new URL(req.url);
+    const orderId = url.searchParams.get('id');
+
 
     const session = await getServerSession(authOptions);
     
@@ -34,7 +33,7 @@ export async function DELETE(
     // Verify the pincode belongs to the partner
     const pincode = await prisma.partnerPincode.findFirst({
       where: {
-        id: id, // Use the awaited id
+        id: orderId || "", // Use the orderId from URL params
         partnerId: partner.id,
       },
     });
@@ -48,7 +47,7 @@ export async function DELETE(
 
     // Soft delete by setting isActive to false
     await prisma.partnerPincode.update({
-      where: { id: id }, // Use the awaited id
+      where: { id: orderId || "" }, // Use the orderId from URL params or empty string
       data: { isActive: false },
     });
 

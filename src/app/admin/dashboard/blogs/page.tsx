@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { SingleImageDropzone } from '@/components/SingleImageDropzone';
 import { useEdgeStore } from '@/lib/edgestore';
-
 interface Blog {
     id: string;
     title: string;

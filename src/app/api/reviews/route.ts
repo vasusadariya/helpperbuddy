@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        User: {
+        user: {
           email: session.user.email
         },
         status: "COMPLETED"
@@ -85,7 +85,7 @@ export async function GET() {
       include: {
         Order: {
           include: {
-            User: {
+            user: {
               select: {
                 name: true,
               },
@@ -100,7 +100,7 @@ export async function GET() {
     });
 
     const formattedReviews = reviews.map((review) => ({
-      name: review.Order.User.name,
+      name: review.Order.user.name,
       rating: review.rating,
       review: review.description || "",
     }));

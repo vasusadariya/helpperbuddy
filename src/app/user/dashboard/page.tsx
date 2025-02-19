@@ -245,37 +245,37 @@ export default function UserDashboard() {
       setIsLoading(false);
     }
   };
-  // Add handleCODPayment function
-  // const handleCODPayment = async (order: Order) => {
-  //   const amount = order.remainingAmount || order.amount;
-  //   const confirmed = window.confirm(
-  //     `Please pay ₹${amount.toFixed(2)} to the service provider`
-  //   );
+
+  const handleCODPayment = async (order: Order) => {
+    const amount = order.remainingAmount || order.amount;
+    const confirmed = window.confirm(
+      `Please pay ₹${amount.toFixed(2)} to the service provider`
+    );
     
-  //   if (!confirmed) return;
+    if (!confirmed) return;
   
-  //   try {
-  //     const response = await fetch('/api/payment/cod', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Accept': 'application/json'
-  //       },
-  //       body: JSON.stringify({ 
-  //         orderId: order.id
-  //       }),
-  //       credentials: 'include' // Important for authentication
-  //     });
+    try {
+      const response = await fetch('/api/payment/cod', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          orderId: order.id
+        }),
+        credentials: 'include' // Important for authentication
+      });
   
-  //     if (!response.ok) {
-  //       const errorData = await response.json().catch(() => null);
-  //       throw new Error(
-  //         errorData?.error || 
-  //         `HTTP error! status: ${response.status}`
-  //       );
-  //     }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(
+          errorData?.error || 
+          `HTTP error! status: ${response.status}`
+        );
+      }
   
-  //     const data = await response.json();
+      const data = await response.json();
      
       if (data.success) {
         toast.success('Payment confirmed and order completed');

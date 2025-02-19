@@ -16,6 +16,9 @@ interface Service {
   category: Category;
   image?: string;
 }
+interface PageProps {
+  params: Promise<{ slug?: string }>;
+}
 
 // Reusable search function
 async function searchServices(query: string = "", category: string = "") {
@@ -42,11 +45,15 @@ async function searchServices(query: string = "", category: string = "") {
 
 // Server Component
 export default async function ServicesPage({
-  searchParams,
-}: {
-  searchParams: { query?: string; category?: string };
-}) {
-  const { query = "", category = "" } = await searchParams;
+  params,
+}: PageProps) {
+  // Await the params promise to get the actual params object
+  const resolvedParams = await params;
+
+  // Extract search parameters from URL
+  const url = new URL("https://example.com" + (resolvedParams.slug ? `/${resolvedParams.slug}` : ""));
+  const query = url.searchParams.get("query") || "";
+  const category = url.searchParams.get("category") || "";
 
   // Fetch initial services
   const initialServices = await searchServices(query, category);
@@ -68,7 +75,6 @@ export default async function ServicesPage({
     </div>
   );
 }
-
 
 export const metadata = {
   title: 'Services - Professional Cleaning Services',

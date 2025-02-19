@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { sendOrderThresholdNotification } from '../../services/emailServices/route';
+import { sendOrderThresholdNotification } from '../../services/emailServices';
 
 
 export async function GET() {

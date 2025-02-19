@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
-import { sendOrderAcceptanceEmail } from "../../services/emailServices/route";
+import { sendOrderAcceptanceEmail } from "../../services/emailServices";
 
 // interface OrderAcceptanceEmailData {
 // orderId: string;

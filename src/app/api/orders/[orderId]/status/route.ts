@@ -4,18 +4,17 @@ import prisma from "@/lib/prisma";
 import { authOptions } from "../../../auth/[...nextauth]/options";
 import { apiResponse } from '@/lib/utils/api-response';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { orderId: string } }
-) {
+export async function GET(request: NextRequest) {
   const currentUTCTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
   
+  // Extract orderId from URL path
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split('/');
+  const orderId = pathParts[pathParts.length - 2]; // Assuming path is /api/orders/[orderId]/status
+  
   try {
-    // Run these promises in parallel
-    const [session, orderId] = await Promise.all([
-      getServerSession(authOptions),
-      Promise.resolve(params.orderId) // Convert sync param to promise for consistency
-    ]);
+    // Get session
+    const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
       return apiResponse({
@@ -159,7 +158,7 @@ export async function GET(
         message: error.message,
         stack: error.stack
       } : 'Unknown error',
-      orderId: params.orderId,
+      orderId,
       timestamp: currentUTCTime,
       user: (await getServerSession(authOptions))?.user?.email
     });

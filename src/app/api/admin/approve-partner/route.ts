@@ -1,7 +1,7 @@
 // route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { sendApprovalEmail } from "../../services/emailServices/route";
+import { sendApprovalEmail } from "../../services/emailServices";
 
 export async function PUT(request: NextRequest) {
   try {
