@@ -145,8 +145,8 @@ export async function GET() {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        Service: true,
-        Transaction: true,
+        service: true,
+        transaction: true,
         Partner: true,
       },
       orderBy: {
@@ -370,10 +370,10 @@ export async function POST(req: NextRequest) {
       // Create order
       const order = await tx.order.create({
         data: {
-          Service: {
+          service: {
             connect: { id: serviceId }
           },
-          User: {
+          user: {
             connect: { id: user.id }
           },
           date: bookingDateTime,
@@ -387,7 +387,7 @@ export async function POST(req: NextRequest) {
           status: "PENDING",
           currency: "INR",
         },
-        include: { Service: true, User: true },
+        include: { service: true, user: true },
       });
 
       let walletTransactionResult = null;
@@ -599,7 +599,7 @@ export async function PATCH(req: NextRequest) {
 
     const currentOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { Service: true },
+      include: { service: true },
     });
 
     if (!currentOrder) {
