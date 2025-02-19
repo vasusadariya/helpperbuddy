@@ -49,7 +49,6 @@ interface FooterLink {
 
 const Footer: React.FC = () => {
   const [services, setServices] = useState<ServiceLink[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Fetch services from the API
@@ -70,10 +69,8 @@ const Footer: React.FC = () => {
         });
 
         setServices(fetchedServices);
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching services:", error);
-        setLoading(false);
       }
     };
 
@@ -94,7 +91,7 @@ const Footer: React.FC = () => {
   const socialLinks: SocialLink[] = [
     { name: "Facebook", icon: Facebook, href: "https://www.facebook.com/profile.php?id=61566410515044" },
     { name: "X", icon: XIcon, href: "https://twitter.com/helperbuddyin" },
-    { name: "LinkedIn", icon: Linkedin, href: "https://linkedin.com" },
+    { name: "LinkedIn", icon: Linkedin, href: "https://www.linkedin.com/company/helperbuddy/" },
     { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/helperbuddy.in" }
   ];
 

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "../../auth/[...nextauth]/options";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const currentUTCTime = new Date("2025-02-17 18:59:06");
 
   try {

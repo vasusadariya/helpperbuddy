@@ -160,18 +160,6 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
       year: 'numeric'
     });
 
-    const acceptanceTime = order.acceptedAt 
-      ? new Date(order.acceptedAt).toLocaleString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          dateStyle: 'long',
-          timeStyle: 'short'
-        })
-      : new Date().toLocaleString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          dateStyle: 'long',
-          timeStyle: 'short'
-        });
-
     const response = await emailjs.send(
       process.env.EMAILJS_SERVICE_ID!,
       process.env.EMAILJS_ORDER_ACCEPTED_TEMPLATE_ID!,
@@ -193,6 +181,7 @@ export async function sendOrderAcceptanceEmail(data: OrderAcceptanceEmailData) {
         // support_url: `${process.env.NEXT_PUBLIC_BASE_URL}/support`,
       }
     );
+    
 
     return {
       success: true,

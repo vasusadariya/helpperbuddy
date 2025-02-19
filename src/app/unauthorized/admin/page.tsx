@@ -49,7 +49,7 @@ export default function Unauthorized() {
                 
                 <div className="space-y-3 mb-8 text-gray-300">
                     <p className="text-lg">
-                        You don't have permission to view this page.
+                        You don&#39;t have permission to view this page.
                     </p>
                     <p className="text-sm opacity-75">
                         Please login as admin to access this resource.

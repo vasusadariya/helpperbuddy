@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,32 +67,37 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hash(password, 10);
     const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    try{
+    try {
       const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phoneno,
-        password: hashedPassword,
-        role: assignedRole,
-        referralCode,
-      },
-    });
-    console.log("User created successfully:", user);
-    return NextResponse.json(
-      { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
-      { status: 201 }
-    );
-    }catch (error: any) {
-      if (error.code === 'P2002') {
-        // This error code means unique constraint violation
-        const field = error.meta?.target?.[0];
-        return NextResponse.json(
-          { Error: `${field} already exists` },
-          { status: 409 }
-        );
+        data: {
+          name,
+          email,
+          phoneno,
+          password: hashedPassword,
+          role: assignedRole,
+          referralCode,
+        },
+      });
+
+      console.log("User created successfully:", user);
+      return NextResponse.json(
+        { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
+        { status: 201 }
+      );
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2002") {
+          const field = (error.meta?.target as string[])?.[0] || "Field";
+          return NextResponse.json(
+            { error: `${field} already exists` },
+            { status: 409 }
+          );
+        }
+        console.error("Prisma Error in /api/user:", error);
+      } else {
+        console.error("Unknown error in /api/user:", error);
       }
-      console.error("Error in /api/user:", error);
+
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
   } catch (error) {

@@ -15,6 +15,10 @@ interface PaymentOptionsProps {
   onPaymentComplete: () => void;
 }
 
+  // interface Window {
+  //   Razorpay: any;
+  // }
+
 export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCodMessage, setShowCodMessage] = useState(false);

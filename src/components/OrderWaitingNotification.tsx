@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { format } from 'date-fns';
 
@@ -18,7 +18,7 @@ interface OrderStatus {
   };
   partner: {
     name: string;
-    phoneno?: string;  // Added partner phone number
+    phoneno?: string;
   } | null;
   date: string;
   time: string;
@@ -55,6 +55,39 @@ export default function OrderWaitingNotification({
   const [isCancelling, setIsCancelling] = useState(false);
   const [showAcceptedMessage, setShowAcceptedMessage] = useState(false);
   const [dismissTimeout, setDismissTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const checkOrderStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/status`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch order status");
+      }
+  
+      const data = await response.json();
+  
+      if (data.success) {
+        const updatedOrder = data.data;
+        setOrder(updatedOrder);
+        localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrder));
+  
+        if (updatedOrder.status === "ACCEPTED" && !showAcceptedMessage) {
+          setShowAcceptedMessage(true);
+          const timeoutId = setTimeout(() => {
+            onOrderAccepted?.();
+          }, 5000);
+          setDismissTimeout(timeoutId);
+        } else if (updatedOrder.status === "CANCELLED") {
+          localStorage.removeItem(`order_${orderId}`);
+          onOrderCancelled?.();
+        }
+      } else {
+        setError(data.error || "Failed to get order status");
+      }
+    } catch (error) {
+      console.error("Error checking order status:", error);
+      setError(error instanceof Error ? error.message : "Failed to check order status");
+    }
+  }, [orderId, showAcceptedMessage, onOrderAccepted, onOrderCancelled]);
 
   // Initialize or load order data
   useEffect(() => {
@@ -113,41 +146,7 @@ export default function OrderWaitingNotification({
         clearTimeout(dismissTimeout);
       }
     };
-  }, [session, orderId]);
-
-  const checkOrderStatus = async () => {
-    try {
-      const response = await fetch(`/api/orders/${orderId}/status`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch order status');
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        const updatedOrder = data.data;
-        setOrder(updatedOrder);
-        localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrder));
-        
-        if (updatedOrder.status === 'ACCEPTED' && !showAcceptedMessage) {
-          setShowAcceptedMessage(true);
-          // Set a timeout to dismiss the notification after 5 seconds
-          const timeoutId = setTimeout(() => {
-            onOrderAccepted?.();
-          }, 5000);
-          setDismissTimeout(timeoutId);
-        } else if (updatedOrder.status === 'CANCELLED') {
-          localStorage.removeItem(`order_${orderId}`);
-          onOrderCancelled?.();
-        }
-      } else {
-        setError(data.error || 'Failed to get order status');
-      }
-    } catch (error) {
-      console.error("Error checking order status:", error);
-      setError(error instanceof Error ? error.message : "Failed to check order status");
-    }
-  };
+  }, [session, checkOrderStatus, dismissTimeout]);
 
   const handleCancelOrder = async () => {
     if (isCancelling || !order) return;

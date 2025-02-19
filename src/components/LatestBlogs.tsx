@@ -4,26 +4,39 @@ import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { prisma } from "@/lib/prisma"
+import { unstable_cache } from 'next/cache'
+
+// Cache the blog fetching function
+const getLatestBlogs = unstable_cache(
+  async () => {
+    const blogs = await prisma.blog.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        title: true,
+        image: true,
+        readTime: true,
+        createdAt: true,
+        author: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 4,
+    })
+    return blogs
+  },
+  ['latest-blogs'],
+  {
+    revalidate: 3600, // Cache for 1 hour
+    tags: ['blogs']
+  }
+)
 
 export default async function LatestBlogs() {
-  const blogs = await prisma.blog.findMany({
-    where: {
-      isActive: true,
-    },
-    select: {
-      id: true,
-      title: true,
-      image: true,
-      readTime: true,
-      createdAt: true,
-      author: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 4,
-  })
-
+  const blogs = await getLatestBlogs()
   const [featuredBlog, ...otherBlogs] = blogs
 
   return (
@@ -54,6 +67,7 @@ export default async function LatestBlogs() {
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   width={1200}
                   height={600}
+                  priority={true}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-0 p-8 text-white">
@@ -84,7 +98,7 @@ export default async function LatestBlogs() {
               >
                 <div className="w-1/3 h-[120px] overflow-hidden rounded-xl flex-shrink-0">
                   <Image
-                    src={blog.image|| '/placeholder-blog.jpg'}
+                    src={blog.image || '/placeholder-blog.jpg'}
                     alt={blog.title}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     width={150}

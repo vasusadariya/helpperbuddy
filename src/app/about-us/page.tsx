@@ -51,7 +51,7 @@ function ServicePage() {
                 </p>
                 <p className="text-gray-700 text-lg leading-relaxed">
                   Our top-quality, eco-friendly solutions are tailored to meet
-                  each customer's unique needs. We focus on delivering exceptional
+                  each customer&#39;s unique needs. We focus on delivering exceptional
                   results and ensuring every project is handled with care and
                   professionalism.
                 </p>

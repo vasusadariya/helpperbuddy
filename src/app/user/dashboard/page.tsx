@@ -19,7 +19,6 @@ import {
   Star,
 } from "lucide-react";
 import Link from "next/link";
-import toast from "react-hot-toast";
 import Image from "next/image";
 import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";

@@ -7,7 +7,6 @@ import { signOut } from "next-auth/react";
 import { 
   LayoutDashboard, 
   Calendar, 
-  Settings, 
   User, 
   MapPin,
   Menu,

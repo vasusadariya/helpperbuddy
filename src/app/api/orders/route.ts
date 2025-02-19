@@ -59,6 +59,7 @@ const validateServerDateTime = (
 ): { isValid: boolean; error?: string } => {
   try {
     // Parse the incoming ISO date string
+    console.log("Date:", timeString);
     const selectedDateTime = new Date(dateTimeString);
     const now = new Date();
 
@@ -99,14 +100,15 @@ const validateServerDateTime = (
 
     return { isValid: true };
   } catch (error) {
+    console.error("Error validating date and time:", error);
     return {
       isValid: false,
-      error: "Please select a valid date and time",
+      error: `${error}`,
     };
   }
 };
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     const currentUTCTime = new Date()
@@ -143,8 +145,8 @@ export async function GET(request: NextRequest) {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        service: true,
-        transaction: true,
+        Service: true,
+        Transaction: true,
         Partner: true,
       },
       orderBy: {
@@ -347,9 +349,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    
-
     
     const totalAmount = service.price;
 
@@ -371,10 +370,10 @@ export async function POST(req: NextRequest) {
       // Create order
       const order = await tx.order.create({
         data: {
-          service: {
+          Service: {
             connect: { id: serviceId }
           },
-          user: {
+          User: {
             connect: { id: user.id }
           },
           date: bookingDateTime,
@@ -388,7 +387,7 @@ export async function POST(req: NextRequest) {
           status: "PENDING",
           currency: "INR",
         },
-        include: { service: true, user: true },
+        include: { Service: true, User: true },
       });
 
       let walletTransactionResult = null;
@@ -600,7 +599,7 @@ export async function PATCH(req: NextRequest) {
 
     const currentOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { service: true },
+      include: { Service: true },
     });
 
     if (!currentOrder) {
@@ -615,7 +614,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const updateData: any = { status };
+      const updateData: { status: 'PENDING' | 'COMPLETED' | 'CANCELLED'; razorpayPaymentId?: string; paidAt?: Date } = { status: status as 'PENDING' | 'COMPLETED' | 'CANCELLED' };
 
       if (status === "COMPLETED" && razorpayPaymentId) {
         updateData.razorpayPaymentId = razorpayPaymentId;
@@ -654,6 +653,30 @@ export async function PATCH(req: NextRequest) {
         details: error instanceof Error ? error.message : "Unknown error",
         timestamp: currentUTCTime,
       },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  try {
+    const { id: orderId } = context.params;
+
+    // Delete the order
+    const order = await prisma.order.delete({
+      where: {
+        id: orderId,
+      },
+    });
+
+    return NextResponse.json(order);
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    return NextResponse.json(
+      { error: 'Error deleting order' },
       { status: 500 }
     );
   }
