@@ -78,38 +78,39 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { searchParams } = new URL(req.url);
-    const orderId = searchParams.get("orderId");
-
-    const review = await prisma.review.findUnique({
+    const reviews = await prisma.review.findMany({
       where: {
-        orderId: orderId!
-      }
+        rating: 5,
+      },
+      include: {
+        Order: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10, // Limit to 10 most recent reviews
     });
 
-    if (!review) {
-      return NextResponse.json(
-        { error: "Review not found" },
-        { status: 404 }
-      );
-    }
+    const formattedReviews = reviews.map((review) => ({
+      name: review.Order.user.name,
+      rating: review.rating,
+      review: review.description || "",
+    }));
 
-    return NextResponse.json(review);
+    return NextResponse.json(formattedReviews);
   } catch (error) {
-    console.error("Review fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch review" },
+      { error: "Failed to fetch reviews" },
       { status: 500 }
     );
   }
