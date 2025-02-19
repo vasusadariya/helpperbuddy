@@ -1,6 +1,5 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 import { ButtonProps, buttonVariants } from "@/components/ui/button"
 
@@ -20,7 +19,7 @@ const PaginationContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ul
     ref={ref}
-    className={cn("flex flex-row items-center gap-1", className)}
+    className={cn("flex flex-row items-center gap-2", className)}
     {...props}
   />
 ))
@@ -52,6 +51,9 @@ const PaginationLink = ({
         variant: isActive ? "outline" : "ghost",
         size,
       }),
+      "transition-all duration-300 hover:scale-105",
+      isActive && "bg-transparent text-white border-gray-900 hover:bg-gray-800 hover:border-gray-800",
+      !isActive && "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
       className
     )}
     {...props}
@@ -66,11 +68,15 @@ const PaginationPrevious = ({
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
-    className={cn("gap-1 pl-2.5", className)}
+    className={cn(
+      "pl-2.5 pr-3.5 rounded-full border bg-white text-gray-700",
+      "transition-all duration-300 hover:translate-x-[-2px] hover:shadow-md",
+      className
+    )}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
+    <span className="font-medium">Previous</span>
   </PaginationLink>
 )
 PaginationPrevious.displayName = "PaginationPrevious"
@@ -82,10 +88,14 @@ const PaginationNext = ({
   <PaginationLink
     aria-label="Go to next page"
     size="default"
-    className={cn("gap-1 pr-2.5", className)}
+    className={cn(
+      "pl-3.5 pr-2.5 rounded-full border border-gray-200 hover:border-gray-300 bg-white text-gray-700",
+      "transition-all duration-300 hover:translate-x-2 hover:shadow-md",
+      className
+    )}
     {...props}
   >
-    <span>Next</span>
+    <span className="font-medium">Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
 )
@@ -97,10 +107,13 @@ const PaginationEllipsis = ({
 }: React.ComponentProps<"span">) => (
   <span
     aria-hidden
-    className={cn("flex h-9 w-9 items-center justify-center", className)}
+    className={cn(
+      "flex h-9 w-9 items-center justify-center text-gray-400 transition-colors duration-300 hover:text-gray-600",
+      className
+    )}
     {...props}
   >
-    <MoreHorizontal className="h-4 w-4" />
+    <MoreHorizontal className="h-5 w-5" />
     <span className="sr-only">More pages</span>
   </span>
 )

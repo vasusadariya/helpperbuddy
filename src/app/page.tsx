@@ -6,6 +6,8 @@ import HeroSection from "@/components/HeroSection"
 import FAQSection from "@/components/FAQSection"
 import HowItWorksSection from "@/components/HowItWorksSection"
 import LatestArticles from "@/components/LatestBlogs"
+import { Suspense } from "react";
+// import Loading from "@/loading";
 
 // Dynamically import ServiceSection with SSR enabled
 const ServiceSection = dynamic(() => import('@/components/ServicesSection'), {
@@ -16,6 +18,9 @@ const ReviewSection = dynamic(() => import('@/components/ReviewSection'), {
   ssr: true
 })
 
+async function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export const metadata: Metadata = {
   title: 'Helper Buddy - Professional Home Services at Your Doorstep',
@@ -28,7 +33,8 @@ export const metadata: Metadata = {
   },
 }
 
-export default function Home() {
+export default async function Home() {
+  await new Promise((resolve) => setTimeout(resolve, 3000));
   return (
     <div className="bg-white dark:bg-gray-900 text-black dark:text-white">
       <Navbar />
