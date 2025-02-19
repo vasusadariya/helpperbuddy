@@ -54,12 +54,12 @@ export default function BlogsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-white">
+    <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
       <div className="container mx-auto px-4 py-16 mt-20">
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-400"></div>
           </div>
         ) : (
           <motion.div
@@ -77,7 +77,7 @@ export default function BlogsPage() {
                 viewport={{ once: true }}
               >
                 <Link href={`/blogs/blog?id=${blog.id}`}>
-                  <div className="group bg-gray-900 border border-gray-700 rounded-xl overflow-hidden transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+                  <div className="group bg-white border border-gray-200 rounded-xl overflow-hidden transform transition-all duration-300 hover:bg-gray-50 hover:border-gray-300 hover:-translate-y-2 hover:shadow-xl">
                     {blog.image && (
                       <div className="relative w-full h-48 overflow-hidden">
                         <Image
@@ -90,10 +90,10 @@ export default function BlogsPage() {
                       </div>
                     )}
                     <div className="p-6">
-                      <h2 className="text-lg font-semibold text-white mb-3 group-hover:text-gray-400 transition-colors duration-300 line-clamp-2">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-3 group-hover:text-gray-600 transition-colors duration-300 line-clamp-2">
                         {blog.title}
                       </h2>
-                      <div className="flex items-center justify-between text-gray-400 text-sm">
+                      <div className="flex items-center justify-between text-gray-600 text-sm">
                         <span className="flex items-center">
                           <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -118,19 +118,19 @@ export default function BlogsPage() {
 
         {totalPages > 1 && (
           <div className="mt-12 flex justify-center">
-            <div className="flex items-center gap-4 bg-gray-900 px-6 py-3 rounded-lg border border-gray-700">
+            <div className="flex items-center gap-4 bg-gray-50 px-6 py-3 rounded-lg border border-gray-200 shadow-sm">
               <Button
-                className="text-white hover:text-gray-400 disabled:text-gray-600"
+                className="bg-gray-50 text-white px-4 py-2 rounded hover:bg-gray-50 transition-all duration-300 disabled:bg-gray-50"
                 disabled={page === 1}
                 onClick={() => goToPage(page - 1)}
               >
                 <PaginationPrevious />
               </Button>
-              <span className="text-white px-4">
+              <span className="text-gray-900 px-4">
                 Page {page} of {totalPages}
               </span>
               <Button
-                className="text-white hover:text-gray-400 disabled:text-gray-600"
+                className="bg-gray-50 text-white px-4 py-2 rounded hover:bg-gray-50 transition-all duration-300 disabled:bg-gray-50"
                 disabled={page === totalPages}
                 onClick={() => goToPage(page + 1)}
               >
