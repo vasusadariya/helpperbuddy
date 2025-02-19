@@ -77,6 +77,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+
     const reviews = await prisma.review.findMany({
       where: {
         rating: 5,
@@ -110,5 +111,6 @@ export async function GET() {
       { error: "Failed to fetch reviews" },
       { status: 500 }
     );
+
   }
 }

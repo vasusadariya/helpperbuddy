@@ -534,6 +534,7 @@ export default function UserDashboard() {
                           <ArrowUpRight className="w-4 h-4 text-red-600" />
                         )}
                       </div>
+
                       <div>
                         <p className="font-medium text-gray-900">
                           {transaction.description}
