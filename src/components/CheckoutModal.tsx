@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format, addDays, parse } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { validateDateTime } from '@/lib/utils/validation';
@@ -48,22 +48,22 @@ export default function CheckoutModal({
   const [maxTime, setMaxTime] = useState<string>('20:00');
   const [maxThresholdService, setMaxThresholdService] = useState<CartService | null>(null);
 
-  const updateTimeConstraints = (selectedDate: string) => {
+  const updateTimeConstraints = useCallback((selectedDate: string) => {
     if (!maxThresholdService) return;
-
+  
     const now = new Date();
     const selectedDateTime = parse(selectedDate, 'yyyy-MM-dd', new Date());
     const isToday = selectedDateTime.toDateString() === now.toDateString();
-
+  
     if (isToday) {
       const thresholdDate = new Date(now);
       thresholdDate.setHours(thresholdDate.getHours() + maxThresholdService.threshold);
-
+  
       const minHour = Math.max(8, thresholdDate.getHours());
       const minMinutes = thresholdDate.getMinutes();
       const formattedMinTime = `${minHour.toString().padStart(2, '0')}:${minMinutes.toString().padStart(2, '0')}`;
       setMinTime(formattedMinTime);
-
+  
       if (bookingDetails.time < formattedMinTime) {
         setBookingDetails({
           ...bookingDetails,
@@ -73,12 +73,12 @@ export default function CheckoutModal({
     } else {
       setMinTime('08:00');
     }
-
+  
     const totalServiceTime = cartServices.reduce((total, service) => 
       total + service.threshold + 1, 0);
     const maxHour = Math.min(20 - totalServiceTime, 20);
     setMaxTime(`${Math.max(8, maxHour).toString().padStart(2, '0')}:00`);
-  };
+  }, [maxThresholdService, bookingDetails, setBookingDetails, cartServices]);
 
   // Find service with maximum threshold hours
   useEffect(() => {

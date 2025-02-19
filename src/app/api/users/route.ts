@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
         phoneno: true,
         createdAt: true,
         referralCode: true,
-        wallet: true
+        Wallet: true
       }
     });
 
@@ -66,26 +67,27 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hash(password, 10);
     const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    try{
+    try {
       const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phoneno,
-        password: hashedPassword,
-        role: assignedRole,
-        referralCode,
-      },
-    });
-    console.log("User created successfully:", user);
-    return NextResponse.json(
-      { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
-      { status: 201 }
-    );
+        data: {
+          name,
+          email,
+          phoneno,
+          password: hashedPassword,
+          role: assignedRole,
+          referralCode,
+        },
+      });
+
+      console.log("User created successfully:", user);
+      return NextResponse.json(
+        { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
+        { status: 201 }
+      );
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        if ((error as any).code === 'P2002') { // Type assertion for known Prisma error
-          const field = (error as any).meta?.target?.[0];
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2002") {
+          const field = (error.meta?.target as string[])?.[0] || "Field";
           return NextResponse.json(
             { error: `${field} already exists` },
             { status: 409 }
@@ -95,9 +97,9 @@ export async function POST(request: NextRequest) {
       } else {
         console.error("Unknown error in /api/user:", error);
       }
-    
+
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }    
+    }
   } catch (error) {
     console.error("Error in /api/user:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -78,11 +78,37 @@ export default function PaymentPage() {
       router.push('/login');
       return;
     }
-
+  
     if (sessionStatus === 'authenticated' && orderId) {
+      const fetchOrderDetails = async (id: string) => {
+        try {
+          setLoading(true);
+          setError(null);
+  
+          const response = await fetch(`/api/payment/initiate/${id}`);
+          const data = await response.json();
+  
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to fetch order details');
+          }
+  
+          if (data.data.status === 'COMPLETED') {
+            router.push('/user/orders?status=success');
+            return;
+          }
+  
+          setOrderDetails(data.data);
+        } catch (err) {
+          console.error('Error fetching order details:', err);
+          setError(err instanceof Error ? err.message : 'An error occurred');
+        } finally {
+          setLoading(false);
+        }
+      };
+  
       fetchOrderDetails(orderId);
     }
-  }, [sessionStatus, orderId]);
+  }, [sessionStatus, orderId, router]);
 
   const fetchOrderDetails = async (id: string) => {
     try {

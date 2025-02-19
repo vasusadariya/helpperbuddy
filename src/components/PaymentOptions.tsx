@@ -14,6 +14,10 @@ interface PaymentOptionsProps {
   onPaymentComplete: () => void;
 }
 
+  // interface Window {
+  //   Razorpay: any;
+  // }
+
 export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCodMessage, setShowCodMessage] = useState(false);
@@ -36,7 +40,7 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
         if (data.success) {
           // Initialize Razorpay
           const options = {
-            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
             amount: data.amount,
             currency: "INR",
             order_id: data.razorpayOrderId,
@@ -47,7 +51,7 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
             },
           };
 
-          const rzp = new (window as any).Razorpay(options);
+          const rzp = new (window.Razorpay)(options);
           rzp.open();
         }
       } else {

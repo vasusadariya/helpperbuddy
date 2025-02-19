@@ -22,7 +22,6 @@ const validateServerDateTime = (
     console.log("Date:", timeString);
     const selectedDateTime = new Date(dateTimeString);
     const now = new Date();
-    timeString + 1;
 
     // Check if the date and time are valid
     if (isNaN(selectedDateTime.getTime())) {
@@ -106,8 +105,8 @@ export async function GET() {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        service: true,
-        transaction: true,
+        Service: true,
+        Transaction: true,
         Partner: true,
       },
       orderBy: {
@@ -331,10 +330,10 @@ export async function POST(req: NextRequest) {
       // Create order
       const order = await tx.order.create({
         data: {
-          service: {
+          Service: {
             connect: { id: serviceId }
           },
-          user: {
+          User: {
             connect: { id: user.id }
           },
           date: bookingDateTime,
@@ -348,7 +347,7 @@ export async function POST(req: NextRequest) {
           status: "PENDING",
           currency: "INR",
         },
-        include: { service: true, user: true },
+        include: { Service: true, User: true },
       });
     
       // Create Razorpay order for remaining amount
@@ -526,7 +525,7 @@ export async function PATCH(req: NextRequest) {
 
     const currentOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { service: true },
+      include: { Service: true },
     });
 
     if (!currentOrder) {

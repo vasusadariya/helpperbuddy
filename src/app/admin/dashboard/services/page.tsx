@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useEdgeStore } from '@/lib/edgestore';
 import ServiceModal from '@/components/ServiceModal';
+import Image from 'next/image';
 
 interface Service {
     id: string;
@@ -229,7 +230,7 @@ export default function ServicesPage() {
                         <div key={service.id} className="bg-white p-6 rounded-lg shadow">
                             {service.image && (
                                 <div className="mb-4 relative aspect-video">
-                                    <img
+                                    <Image
                                         src={service.image}
                                         alt={service.name}
                                         className="w-full h-full object-cover rounded-md"
