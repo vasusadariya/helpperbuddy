@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         phoneno: true,
         createdAt: true,
         referralCode: true,
-        Wallet: true
+        wallet: true
       }
     });
 

@@ -4,8 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
-  const currentUTCTime = new Date("2025-02-17 17:56:28");
-  console.log(req); 
+  const currentUTCTime = new Date("2025-02-17 17:56:28"); 
 
   try {
     const session = await getServerSession(authOptions);
@@ -46,7 +45,7 @@ export async function GET() {
           select: {
             id: true,
             status: true,
-            Service: {
+            service: {
               select: {
                 name: true
               }
@@ -76,7 +75,7 @@ export async function GET() {
         remainingAmount: true,
         paidAt: true,
         status: true,
-        Service: {
+        service: {
           select: {
             name: true
           }
@@ -99,7 +98,7 @@ export async function GET() {
         id: order.id,
         status: order.status,
         service: {
-          name: order.Service.name
+          name: order.service.name
         }
       }
     }));
