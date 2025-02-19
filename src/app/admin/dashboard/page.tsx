@@ -35,7 +35,6 @@ interface DashboardStats {
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [timeframe, setTimeframe] = useState<"day" | "week" | "month">("day");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,7 +42,6 @@ export default function Dashboard() {
     const signal = controller.signal;
 
     const fetchDashboardStats = async () => {
-      setLoading(true);
       setError(null);
 
       try {
@@ -66,19 +64,21 @@ export default function Dashboard() {
           setError("An unexpected error occurred.");
         }
       }
-      
     };
 
     fetchDashboardStats();
 
     return () => {
-      controller.abort(); // Cancel the fetch if the component unmounts or timeframe changes
+      controller.abort();
     };
   }, [timeframe]);
 
-  if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-600">{error}</div>;
-  if (!stats) return <div>No data available</div>;
+  if (!stats) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  );
 
   const revenueByCategoryData = {
     labels: stats.revenueByCategory.map((item) => item.category),
