@@ -5,6 +5,10 @@ import { format, addDays, parse } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { validateDateTime } from '@/lib/utils/validation';
 
+const today = new Date();
+const minDate = format(today, "yyyy-MM-dd");
+const maxDate = format(addDays(today, 30), "yyyy-MM-dd");
+
 interface CartService {
   id: string;
   name: string;
@@ -189,34 +193,35 @@ export default function CheckoutModal({
               Date
             </label>
             <input
-              type="date"
-              min={format(new Date(), "yyyy-MM-dd")}
-              max={format(addDays(new Date(), 30), "yyyy-MM-dd")}
-              value={bookingDetails.date}
-              onChange={handleDateChange}
-              className="w-full p-2 border rounded"
-              disabled={isProcessing}
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Select a date within the next 30 days
-            </p>
-          </div>
+      type="date"
+      min={minDate}
+      max={maxDate}
+      value={bookingDetails.date || minDate}
+      onChange={handleDateChange}
+      className="w-full p-2 border rounded"
+      disabled={isProcessing}
+      required
+    />
+    <p className="text-xs text-gray-500 mt-1">
+      Select a date within the next 30 days
+    </p>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Time
-            </label>
-            <input
-              type="time"
-              min={minTime}
-              max={maxTime}
-              value={bookingDetails.time}
-              onChange={handleTimeChange}
-              className="w-full p-2 border rounded"
-              disabled={isProcessing}
-              required
-            />
+    {/* Time Picker */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Time
+      </label>
+      <input
+        type="time"
+        min={minTime}
+        max={maxTime}
+        value={bookingDetails.time || minTime}
+        onChange={handleTimeChange}
+        className="w-full p-2 border rounded"
+        disabled={isProcessing}
+        required
+      />
+    </div>
             <p className="text-xs text-gray-500 mt-1">
               Service hours: 8:00 AM to {parseInt(maxTime)}:00 PM
             </p>
