@@ -12,7 +12,7 @@ interface UpdateData {
 }
 
 export async function POST(req: Request) {
-  const currentUTCTime = new Date("2025-02-17 18:59:06");
+  const currentUTCTime = new Date('2025-02-17 18:59:06');
 
   try {
     const session = await getServerSession(authOptions);
@@ -64,38 +64,92 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    if (status === 'COMPLETED' && order.status !== 'IN_PROGRESS') {
+    if (status === 'SERVICE_COMPLETED' && order.status !== 'IN_PROGRESS') {
       return NextResponse.json({ 
         success: false, 
-        error: 'Can only complete orders that are in progress',
+        error: 'Can only complete service for orders that are in progress',
         timestamp: currentUTCTime 
       }, { status: 400 });
     }
 
-    // Update order status
-    const updateData: UpdateData = {
-      status,
-      updatedAt: currentUTCTime
-    };
 
-    if (status === 'IN_PROGRESS') {
-      updateData.startedAt = currentUTCTime;
-    } else if (status === 'COMPLETED') {
-      updateData.completedAt = currentUTCTime;
+    if (status === 'SERVICE_COMPLETED') {
+      const isPaymentCompleted = 
+        // Full wallet payment
+        (order.walletAmount === order.amount && order.walletAmount > 0) ||
+        // Online payment done
+        order.razorpayPaymentId ||
+        // Payment completed status
+        order.status === 'PAYMENT_COMPLETED' ||
+        // Has payment timestamp
+        order.paidAt !== null;
+
+
+      if (isPaymentCompleted) {
+        // Update order to COMPLETED status directly
+        const completedOrder = await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            status: 'COMPLETED',
+            completedAt: currentUTCTime,
+            updatedAt: currentUTCTime
+          }
+        });
+    
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            order: completedOrder,
+            timestamp: currentUTCTime
+          }
+        });
+      } else {
+        // Update to SERVICE_COMPLETED if payment is not done
+        const updatedOrder = await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            status: 'SERVICE_COMPLETED',
+            completedAt: currentUTCTime,
+            updatedAt: currentUTCTime
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            order: updatedOrder,
+            timestamp: currentUTCTime
+          }
+        });
+      }
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: updateData
-    });
+    // Handle IN_PROGRESS status update
+    if (status === 'IN_PROGRESS') {
+      const updatedOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'IN_PROGRESS',
+          startedAt: currentUTCTime,
+          updatedAt: currentUTCTime
+        }
+      });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        order: updatedOrder,
-        timestamp: currentUTCTime
-      }
-    });
+      return NextResponse.json({
+        success: true,
+        data: {
+          order: updatedOrder,
+          timestamp: currentUTCTime
+        }
+      });
+    }
+
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Invalid status transition',
+      timestamp: currentUTCTime 
+    }, { status: 400 });
 
   } catch (error) {
     console.error('Error updating order status:', error);

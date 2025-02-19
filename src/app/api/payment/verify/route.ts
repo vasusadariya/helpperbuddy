@@ -62,9 +62,13 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if order is already paid
-      if (order.status === "PAYMENT_COMPLETED") {
+      if (order.status === "PAYMENT_COMPLETED" || order.status === "COMPLETED") {
         throw new Error("Order is already paid");
       }
+
+       // Determine final status based on current order status
+       const finalStatus = order.status === 'SERVICE_COMPLETED' ? 'COMPLETED' : 'PAYMENT_COMPLETED';
+
 
       // Handle wallet payment if applicable
       if (order.walletAmount > 0) {
@@ -140,10 +144,13 @@ export async function POST(req: NextRequest) {
       const updatedOrder = await tx.order.update({
         where: { id: order.id },
         data: {
-          status: "PAYMENT_COMPLETED",
+          status: finalStatus,
           razorpayPaymentId: payload.razorpayPaymentId,
           paidAt: new Date(currentUTCTime),
-          paymentMode: "ONLINE"
+          paymentMode: "ONLINE",
+          ...(finalStatus === 'COMPLETED' && {
+            completedAt: new Date(currentUTCTime)
+          })
         }
       });
 

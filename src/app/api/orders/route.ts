@@ -13,6 +13,46 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
+async function handleWalletTransaction(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  amount: number,
+  orderId: string
+) {
+  const wallet = await tx.wallet.findUnique({
+    where: { userId }
+  });
+
+  if (!wallet) {
+    throw new Error('Wallet not found');
+  }
+
+  // Update wallet balance
+  const updatedWallet = await tx.wallet.update({
+    where: { id: wallet.id },
+    data: {
+      balance: { decrement: amount },
+      updatedAt: new Date()
+    }
+  });
+
+  // Create transaction record
+  await tx.transaction.create({
+    data: {
+      id: crypto.randomUUID(),
+      amount: amount,
+      type: 'DEBIT',
+      description: `Payment for order ${orderId}`,
+      walletId: wallet.id,
+      userId: userId,
+      createdAt: new Date()
+    }
+  });
+
+  return updatedWallet;
+}
+
+
 const validateServerDateTime = (
   dateTimeString: string,
   timeString: string
@@ -349,39 +389,71 @@ export async function POST(req: NextRequest) {
         },
         include: { Service: true, User: true },
       });
-    
-      // Create Razorpay order for remaining amount
-      let razorpayOrder = null;
-      if (remainingAmount > 0) {
-        razorpayOrder = await razorpay.orders.create({
-          amount: Math.round(remainingAmount * 100),
-          currency: "INR",
-          receipt: `order_rcpt_${order.id}`,
-          notes: {
-            orderId: order.id,
-            serviceId: serviceId,
-            userId: user.id,
-            walletAmountToUse: potentialWalletUse
-          },
-        });
-    
-        await tx.order.update({
-          where: { id: order.id },
-          data: { razorpayOrderId: razorpayOrder.id },
-        });
-      }
 
-      // Increment service order count
-      await tx.service.update({
-        where: { id: serviceId },
-        data: { numberoforders: { increment: 1 } },
+      let walletTransactionResult = null;
+  let razorpayOrder = null;
+
+  // Only process immediate wallet payment if amount is less than or equal to wallet balance
+  if (totalAmount <= walletBalance) {
+    try {
+      // Process wallet payment immediately only for full wallet payments
+      walletTransactionResult = await handleWalletTransaction(
+        tx,
+        user.id,
+        totalAmount,
+        order.id,
+      );
+
+      // Update order status for full wallet payments
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "PENDING",
+          paymentMode: "ONLINE",
+          paidAt: new Date(currentUTCTime)
+        }
       });
+      
+    } catch (error) {
+      console.error('Wallet transaction failed:', error);
+      throw error;
+    }
+  } else {
+    // For amounts greater than wallet balance, create Razorpay order for remaining amount
+    razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(remainingAmount * 100),
+      currency: "INR",
+      receipt: `order_rcpt_${order.id}`,
+      notes: {
+        orderId: order.id,
+        serviceId: serviceId,
+        userId: user.id,
+        availableWalletBalance: walletBalance,
+        potentialWalletUse: potentialWalletUse
+      },
+    });
+
+    await tx.order.update({
+      where: { id: order.id },
+      data: { 
+        razorpayOrderId: razorpayOrder.id,
+      },
+    });
+  }
+
+  await tx.service.update({
+    where: { id: serviceId },
+    data: { numberoforders: { increment: 1 } },
+  });
 
       return {
         order,
         razorpayOrder,
         potentialWalletUse,
-        remainingAmount
+        remainingAmount,
+        walletTransactionResult,
+    walletBalance,
+        fullyPaidByWallet: totalAmount <= walletBalance
       };
     }, {
       timeout: 10000,
@@ -428,9 +500,11 @@ export async function POST(req: NextRequest) {
       data: {
         orderId: result.order.id,
         totalAmount,
-        availableWalletBalance: walletBalance,
+        availableWalletBalance: result.walletBalance,
         potentialWalletUse: result.potentialWalletUse,
         remainingAmount: result.remainingAmount,
+        paymentStatus: "PENDING",
+    paymentMode: result.fullyPaidByWallet ? "WALLET" : undefined,
         razorpayOrderId: result.razorpayOrder?.id,
         razorpayAmount: result.remainingAmount > 0 ? Math.round(result.remainingAmount * 100) : 0,
         status: result.order.status,
