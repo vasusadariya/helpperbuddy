@@ -8,7 +8,6 @@ import {
   CheckCircle,
   Wallet,
   ArrowUpRight,
-  ArrowDownRight,
   XCircle,
   Phone,
   Mail,
@@ -16,11 +15,10 @@ import {
   Banknote,
   CreditCard,
   Star,
-
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-// import { OrderCancellationStatus } from "@/components/OrderCancellation";
+import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
 import { Review } from "@/components/review";
 import toast from "react-hot-toast";
@@ -158,7 +156,7 @@ export default function UserDashboard() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  console.log(transactions);
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
@@ -167,7 +165,7 @@ export default function UserDashboard() {
       // Fetch orders, wallet data, and transactions in parallel
       const [ordersResponse, walletResponse, transactionsResponse] =
         await Promise.all([
-          fetch("/api/user/orders?limit=5&include=partner"),
+          fetch("/api/user/orders?limit=3&include=partner"),
           fetch("/api/wallet"),
           fetch("/api/transactions"), // Add this new endpoint
         ]);
@@ -245,54 +243,52 @@ export default function UserDashboard() {
       setIsLoading(false);
     }
   };
-
+  // Add handleCODPayment function
   const handleCODPayment = async (order: Order) => {
     const amount = order.remainingAmount || order.amount;
     const confirmed = window.confirm(
       `Please pay ₹${amount.toFixed(2)} to the service provider`
     );
-    
+
     if (!confirmed) return;
-  
+
     try {
-      const response = await fetch('/api/payment/cod', {
-        method: 'POST',
+      const response = await fetch("/api/payment/cod", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: JSON.stringify({ 
-          orderId: order.id
+        body: JSON.stringify({
+          orderId: order.id,
         }),
-        credentials: 'include' // Important for authentication
+        credentials: "include", // Important for authentication
       });
-  
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         throw new Error(
-          errorData?.error || 
-          `HTTP error! status: ${response.status}`
+          errorData?.error || `HTTP error! status: ${response.status}`
         );
       }
-  
+
       const data = await response.json();
-     
+
       if (data.success) {
-        toast.success('Payment confirmed and order completed');
+        toast.success("Payment confirmed and order completed");
         window.location.reload();
       } else {
-        throw new Error(data.error || 'Failed to confirm payment');
+        throw new Error(data.error || "Failed to confirm payment");
       }
     } catch (error) {
-      console.error('Error confirming payment:', error);
+      console.error("Error confirming payment:", error);
       toast.error(
-        error instanceof Error 
-          ? error.message 
-          : 'Failed to confirm payment'
+        error instanceof Error ? error.message : "Failed to confirm payment"
       );
     }
   };
   console.log(handleCODPayment);
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -302,7 +298,6 @@ export default function UserDashboard() {
   console.log("Current walletData:", walletData);
 
   const getStatusDisplay = (order: Order) => {
-
     if (order.walletAmount && order.walletAmount === order.amount) {
       return {
         text: "Paid by Wallet",
@@ -388,12 +383,12 @@ export default function UserDashboard() {
     if (order.walletAmount && order.walletAmount === order.amount) {
       return false;
     }
-  
+
     // Show payment options for ACCEPTED status and no payment made yet
     if (order.status === "ACCEPTED" && !order.razorpayPaymentId) {
       return true;
     }
-  
+
     // Don't show payment button for these states
     if (
       order.status === "PAYMENT_COMPLETED" ||
@@ -406,7 +401,7 @@ export default function UserDashboard() {
     ) {
       return false;
     }
-  
+
     // Check if there's a remaining amount to be paid
     const remainingAmount = order.remainingAmount || order.amount;
     return remainingAmount > 0;
@@ -490,423 +485,317 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Transactions */}
-        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Transactions
-              </h2>
-              <Link
-                href="/user/dashboard/wallet"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                View All
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="flex items-center justify-center p-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-              ) : transactions.length > 0 ? (
-                transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between border-b last:border-b-0 pb-4 last:pb-0"
-                  >
-                    <div className="flex items-center">
-                      <div
-                        className={`p-2 rounded-full mr-3 ${
-                          ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                            transaction.type
-                          )
-                            ? "bg-green-100"
-                            : "bg-red-100"
-                        }`}
-                      >
-                        {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                          transaction.type
-                        ) ? (
-                          <ArrowDownRight className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <ArrowUpRight className="w-4 h-4 text-red-600" />
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {transaction.description}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {formatDate(transaction.createdAt)}
-                        </p>
-                        {transaction.Order && (
-                          <p className="text-xs text-gray-500">
-                            {transaction.Order.service.name} - Order #
-                            {transaction.Order.id}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p
-                        className={`font-medium ${
-                          ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                            transaction.type
-                          )
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                          transaction.type
-                        )
-                          ? "+"
-                          : "-"}
-                        ₹{Math.abs(transaction.amount).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-gray-500 text-right">
-                        {transaction.type
-                          .split("_")
-                          .map(
-                            (word) =>
-                              word.charAt(0) + word.slice(1).toLowerCase()
-                          )
-                          .join(" ")}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No transactions yet
-                </p>
-              )}
-            </div>
+      {/* Recent Orders */}
+      <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+        <div className="p-6 space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Recent Orders
+            </h2>
+            <Link
+              href="/user/dashboard/orders"
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              View All
+              <ArrowUpRight className="w-4 h-4 ml-1" />
+            </Link>
           </div>
-        </div>
 
-        {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Recent Orders
-              </h2>
-              <Link
-                href="/user/orders"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-              >
-                View All
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-            <div className="space-y-4">
-              {recentOrders.length > 0 ? (
-                recentOrders.map((order) => {
-                  const statusDisplay = getStatusDisplay(order);
-                  // const showPayment = shouldShowPaymentButton(order);
+          <div className="space-y-4">
+            {recentOrders.length > 0 ? (
+        recentOrders.slice(0, 3).map((order) => {
+                const statusDisplay = getStatusDisplay(order);
 
-                  // Add null checks for amounts and format them
-                  const amount = order?.amount || 0;
-                  const walletAmount = order?.walletAmount || 0;
-                  const remainingAmount = order?.remainingAmount || 0;
+                // Defensive checks and formatting
+                const amount = order?.amount || 0;
+                const walletAmount = order?.walletAmount || 0;
+                const remainingAmount = order?.remainingAmount || 0;
 
-                  return (
-                    <div
-                      key={order.id}
-                      className="border-b last:border-b-0 pb-4 last:pb-0"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-3 flex-grow">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {order.service?.name ||
-                                "Service Name Not Available"}
+                return (
+                  <div
+                    key={order.id}
+                    className="border-b last:border-b-0 pb-4 last:pb-0"
+                  >
+                    <div className="flex justify-between items-start">
+                      {/* Left column with order details */}
+                      <div className="space-y-3 flex-grow">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {order.service?.name ||
+                              "Service Name Not Available"}
+                          </p>
+                          <div className="mt-1 space-y-1">
+                            <p className="text-sm text-gray-600">
+                              Scheduled: {order.date}
                             </p>
-                            <div className="mt-1 space-y-1">
+                            {order.time && (
                               <p className="text-sm text-gray-600">
-                                Scheduled:{" "}
-                                {order.date}
+                                Time: {order.time}
                               </p>
-                              {order.time && (
-                                <p className="text-sm text-gray-600">
-                                  Time: {order.time}
-                                </p>
-                              )}
-                            </div>
-                            <div className="mt-2 space-y-1">
-                              <p className="text-sm text-gray-600">
-                                Amount: ₹{amount.toFixed(2)}
-                              </p>
-                              {walletAmount > 0 && (
-                                <p className="text-sm text-green-600">
-                                  Wallet Used: ₹{walletAmount.toFixed(2)}
-                                </p>
-                              )}
-                              {remainingAmount > 0 && (
-                                <p className="text-sm text-blue-600">
-                                  Balance Due: ₹{remainingAmount.toFixed(2)}
-                                </p>
-                              )}
-                            </div>
+                            )}
                           </div>
+                          <div className="mt-2 space-y-1">
+                            <p className="text-sm text-gray-600">
+                              Amount: ₹{amount.toFixed(2)}
+                            </p>
+                            {walletAmount > 0 && (
+                              <p className="text-sm text-green-600">
+                                Wallet Used: ₹{walletAmount.toFixed(2)}
+                              </p>
+                            )}
+                            {remainingAmount > 0 && (
+                              <p className="text-sm text-blue-600">
+                                Balance Due: ₹{remainingAmount.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
 
-                          {/* {order.status === "PENDING" && (
-                            <OrderCancellationStatus
-                              order={{
-                                id: order.id,
-                                status: order.status,
-                                createdAt: new Date(order.date || ""),
-                                service: {
-                                  name: order.service?.name || "",
-                                  threshold: order.service?.threshold || 2,
-                                },
-                                date: order.date,
-                                time: order.time,
-                                amount: order.amount || 0,
-                                Partner: order.Partner,
-                              }}
-                            />
-                          )} */}
+                        {/* Order cancellation condition */}
+                        {order.status === "PENDING" && (
+                          <OrderCancellationStatus
+                            order={{
+                              id: order.id,
+                              status: order.status,
+                              createdAt: new Date(order.date || ""),
+                              service: {
+                                name: order.service?.name || "",
+                                threshold: order.service?.threshold || 2,
+                              },
+                              date: order.date,
+                              time: order.time,
+                              amount: order.amount || 0,
+                              Partner: order.Partner ?? null,
+                            }}
+                          />
+                        )}
 
-                          {order.Partner && (
-                            <div className="bg-gray-50 rounded-lg p-4 mt-3">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="bg-blue-100 p-1.5 rounded-full">
-                                    <UserCheck className="w-4 h-4 text-blue-600" />
-                                  </div>
-                                  <p className="text-sm font-medium text-gray-900">
-                                    Service Provider Details
-                                  </p>
+                        {/* Partner (Service Provider) details */}
+                        {order.Partner && (
+                          <div className="bg-gray-50 rounded-lg p-4 mt-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-2">
+                                <div className="bg-blue-100 p-1.5 rounded-full">
+                                  <UserCheck className="w-4 h-4 text-blue-600" />
                                 </div>
-                                <div className="flex items-center">
-                                  {order.Partner.isActive && (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      Active Now
+                                <p className="text-sm font-medium text-gray-900">
+                                  Service Provider Details
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start space-x-4">
+                              <div className="flex-shrink-0">
+                                {order.Partner.profileImage ? (
+                                  <Image
+                                    src={order.Partner.profileImage}
+                                    alt={order.Partner.name}
+                                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                    width={48}
+                                    height={48}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">
+                                    <span className="text-lg font-semibold text-blue-600">
+                                      {order.Partner.name
+                                        .charAt(0)
+                                        .toUpperCase()}
                                     </span>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
 
-                              <div className="flex items-start space-x-4">
-                                <div className="flex-shrink-0">
-                                  {order.Partner.profileImage ? (
-                                    <Image
-                                      src={order.Partner.profileImage}
-                                      alt={order.Partner.name}
-                                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                      width={48}
-                                      height={48}
-                                    />
-                                  ) : (
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">
-                                      <span className="text-lg font-semibold text-blue-600">
-                                        {order.Partner.name
-                                          .charAt(0)
-                                          .toUpperCase()}
-                                      </span>
+                              <div className="flex-grow">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-medium text-gray-900">
+                                    {order.Partner.name}
+                                  </h4>
+                                </div>
+
+                                <div className="mt-2 space-y-1.5">
+                                  {order.acceptedAt && (
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                                      Accepted: {formatDate(order.acceptedAt)}
+                                    </div>
+                                  )}
+                                  {order.startedAt && (
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                                      Started: {formatDate(order.startedAt)}
+                                    </div>
+                                  )}
+                                  {order.completedAt && (
+                                    <div className="flex items-center text-xs text-gray-500">
+                                      <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
+                                      Completed: {formatDate(order.completedAt)}
                                     </div>
                                   )}
                                 </div>
 
-                                <div className="flex-grow">
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-medium text-gray-900">
-                                      {order.Partner.name}
-                                    </h4>
-                                  </div>
-
-                                  <div className="mt-2 space-y-1.5">
-                                    {order.acceptedAt && (
-                                      <div className="flex items-center text-xs text-gray-500">
-                                        <Clock className="w-3 h-3 mr-1 text-blue-500" />
-                                        Accepted: {formatDate(order.acceptedAt)}
-                                      </div>
-                                    )}
-                                    {order.startedAt && (
-                                      <div className="flex items-center text-xs text-gray-500">
-                                        <Clock className="w-3 h-3 mr-1 text-blue-500" />
-                                        Started: {formatDate(order.startedAt)}
-                                      </div>
-                                    )}
-                                    {order.completedAt && (
-                                      <div className="flex items-center text-xs text-gray-500">
-                                        <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
-                                        Completed:{" "}
-                                        {formatDate(order.completedAt)}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                                    {order.Partner.phoneno && (
-                                      <div className="flex items-center text-sm text-gray-600">
-                                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                                        <a
-                                          href={`tel:${order.Partner.phoneno}`}
-                                          className="hover:text-blue-600 transition-colors"
-                                        >
-                                          {order.Partner.phoneno}
-                                        </a>
-                                      </div>
-                                    )}
+                                <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                                  {order.Partner.phoneno && (
                                     <div className="flex items-center text-sm text-gray-600">
-                                      <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                                      <Phone className="w-4 h-4 mr-2 text-gray-400" />
                                       <a
-                                        href={`mailto:${order.Partner.email}`}
+                                        href={`tel:${order.Partner.phoneno}`}
                                         className="hover:text-blue-600 transition-colors"
                                       >
-                                        {order.Partner.email}
+                                        {order.Partner.phoneno}
                                       </a>
                                     </div>
+                                  )}
+                                  <div className="flex items-center text-sm text-gray-600">
+                                    <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                                    <a
+                                      href={`mailto:${order.Partner.email}`}
+                                      className="hover:text-blue-600 transition-colors"
+                                    >
+                                      {order.Partner.email}
+                                    </a>
                                   </div>
+                                </div>
 
-                                  <div className="mt-4 flex justify-end space-x-2">
-                                    {order.Partner.phoneno && (
-                                      <button
-                                        onClick={() =>
-                                          order.Partner &&
-                                          (window.location.href = `tel:${order.Partner.phoneno}`)
-                                        }
-                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                                      >
-                                        <Phone className="w-3 h-3 mr-1.5" />
-                                        Call
-                                      </button>
-                                    )}
+                                <div className="mt-4 flex justify-end space-x-2">
+                                  {order.Partner.phoneno && (
                                     <button
                                       onClick={() =>
                                         order.Partner &&
-                                        (window.location.href = `mailto:${order.Partner.email}`)
+                                        (window.location.href = `tel:${order.Partner.phoneno}`)
                                       }
-                                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
                                     >
-                                      <Mail className="w-3 h-3 mr-1.5" />
-                                      Email
+                                      <Phone className="w-3 h-3 mr-1.5" />
+                                      Call
                                     </button>
-                                  </div>
+                                  )}
+                                  <button
+                                    onClick={() =>
+                                      order.Partner &&
+                                      (window.location.href = `mailto:${order.Partner.email}`)
+                                    }
+                                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                                  >
+                                    <Mail className="w-3 h-3 mr-1.5" />
+                                    Email
+                                  </button>
                                 </div>
                               </div>
                             </div>
+                          </div>
+                        )}
+
+                        {/* Payment if service completed and not yet paid */}
+                        {order.status === "SERVICE_COMPLETED" &&
+                          !order.razorpayPaymentId && (
+                            <div className="mt-3">
+                              <PaymentOptions
+                                order={{
+                                  id: order.id,
+                                  amount: order.amount,
+                                  remainingAmount: order.remainingAmount,
+                                  status: order.status,
+                                }}
+                                onPaymentComplete={() => {
+                                  // Refresh the orders list
+                                  window.location.reload();
+                                }}
+                              />
+                            </div>
                           )}
-
-                          {order.status === "SERVICE_COMPLETED" &&
-                            !order.razorpayPaymentId && (
-                              <div className="mt-3">
-                                <PaymentOptions
-                                  order={{
-                                    id: order.id,
-                                    amount: order.amount,
-                                    remainingAmount: order.remainingAmount,
-                                    status: order.status,
-                                  }}
-                                  onPaymentComplete={() => {
-                                    // Refresh the orders list
-                                    window.location.reload();
-                                  }}
-                                />
-                              </div>
-                            )}
-                        </div>
-
-                        <div className="flex flex-col items-end space-y-2 ml-4">
-                          <span
-                            className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}
-                          >
-                            {statusDisplay.icon}
-                            <span className="ml-1">{statusDisplay.text}</span>
-                          </span>
-
-                          {shouldShowPaymentButton(order) && (
-                        <Link
-                          href={`/payment/${order.id}`}
-                          className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Pay Now
-                        </Link>
-                      )}
-                        </div>
                       </div>
 
-                      {order.razorpayPaymentId && (
-                        <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                          <p className="text-sm font-medium text-green-800">
-                            Payment Completed
+                      {/* Right column with status and payment button */}
+                      <div className="flex flex-col items-end space-y-2 ml-4">
+                        <span
+                          className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}
+                        >
+                          {statusDisplay.icon}
+                          <span className="ml-1">{statusDisplay.text}</span>
+                        </span>
+
+                        {shouldShowPaymentButton(order) && (
+                          <Link
+                            href={`/payment/${order.id}`}
+                            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Pay Now
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Payment completed info */}
+                    {order.razorpayPaymentId && (
+                      <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                        <p className="text-sm font-medium text-green-800">
+                          Payment Completed
+                        </p>
+                        <div className="mt-1 space-y-1">
+                          <p className="text-xs text-green-700">
+                            Transaction ID: {order.razorpayPaymentId}
                           </p>
-                          <div className="mt-1 space-y-1">
+                          {order.paidAt && (
                             <p className="text-xs text-green-700">
-                              Transaction ID: {order.razorpayPaymentId}
+                              Paid on: {formatDate(order.paidAt)}
                             </p>
-                            {order.paidAt && (
-                              <p className="text-xs text-green-700">
-                                Paid on: {formatDate(order.paidAt)}
-                              </p>
-                            )}
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Review section */}
+                    {order.status === "COMPLETED" && !order.Review && (
+                      <div className="mt-3">
+                        <Review
+                          orderId={order.id}
+                          orderStatus={order.status}
+                          isPaid={Boolean(
+                            order.paidAt || order.razorpayPaymentId
+                          )}
+                          isServiceCompleted={Boolean(order.completedAt)}
+                          hasReview={Boolean(order.Review)}
+                          onReviewSubmit={() => {
+                            window.location.reload();
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {order.Review && (
+                      <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    (order.Review?.rating ?? 0) >= star
+                                      ? "text-yellow-400 fill-current"
+                                      : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              {formatDate(order.Review.createdAt.toISOString())}
+                            </span>
                           </div>
                         </div>
-                      )}
-
-
-{/* Show review button only for completed orders without reviews */}
-{order.status === "COMPLETED" && (
-  <div className="mt-3">
-    <Review 
-      orderId={order.id}
-      orderStatus={order.status}
-      isPaid={Boolean(order.paidAt || order.razorpayPaymentId)}
-      isServiceCompleted={Boolean(order.completedAt)}
-      hasReview={Boolean(order.Review)} // Pass whether review exists
-      onReviewSubmit={() => {
-        // Refresh orders after review
-        window.location.reload();
-      }}
-    />
-  </div>
-)}
-
-{/* Show existing review if it exists */}
-{order.Review && (
-  <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <div className="flex">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Star
-              key={star}
-              className={`w-4 h-4 ${
-                (order.Review?.rating ?? 0) >= star
-                  ? 'text-yellow-400 fill-current'
-                  : 'text-gray-300'
-              }`}
-            />
-          ))}
-        </div>
-        <span className="text-sm text-gray-500">
-          {formatDate(order.Review.createdAt.toISOString())}
-        </span>
-      </div>
-    </div>
-    {order.Review.description && (
-      <p className="mt-2 text-sm text-gray-600">
-        &quot;{order.Review.description}&quot;
-      </p>
-    )}
-  </div>
-)}
+                        {order.Review.description && (
+                          <p className="mt-2 text-sm text-gray-600">
+                            &quot;{order.Review.description}&quot;
+                          </p>
+                        )}
                       </div>
-                  );
-                })
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No orders found
-                </p>
-              )}
-            </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-gray-500 text-center py-4">No orders found</p>
+            )}
           </div>
         </div>
       </div>

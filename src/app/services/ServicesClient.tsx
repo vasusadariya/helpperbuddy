@@ -333,7 +333,7 @@ export default function ServicesClient({
         await new Promise((resolve) => setTimeout(resolve, 3000));
         router.push('/user/dashboard');
       } else {
-        throw new Error("Failed to create one or more orders");
+        throw new Error("No service providers is currently available in your area.");
       }
     } catch (error) {
       console.error("Checkout error:", error);
