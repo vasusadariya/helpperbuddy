@@ -106,6 +106,7 @@ const validateServerDateTime = (
     };
   }
 };
+console.log(validateServerDateTime);
 
 export async function GET() {
   try {
@@ -274,19 +275,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate date and time
-    const dateTimeValidation = validateServerDateTime(date, time);
-    if (!dateTimeValidation.isValid) {
+    const parsedTime = time ? time.trim() : "";
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (!timeRegex.test(parsedTime)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid date or time",
-          details: dateTimeValidation.error,
-          timestamp: currentUTCTime,
+          error: "Invalid time format",
+          details: "Time must be in HH:mm format.",
+          timestamp: new Date().toISOString(),
         },
         { status: 400 }
       );
     }
-
     const bookingDateTime = new Date(date);
 
     // Get service details
