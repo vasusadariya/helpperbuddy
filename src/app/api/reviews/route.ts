@@ -107,6 +107,7 @@ export async function GET() {
 
     return NextResponse.json(formattedReviews);
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { error: "Failed to fetch reviews" },
       { status: 500 }

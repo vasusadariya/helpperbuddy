@@ -13,6 +13,7 @@ interface LabelledInputProps {
   showPasswordToggle?: boolean;
   isPasswordVisible?: boolean;
   onPasswordToggle?: () => void;
+  required?: boolean;
 }
 
 function LabelledInput({ 
@@ -23,7 +24,8 @@ function LabelledInput({
   onChange, 
   showPasswordToggle = false,
   isPasswordVisible = false,
-  onPasswordToggle
+  onPasswordToggle,
+  required = true
 }: LabelledInputProps) {
   return (
     <div>
@@ -37,7 +39,7 @@ function LabelledInput({
           value={value}
           onChange={onChange}
           className="block w-full rounded-lg border-0 px-4 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-black-600 sm:text-sm transition-all duration-200"
-          required
+          required={required}
         />
         {showPasswordToggle && value.length > 0 && (
           <button
@@ -96,6 +98,7 @@ export default function Signup() {
     email: "",
     phoneno: "",
     password: "",
+    referralCode: "",
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -141,7 +144,6 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 relative">
-      {/* Background Pattern */}
       <div className="absolute inset-0 bg-pattern opacity-5"></div>
       
       <div className="flex min-h-screen items-center justify-center px-4 py-12 relative">
@@ -194,6 +196,14 @@ export default function Signup() {
                 showPasswordToggle={true}
                 isPasswordVisible={showPassword}
                 onPasswordToggle={togglePasswordVisibility}
+              />
+              <LabelledInput
+                label="Referral Code (Optional)"
+                type="text"
+                name="referralCode"
+                value={userData.referralCode}
+                onChange={handleChange}
+                required={false}
               />
             </div>
 

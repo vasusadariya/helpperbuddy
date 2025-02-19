@@ -92,8 +92,7 @@ export async function GET() {
       prisma.transaction.aggregate({
         where: {
           userId: user.id,
-          type: 'CREDIT',
-          description: 'Referral bonus'
+          type: 'REFERRAL_BONUS'
         },
         _sum: {
           amount: true
@@ -122,12 +121,19 @@ export async function GET() {
 // Helper function to award referral bonus
 export async function awardReferralBonus(userId: string) {
   try {
+    // Get referral bonus amount from system config
     const result: { variable_value: number }[] = await prisma.$queryRaw`
-          SELECT variable_value FROM system_config 
-          WHERE variable_name = 'referral'
-        `
-    const config = result[0]
-    const REFERRAL_BONUS = config.variable_value;
+      SELECT variable_value FROM system_config 
+      WHERE variable_name = 'referral'
+    `
+    
+    if (!result || result.length === 0) {
+      console.error('Referral bonus amount not found in system config');
+      return;
+    }
+
+    const REFERRAL_BONUS = result[0].variable_value;
+
     // Find the user who made the purchase
     const purchaser = await prisma.user.findUnique({
       where: { id: userId },
@@ -138,7 +144,7 @@ export async function awardReferralBonus(userId: string) {
       return; // User wasn't referred, no bonus to award
     }
 
-    // Award the bonus to the referrer
+    // Award the bonus to the referrer using a transaction
     await prisma.$transaction(async (tx) => {
       // Get or create wallet for referrer
       const referrerWallet = await tx.wallet.upsert({
@@ -152,17 +158,21 @@ export async function awardReferralBonus(userId: string) {
         }
       });
 
-      // Create transaction record for the bonus
+      // Create transaction record for the referral bonus
       await tx.transaction.create({
         data: {
           amount: REFERRAL_BONUS,
-          type: 'CREDIT',
-          description: 'Referral bonus',
+          type: 'REFERRAL_BONUS',
+          description: 'Referral bonus earned',
           walletId: referrerWallet.id,
           userId: purchaser.referredBy!
         }
       });
+
+      // Log the bonus award
+      console.log(`Awarded referral bonus of ${REFERRAL_BONUS} to user ${purchaser.referredBy}`);
     });
+
   } catch (error) {
     console.error('Error awarding referral bonus:', error);
     throw error;

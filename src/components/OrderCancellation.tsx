@@ -3,17 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 
-interface Partner {
-  id: string;
+interface PartnerType {
   name: string;
   email: string;
-  service: string[];
-  approved: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  phoneno?: string;
-  isActive: boolean;
-  lastActiveAt: Date;
+  phoneno?: string | null;
+  profileImage?: string | null;
+  isActive?: boolean;
+  rating?: number;
 }
 
 interface OrderCancellationStatusProps {
@@ -28,10 +24,9 @@ interface OrderCancellationStatusProps {
     date: string | Date;
     time: string;
     amount: number;
-    Partner: Partner | null;
+    Partner?: PartnerType | null; // Match the Order interface Partner type
   };
 }
-
 export const OrderCancellationStatus = ({ order }: OrderCancellationStatusProps) => {
   const [cancellationStatus, setCancellationStatus] = useState<{
     isCancellable: boolean;
