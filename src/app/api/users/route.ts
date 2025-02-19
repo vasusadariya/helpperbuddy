@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
-import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
     }
 
-    const { name, email, phoneno, password } = body;
+    const { name, email, phoneno, password, referralCode } = body;
 
     if (!name || !email || !phoneno || !password) {
       console.log("Validation failed - Missing fields");
@@ -65,29 +64,76 @@ export async function POST(request: NextRequest) {
     const assignedRole = isAdminPattern ? "PENDING_ADMIN" : "USER";
 
     const hashedPassword = await hash(password, 10);
-    const referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const SIGNUP_BONUS = 100; // Define signup bonus amount
+
+    // Find referrer if referral code is provided
+    let referrerId = null;
+    if (referralCode) {
+      const referrer = await prisma.user.findFirst({
+        where: { referralCode }
+      });
+      if (referrer) {
+        referrerId = referrer.id;
+      }
+    }
 
     try {
-      const user = await prisma.user.create({
-        data: {
-          name,
-          email,
-          phoneno,
-          password: hashedPassword,
-          role: assignedRole,
-          referralCode,
-        },
+      // Create user with transaction to handle both user and wallet creation
+      const result = await prisma.$transaction(async (tx) => {
+        // Create user
+        const user = await tx.user.create({
+          data: {
+            name,
+            email,
+            phoneno,
+            password: hashedPassword,
+            role: assignedRole,
+            referralCode: newReferralCode,
+            referredBy: referrerId
+          },
+        });
+
+        // Create wallet for the new user with signup bonus
+        const wallet = await tx.wallet.create({
+          data: {
+            userId: user.id,
+            balance: SIGNUP_BONUS
+          }
+        });
+
+        // Create transaction record for signup bonus
+        await tx.transaction.create({
+          data: {
+            amount: SIGNUP_BONUS,
+            type: 'CREDIT',
+            description: 'Signup bonus',
+            walletId: wallet.id,
+            userId: user.id
+          }
+        });
+
+        return { user, wallet };
       });
 
-      console.log("User created successfully:", user);
+      console.log("User created successfully:", result);
       return NextResponse.json(
-        { id: user.id, email: user.email, phoneno: user.phoneno, role: user.role },
+        { 
+          id: result.user.id, 
+          email: result.user.email, 
+          phoneno: result.user.phoneno, 
+          role: result.user.role,
+          referralCode: result.user.referralCode,
+          wallet: {
+            balance: result.wallet.balance
+          }
+        },
         { status: 201 }
       );
     } catch (error: unknown) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === "P2002") {
-          const field = (error.meta?.target as string[])?.[0] || "Field";
+      if (error instanceof Error) {
+        if ((error as any).code === 'P2002') {
+          const field = (error as any).meta?.target?.[0];
           return NextResponse.json(
             { error: `${field} already exists` },
             { status: 409 }
@@ -97,9 +143,9 @@ export async function POST(request: NextRequest) {
       } else {
         console.error("Unknown error in /api/user:", error);
       }
-
+    
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-    }
+    }    
   } catch (error) {
     console.error("Error in /api/user:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
