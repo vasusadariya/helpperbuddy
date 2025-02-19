@@ -527,7 +527,7 @@ export default function ServicesClient({
 
         {/* Cart Sidebar */}
         <aside
-          className={`fixed right-0 top-0 h-full w-80 bg-white z-20 shadow-lg transform transition-transform duration-300 ${isCartOpen ? "translate-x-0" : "translate-x-full"
+          className={`fixed right-0 top-0 h-full w-80 bg-white z-20 pt-[calc(6rem)] shadow-lg transform transition-transform duration-300 ${isCartOpen ? "translate-x-0" : "translate-x-full"
             }`}
         >
           <div className="p-4 h-full flex flex-col">
