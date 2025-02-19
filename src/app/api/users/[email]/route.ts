@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { email: string } }
-) {
+export async function GET(req: NextRequest) {
+
   try {
-    const email = params.email;
-    
+  const url = new URL(req.url);
+  const email = url.searchParams.get('email');
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
@@ -38,13 +36,14 @@ export async function GET(
 }
 
 // Optionally add PATCH for updating user details
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { email: string } }
-) {
+export async function PATCH(req: NextRequest) {
   try {
-    const email = params.email;
-    const updates = await request.json();
+    const url = new URL(req.url);
+  const email = url.searchParams.get('email');
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+    const updates = await req.json();
 
     const user = await prisma.user.update({
       where: { email: decodeURIComponent(email) },
@@ -70,11 +69,14 @@ export async function PATCH(
 
 // Optionally add DELETE for removing users
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { email: string } }
+  req: NextRequest
 ) {
   try {
-    const email = params.email;
+    const url = new URL(req.url);
+    const email = url.searchParams.get('email');
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
     
     await prisma.user.delete({
       where: { email: decodeURIComponent(email) },
