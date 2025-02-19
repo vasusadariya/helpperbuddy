@@ -79,8 +79,10 @@ export default function ServicesPage() {
             }
 
             // Then delete the service
-            const response = await fetch(`/api/admin/services/${id}`, {
+            const response = await fetch('/api/admin/services', {
                 method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }),
             });
 
             if (response.ok) {
@@ -165,13 +167,13 @@ export default function ServicesPage() {
             imageUrl = res.url;
           }
       
-          const response = await fetch(`/api/admin/services/${selectedService.id}`, {
+          const response = await fetch('/api/admin/services', {
             method: 'PATCH',
             headers: {
-              'Content-Type': 'application/json',
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ...formData, image: imageUrl }),
-          });
+            body: JSON.stringify({ id: selectedService.id, ...formData, image: imageUrl }),
+        });        
       
           if (response.ok) {
             if (file && imageUrl) {
@@ -234,6 +236,8 @@ export default function ServicesPage() {
                                         src={service.image}
                                         alt={service.name}
                                         className="w-full h-full object-cover rounded-md"
+                                        width={700}
+                                        height={500}
                                     />
                                 </div>
                             )}
