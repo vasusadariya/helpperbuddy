@@ -132,13 +132,20 @@ export async function POST(request: NextRequest) {
       );
     } catch (error: unknown) {
       if (error instanceof Error) {
-        if ((error as any).code === 'P2002') {
-          const field = (error as any).meta?.target?.[0];
-          return NextResponse.json(
-            { error: `${field} already exists` },
-            { status: 409 }
-          );
+        interface PrismaError extends Error {
+          code?: string;
+          meta?: {
+            target?: string[];
+          };
         }
+
+            if ((error as PrismaError).code === 'P2002') {
+              const field = (error as PrismaError).meta?.target?.[0];
+              return NextResponse.json(
+                { error: `${field} already exists` },
+                { status: 409 }
+              );
+            }
         console.error("Prisma Error in /api/user:", error);
       } else {
         console.error("Unknown error in /api/user:", error);
