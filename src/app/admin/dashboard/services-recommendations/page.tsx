@@ -166,16 +166,20 @@ export default function ServicesRecommendations() {
 
     const handleDelete = async (id: string, type: 'user' | 'partner') => {
         const endpoint = type === 'user'
-            ? `/api/admin/services/requested-services/${id}`
-            : `/api/admin/services/partner-requested-services/${id}`;
-
+            ? `/api/admin/services/requested-services`
+            : `/api/admin/services/partner-requested-services`; // No ID in URL
+    
         try {
-            const response = await fetch(endpoint, { method: 'DELETE' });
-
+            const response = await fetch(endpoint, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }), // ID is now sent in the body
+            });
+    
             if (!response.ok) {
                 throw new Error(`Failed to delete service: ${response.statusText}`);
             }
-
+    
             if (type === 'user') {
                 setUserRequestedServices(prev => prev.filter(service => service.id !== id));
             } else {
@@ -184,7 +188,7 @@ export default function ServicesRecommendations() {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
             console.error(`[handleDelete] Error deleting ${type} service:`, errorMessage);
-
+    
             if (type === 'user') {
                 setErrorUserServices(errorMessage);
             } else {
@@ -192,6 +196,7 @@ export default function ServicesRecommendations() {
             }
         }
     };
+    
 
     const ServicesList = ({
         title,

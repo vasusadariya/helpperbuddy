@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        user: {
+        User: {
           email: session.user.email
         },
         status: "COMPLETED"
@@ -87,7 +87,7 @@ export async function GET() {
       include: {
         Order: {
           include: {
-            user: {
+            User: {
               select: {
                 name: true,
               },
@@ -102,7 +102,7 @@ export async function GET() {
     });
 
     const formattedReviews = reviews.map((review) => ({
-      name: review.Order.user.name,
+      name: review.Order.User.name,
       rating: review.rating,
       review: review.description || "",
     }));
@@ -110,7 +110,7 @@ export async function GET() {
     return NextResponse.json(formattedReviews);
   } catch (error) {
     return NextResponse.json(
-      { error: "Failed to fetch reviews" },
+      { error: "Failed to fetch reviews" +error },
       { status: 500 }
     );
   }
