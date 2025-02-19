@@ -62,7 +62,7 @@ export async function GET() {
         ]
       },
       include: {
-        Service: {
+        service: {
           select: {
             name: true,
             category: true,
@@ -70,7 +70,7 @@ export async function GET() {
             description: true
           }
         },
-        User: {
+        user: {
           select: {
             name: true,
             phoneno: true
@@ -86,14 +86,14 @@ export async function GET() {
     const formattedOrders = pendingOrders.map(order => ({
       id: order.id,
       serviceDetails: {
-        name: order.Service.name,
-        category: order.Service.category,
-        price: order.Service.price,
-        description: order.Service.description
+        name: order.service.name,
+        category: order.service.category,
+        price: order.service.price,
+        description: order.service.description
       },
       customerDetails: {
-        name: order.User.name,
-        phone: order.User.phoneno || 'Will be shared after acceptance'
+        name: order.user.name,
+        phone: order.user.phoneno || 'Will be shared after acceptance'
       },
       orderDetails: {
         date: order.date.toISOString().split('T')[0],

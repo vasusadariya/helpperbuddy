@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       const order = await tx.order.findFirst({
         where: {
           id: payload.orderId,
-          ser: { email: session?.user?.email ?? "" },
+          user: { email: session?.user?.email ?? "" },
         },
         include: {
           service: true,
