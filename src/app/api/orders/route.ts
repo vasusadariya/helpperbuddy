@@ -3,9 +3,7 @@ import { getServerSession } from "next-auth";
 import Razorpay from "razorpay";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { authOptions } from "../auth/[...nextauth]/options";
-
 import { sendNewOrderToEligiblePartners } from "../services/emailServices";
-
 
 const prisma = new PrismaClient();
 
@@ -626,6 +624,15 @@ export async function PATCH(req: NextRequest) {
         where: { id: orderId },
         data: updateData,
       });
+
+      // if (status === "COMPLETED") {
+      //   try {
+      //     await awardReferralBonus(currentOrder.userId);
+      //   } catch (error) {
+      //     console.error("Error awarding referral bonus:", error);
+      //   }
+      // }
+
       return updatedOrder;
     });
 
@@ -650,7 +657,8 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(
+  req: NextRequest) {
   try {
     const orderId = req.nextUrl.searchParams.get('id');
     if (!orderId) {
@@ -659,7 +667,7 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
-
+    // Delete the order
     const order = await prisma.order.delete({
       where: {
         id: orderId,
