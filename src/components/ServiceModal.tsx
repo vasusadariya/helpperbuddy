@@ -135,6 +135,8 @@ export default function ServiceModal({
                   src={initialData.image} 
                   alt="Current service" 
                   className="mt-1 h-32 w-32 object-cover rounded-md"
+                  width={400}
+                  height={200}
                 />
               </div>
             )}

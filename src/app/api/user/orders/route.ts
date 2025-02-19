@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
       prisma.order.findMany({
         where: whereClause,
         include: {
-          service: {
+          Service: {
             select: {
               name: true,
               price: true,
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
               lastActiveAt: true
             }
           },
-          review: {
+          Review: {
             select: {
               id: true,
               rating: true,
@@ -145,9 +145,9 @@ export async function GET(req: NextRequest) {
       // assignedAt: order.assignedAt?.toISOString() ?? null,
       id: order.id,
       service: {
-        name: order.service?.name ?? 'Service Unavailable',
-        price: order.service?.price ?? 0,
-        category: order.service?.category ?? 'Uncategorized'
+        name: order.Service?.name ?? 'Service Unavailable',
+        price: order.Service?.price ?? 0,
+        category: order.Service?.category ?? 'Uncategorized'
       },
       Partner: order.Partner ? {
         id: order.Partner.id,
@@ -168,11 +168,11 @@ export async function GET(req: NextRequest) {
       remarks: order.remarks,
       razorpayPaymentId: order.razorpayPaymentId,
       paidAt: order.paidAt?.toISOString() ?? null,
-      review: order.review ? {
-        id: order.review.id,
-        rating: order.review.rating,
-        description: order.review.description,
-        createdAt: order.review.createdAt.toISOString()
+      review: order.Review ? {
+        id: order.Review.id,
+        rating: order.Review.rating,
+        description: order.Review.description,
+        createdAt: order.Review.createdAt.toISOString()
       } : null,
       acceptedAt: order.acceptedAt?.toISOString() ?? null,
       startedAt: order.startedAt?.toISOString() ?? null,

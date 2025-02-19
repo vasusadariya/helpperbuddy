@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error("Error updating blog:", error);
+  console.error("Error updating blog:", error);
     const errorMessage = error instanceof Error ? error.message : "Failed to update blog";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
