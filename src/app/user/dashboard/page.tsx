@@ -14,7 +14,7 @@ import {
   Mail,
   UserCheck,
 
-  PlayCircle,
+
   Banknote,
   CreditCard,
   Star,
@@ -25,6 +25,7 @@ import Image from "next/image";
 import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
 import { Review } from "@/components/review";
+import toast from "react-hot-toast";
 
 type DashboardStats = {
   totalOrders: number;
@@ -293,6 +294,7 @@ export default function UserDashboard() {
       );
     }
   };
+  console.log(handleCODPayment);
 
   useEffect(() => {
     fetchDashboardData();
@@ -894,7 +896,7 @@ export default function UserDashboard() {
     </div>
     {order.Review.description && (
       <p className="mt-2 text-sm text-gray-600">
-        "{order.Review.description}"
+        &quot;{order.Review.description}&quot;
       </p>
     )}
   </div>
