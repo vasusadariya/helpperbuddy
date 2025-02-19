@@ -22,7 +22,11 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
 
   const handlePaymentMethod = async (method: 'ONLINE' | 'COD') => {
     if (method === 'COD') {
-      const confirmCod = window.confirm(`Please confirm that you will pay ₹${order.amount.toFixed(2)} to the service provider in cash.`);
+      const message = order.status === 'SERVICE_COMPLETED' 
+        ? `Please confirm that you will pay ₹${order.amount.toFixed(2)} to complete the service.`
+        : `Please confirm that you will pay ₹${order.amount.toFixed(2)} to the service provider in cash.`;
+      
+      const confirmCod = window.confirm(message);
       if (!confirmCod) {
         return;
       }
@@ -31,10 +35,8 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
     setIsProcessing(true);
     try {
       if (method === 'ONLINE') {
-        // Redirect to payment page for online payment
         router.push(`/payment/${order.id}`);
       } else {
-        // Handle COD
         const response = await fetch('/api/payment/cod', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -47,10 +49,13 @@ export const PaymentOptions = ({ order, onPaymentComplete }: PaymentOptionsProps
         const data = await response.json();
         if (data.success) {
           setShowCodMessage(true);
-          toast.success(`Please pay ₹${order.amount.toFixed(2)} to the service provider`);
+          const message = order.status === 'SERVICE_COMPLETED'
+            ? 'Order completed successfully'
+            : `Please pay ₹${order.amount.toFixed(2)} to the service provider`;
+          toast.success(message);
           onPaymentComplete();
         } else {
-          throw new Error(data.error || 'Failed to process COD request');
+          throw new Error(data.error || 'Failed to process payment');
         }
       }
     } catch (error) {

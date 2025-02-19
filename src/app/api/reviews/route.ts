@@ -35,6 +35,9 @@ export async function POST(req: Request) {
           email: session.user.email
         },
         status: "COMPLETED"
+      },
+      include: {
+        review: true // Include to check if review exists
       }
     });
 
@@ -46,17 +49,11 @@ export async function POST(req: Request) {
     }
 
     // Check if review already exists
-    const existingReview = await prisma.review.findUnique({
-      where: {
-        orderId
-      }
-    });
-
-    if (existingReview) {
-      return NextResponse.json(
-        { error: "Review already exists for this order" },
-        { status: 400 }
-      );
+    if (order.review) {
+      return NextResponse.json({ 
+        success: false,
+        error: "Review already exists for this order",
+      }, { status: 400 });
     }
 
     // Create review
@@ -92,25 +89,53 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const orderId = searchParams.get("orderId");
 
-    const review = await prisma.review.findUnique({
+    if (!orderId) {
+      return NextResponse.json({ 
+        error: "Order ID is required",
+      }, { status: 400 });
+    }
+
+    const order = await prisma.order.findFirst({
       where: {
-        orderId: orderId!
+        id: orderId,
+        user: {
+          email: session.user.email
+        }
+      },
+      include: {
+        review: true
       }
     });
 
-    if (!review) {
-      return NextResponse.json(
-        { error: "Review not found" },
-        { status: 404 }
-      );
+    if (!order) {
+      return NextResponse.json({ 
+        success: false,
+        error: "Order not found"
+      }, { status: 404 });
     }
 
-    return NextResponse.json(review);
+    if (!order.review) {
+      return NextResponse.json({ 
+        success: false,
+        error: "Review not found for this order",
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        review: order.review
+      }
+    });
+
   } catch (error) {
     console.error("Review fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch review" },
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      success: false,
+      error: "Failed to fetch review",
+      details: error instanceof Error ? error.message : "Unknown error",
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }

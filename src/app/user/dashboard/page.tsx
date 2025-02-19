@@ -16,12 +16,14 @@ import {
   PlayCircle,
   Banknote,
   CreditCard,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import { OrderCancellationStatus } from "@/components/OrderCancellation";
 import { PaymentOptions } from "@/components/PaymentOptions";
+import { Review } from "@/components/review";
 
 type DashboardStats = {
   totalOrders: number;
@@ -64,9 +66,12 @@ interface Order {
     isActive?: boolean;
     rating?: number;
   } | null;
-  review?: {
+  Review?: {
+    id: string;
     rating: number;
-  } | null;
+    description?: string;
+    createdAt: Date;
+  };
   assignedAt?: string | null;
   acceptedAt?: string | null;
   startedAt?: string | null;
@@ -114,18 +119,6 @@ interface TransactionsResponse {
   };
 }
 
-function formatDate(dateString: string) {
-  return new Intl.DateTimeFormat('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Kolkata'
-  }).format(new Date(dateString));
-}
-
 interface WalletData {
   balance: number;
   transactions: Transaction[];
@@ -166,94 +159,141 @@ export default function UserDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-  
-        // Fetch orders, wallet data, and transactions in parallel
-        const [ordersResponse, walletResponse, transactionsResponse] = await Promise.all([
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch orders, wallet data, and transactions in parallel
+      const [ordersResponse, walletResponse, transactionsResponse] =
+        await Promise.all([
           fetch("/api/user/orders?limit=5&include=partner"),
           fetch("/api/wallet"),
-          fetch("/api/transactions") // Add this new endpoint
+          fetch("/api/transactions"), // Add this new endpoint
         ]);
-  
-        const ordersData: OrdersResponse = await ordersResponse.json();
-        const walletData: WalletResponse = await walletResponse.json();
-        const transactionsData: TransactionsResponse = await transactionsResponse.json();
-  
-        // Handle orders data
-        if (ordersResponse.ok && ordersData.success) {
-          const orders = ordersData.data.orders || [];
-          console.log("Fetched orders with partners:", orders);
-  
-          setRecentOrders(orders);
-  
-          const completedOrders = orders.filter(
-            (order) =>
-              order.status === "COMPLETED"
-              // || order.status === "PAYMENT_COMPLETED"
-          );
-  
-          const pendingOrders = orders.filter(
-            (order) =>
-              order.status === "PENDING" ||
-              order.status === "ACCEPTED" ||
-              order.status === "IN_PROGRESS"
-          );
-  
-          const totalRating = completedOrders.reduce(
-            (sum, order) => sum + (order.review?.rating || 0),
-            0
-          );
-  
-          setStats({
-            totalOrders: ordersData.data.pagination.total,
-            completedOrders: completedOrders.length,
-            pendingOrders: pendingOrders.length,
-            averageRating: completedOrders.length
-              ? +(totalRating / completedOrders.length).toFixed(1)
-              : 0,
-          });
-        } else {
-          throw new Error(ordersData.data?.error || "Failed to fetch orders");
-        }
-  
-        // Handle wallet data
-        if (walletResponse.ok && walletData.success) {
-          const wallet = walletData.data.wallet;
-          console.log("Fetched wallet data:", wallet);
-  
-          setWalletData({
-            balance: Number(wallet.balance) || 0,
-            transactions: [], // We'll use separate transactions state now
-          });
-        } else {
-          throw new Error(walletData.data?.error || "Failed to fetch wallet data");
-        }
-  
-        // Handle transactions data
-        if (transactionsResponse.ok && transactionsData.success) {
-          const transactions = transactionsData.data.transactions;
-          console.log("Fetched transactions:", transactions);
-  
-          // Set all transactions without filtering
-          setTransactions(transactions);
-        } else {
-          throw new Error(
-            "Failed to fetch transactions"
-          );
-        }
-  
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        setError(error instanceof Error ? error.message : "An error occurred");
-      } finally {
-        setIsLoading(false);
+
+      const ordersData: OrdersResponse = await ordersResponse.json();
+      const walletData: WalletResponse = await walletResponse.json();
+      const transactionsData: TransactionsResponse =
+        await transactionsResponse.json();
+
+      // Handle orders data
+      if (ordersResponse.ok && ordersData.success) {
+        const orders = ordersData.data.orders || [];
+        console.log("Fetched orders with partners:", orders);
+
+        setRecentOrders(orders);
+
+        const completedOrders = orders.filter(
+          (order) => order.status === "COMPLETED"
+          // || order.status === "PAYMENT_COMPLETED"
+        );
+
+        const pendingOrders = orders.filter(
+          (order) =>
+            order.status === "PENDING" ||
+            order.status === "ACCEPTED" ||
+            order.status === "IN_PROGRESS"
+        );
+
+        const totalRating = completedOrders.reduce(
+          (sum, order) => sum + (order.Review?.rating || 0),
+          0
+        );
+
+        setStats({
+          totalOrders: ordersData.data.pagination.total,
+          completedOrders: completedOrders.length,
+          pendingOrders: pendingOrders.length,
+          averageRating: completedOrders.length
+            ? +(totalRating / completedOrders.length).toFixed(1)
+            : 0,
+        });
+      } else {
+        throw new Error(ordersData.data?.error || "Failed to fetch orders");
       }
-    };
+
+      // Handle wallet data
+      if (walletResponse.ok && walletData.success) {
+        const wallet = walletData.data.wallet;
+        console.log("Fetched wallet data:", wallet);
+
+        setWalletData({
+          balance: Number(wallet.balance) || 0,
+          transactions: [], // We'll use separate transactions state now
+        });
+      } else {
+        throw new Error(
+          walletData.data?.error || "Failed to fetch wallet data"
+        );
+      }
+
+      // Handle transactions data
+      if (transactionsResponse.ok && transactionsData.success) {
+        const transactions = transactionsData.data.transactions;
+        console.log("Fetched transactions:", transactions);
+
+        // Set all transactions without filtering
+        setTransactions(transactions);
+      } else {
+        throw new Error("Failed to fetch transactions");
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      setError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // Add handleCODPayment function
+  const handleCODPayment = async (order: Order) => {
+    const amount = order.remainingAmount || order.amount;
+    const confirmed = window.confirm(
+      `Please pay ₹${amount.toFixed(2)} to the service provider`
+    );
+    
+    if (!confirmed) return;
   
+    try {
+      const response = await fetch('/api/payment/cod', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          orderId: order.id
+        }),
+        credentials: 'include' // Important for authentication
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(
+          errorData?.error || 
+          `HTTP error! status: ${response.status}`
+        );
+      }
+  
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Payment confirmed and order completed');
+        window.location.reload();
+      } else {
+        throw new Error(data.error || 'Failed to confirm payment');
+      }
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      toast.error(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to confirm payment'
+      );
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
   }, []);
 
@@ -262,6 +302,15 @@ export default function UserDashboard() {
   console.log("Current walletData:", walletData);
 
   const getStatusDisplay = (order: Order) => {
+
+    if (order.walletAmount && order.walletAmount === order.amount) {
+      return {
+        text: "Paid by Wallet",
+        class: "bg-green-100 text-green-800",
+        icon: <Wallet className="w-4 h-4 text-green-600" />, // Make sure to import Wallet icon
+      };
+    }
+
     switch (order.status) {
       case "COMPLETED":
         return {
@@ -269,14 +318,18 @@ export default function UserDashboard() {
           class: "bg-green-100 text-green-800",
           icon: <CheckCircle className="w-4 h-4" />,
         };
-        case "PAYMENT_COMPLETED":
-          return {
-            text: order.paymentMode === "COD" ? "Paid by Cash" : "Payment Completed",
-            class: "bg-green-100 text-green-800",
-            icon: order.paymentMode === "COD" ? 
-              <Banknote className="w-4 h-4 text-green-600" /> : 
-              <CreditCard className="w-4 h-4 text-green-600" />,
-          };
+      case "PAYMENT_COMPLETED":
+        return {
+          text:
+            order.paymentMode === "COD" ? "Paid by Cash" : "Payment Completed",
+          class: "bg-green-100 text-green-800",
+          icon:
+            order.paymentMode === "COD" ? (
+              <Banknote className="w-4 h-4 text-green-600" />
+            ) : (
+              <CreditCard className="w-4 h-4 text-green-600" />
+            ),
+        };
       case "SERVICE_COMPLETED":
         return {
           text: "Service Completed - Select Payment Method",
@@ -330,26 +383,34 @@ export default function UserDashboard() {
     }
   };
 
-const shouldShowPaymentButton = (order: Order) => {
-  // Show payment options for SERVICE_COMPLETED status only
-  if (order.status === "SERVICE_COMPLETED" && !order.razorpayPaymentId) {
-    return true;
-  }
-
-  // Don't show payment button for these states
-  if (
-    order.status === "PAYMENT_COMPLETED" ||
-    order.status === "COMPLETED" ||
-    order.status === "CANCELLED" ||
-    order.razorpayPaymentId ||
-    order.paymentMode === "COD"
-  ) {
-    return false;
-  }
-
-  // Check if there's a remaining amount to be paid
-  return (order.remainingAmount || order.amount) > 0;
-};
+  const shouldShowPaymentButton = (order: Order) => {
+    // Don't show payment button if order is fully paid by wallet
+    if (order.walletAmount && order.walletAmount === order.amount) {
+      return false;
+    }
+  
+    // Show payment options for ACCEPTED status and no payment made yet
+    if (order.status === "ACCEPTED" && !order.razorpayPaymentId) {
+      return true;
+    }
+  
+    // Don't show payment button for these states
+    if (
+      order.status === "PAYMENT_COMPLETED" ||
+      order.status === "SERVICE_COMPLETED" ||
+      order.status === "COMPLETED" ||
+      order.status === "CANCELLED" ||
+      order.status === "PENDING" ||
+      order.razorpayPaymentId ||
+      order.paymentMode === "COD"
+    ) {
+      return false;
+    }
+  
+    // Check if there's a remaining amount to be paid
+    const remainingAmount = order.remainingAmount || order.amount;
+    return remainingAmount > 0;
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("en-IN", {
@@ -360,48 +421,6 @@ const shouldShowPaymentButton = (order: Order) => {
       minute: "2-digit",
       hour12: true,
     });
-  };
-
-  const handleCancellation = async (orderId: string) => {
-    try {
-      // Show confirmation dialog
-      const confirmed = window.confirm(
-        "Are you sure you want to cancel this order? This action cannot be undone."
-      );
-
-      if (!confirmed) return;
-
-      // Show loading toast
-      const loadingToast = toast.loading("Cancelling order...");
-
-      // Call the API endpoint
-      const response = await fetch(`/api/orders/${orderId}/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to cancel order");
-      }
-
-      // Success
-      toast.success("Order cancelled successfully", {
-        id: loadingToast,
-      });
-
-      // Refresh the page or update the data
-      window.location.reload();
-      // Or if you're using router.refresh():
-      // router.refresh();
-    } catch (error) {
-      console.error("Error cancelling order:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to cancel order"
-      );
-    }
   };
 
   if (isLoading) {
@@ -473,326 +492,336 @@ const shouldShowPaymentButton = (order: Order) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Transactions */}
-<div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-  <div className="p-6">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-lg font-semibold text-gray-900">
-        Recent Transactions
-      </h2>
-      <Link
-        href="/user/dashboard/wallet"
-        className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-      >
-        View All
-        <ArrowUpRight className="w-4 h-4 ml-1" />
-      </Link>
-    </div>
-    <div className="space-y-4">
-      {isLoading ? (
-        <div className="flex items-center justify-center p-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      ) : transactions.length > 0 ? (
-        transactions.map((transaction) => (
-          <div
-            key={transaction.id}
-            className="flex items-center justify-between border-b last:border-b-0 pb-4 last:pb-0"
-          >
-            <div className="flex items-center">
-              <div
-                className={`p-2 rounded-full mr-3 ${
-                  ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                    transaction.type
-                  )
-                    ? "bg-green-100"
-                    : "bg-red-100"
-                }`}
+        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Recent Transactions
+              </h2>
+              <Link
+                href="/user/dashboard/wallet"
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
               >
-                {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                  transaction.type
-                ) ? (
-                  <ArrowUpRight className="w-4 h-4 text-green-600" />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4 text-red-600" />
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">
-                  {transaction.description}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {formatDate(transaction.createdAt)}
-                </p>
-                {transaction.Order && (
-                  <p className="text-xs text-gray-500">
-                    {transaction.Order.service.name} - Order #{transaction.Order.id}
-                  </p>
-                )}
-              </div>
+                View All
+                <ArrowUpRight className="w-4 h-4 ml-1" />
+              </Link>
             </div>
-            <div>
-              <p
-                className={`font-medium ${
-                  ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                    transaction.type
-                  )
-                    ? "text-green-600"
-                    : "text-red-600"
-                }`}
-              >
-                {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
-                  transaction.type
-                )
-                  ? "+"
-                  : "-"}
-                ₹{Math.abs(transaction.amount).toFixed(2)}
-              </p>
-              <p className="text-xs text-gray-500 text-right">
-                {transaction.type.split('_').map(word => 
-                  word.charAt(0) + word.slice(1).toLowerCase()
-                ).join(' ')}
-              </p>
+            <div className="space-y-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+              ) : transactions.length > 0 ? (
+                transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between border-b last:border-b-0 pb-4 last:pb-0"
+                  >
+                    <div className="flex items-center">
+                      <div
+                        className={`p-2 rounded-full mr-3 ${
+                          ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                            transaction.type
+                          )
+                            ? "bg-green-100"
+                            : "bg-red-100"
+                        }`}
+                      >
+                        {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                          transaction.type
+                        ) ? (
+                          <ArrowDownRight className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <ArrowUpRight className="w-4 h-4 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {transaction.description}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {formatDate(transaction.createdAt)}
+                        </p>
+                        {transaction.Order && (
+                          <p className="text-xs text-gray-500">
+                            {transaction.Order.service.name} - Order #
+                            {transaction.Order.id}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p
+                        className={`font-medium ${
+                          ["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                            transaction.type
+                          )
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {["CREDIT", "REFERRAL_BONUS", "SIGNUP_BONUS"].includes(
+                          transaction.type
+                        )
+                          ? "+"
+                          : "-"}
+                        ₹{Math.abs(transaction.amount).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500 text-right">
+                        {transaction.type
+                          .split("_")
+                          .map(
+                            (word) =>
+                              word.charAt(0) + word.slice(1).toLowerCase()
+                          )
+                          .join(" ")}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  No transactions yet
+                </p>
+              )}
             </div>
           </div>
-        ))
-      ) : (
-        <p className="text-gray-500 text-center py-4">
-          No transactions yet
-        </p>
-      )}
-    </div>
-  </div>
-</div>
+        </div>
 
         {/* Recent Orders */}
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-          <Link
-            href="/user/orders"
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-          >
-            View All
-            <ArrowUpRight className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
-        <div className="space-y-4">
-          {recentOrders.length > 0 ? (
-            recentOrders.map((order) => {
-              const statusDisplay = getStatusDisplay(order);
-              const showPayment = shouldShowPaymentButton(order);
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Recent Orders
+              </h2>
+              <Link
+                href="/user/orders"
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+              >
+                View All
+                <ArrowUpRight className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
+            <div className="space-y-4">
+              {recentOrders.length > 0 ? (
+                recentOrders.map((order) => {
+                  const statusDisplay = getStatusDisplay(order);
+                  // const showPayment = shouldShowPaymentButton(order);
 
-              // Add null checks for amounts and format them
-              const amount = order?.amount || 0;
-              const walletAmount = order?.walletAmount || 0;
-              const remainingAmount = order?.remainingAmount || 0;
+                  // Add null checks for amounts and format them
+                  const amount = order?.amount || 0;
+                  const walletAmount = order?.walletAmount || 0;
+                  const remainingAmount = order?.remainingAmount || 0;
 
-              return (
-                <div
-                  key={order.id}
-                  className="border-b last:border-b-0 pb-4 last:pb-0"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-3 flex-grow">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {order.service?.name || "Service Name Not Available"}
-                        </p>
-                        <div className="mt-1 space-y-1">
-                          <p className="text-sm text-gray-600">
-                            Scheduled:{" "}
-                            {order.date
-                              ? formatDate(order.date)
-                              : "Date Not Set"}
-                          </p>
-                          {order.time && (
-                            <p className="text-sm text-gray-600">
-                              Time: {order.time}
+                  return (
+                    <div
+                      key={order.id}
+                      className="border-b last:border-b-0 pb-4 last:pb-0"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-3 flex-grow">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {order.service?.name ||
+                                "Service Name Not Available"}
                             </p>
-                          )}
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          <p className="text-sm text-gray-600">
-                            Amount: ₹{amount.toFixed(2)}
-                          </p>
-                          {walletAmount > 0 && (
-                            <p className="text-sm text-green-600">
-                              Wallet Used: ₹{walletAmount.toFixed(2)}
-                            </p>
-                          )}
-                          {remainingAmount > 0 && (
-                            <p className="text-sm text-blue-600">
-                              Balance Due: ₹{remainingAmount.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {order.status === "PENDING" && (
-                        <OrderCancellationStatus
-                          order={{
-                            id: order.id,
-                            status: order.status,
-                            createdAt: new Date(order.date || ""),
-                            service: {
-                              name: order.service?.name || "",
-                              threshold: order.service?.threshold || 2,
-                            },
-                            date: order.date,
-                            time: order.time,
-                            amount: order.amount || 0,
-                            Partner: order.Partner,
-                          }}
-                        />
-                      )}
-
-                      {order.Partner && (
-                        <div className="bg-gray-50 rounded-lg p-4 mt-3">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="bg-blue-100 p-1.5 rounded-full">
-                                <UserCheck className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <p className="text-sm font-medium text-gray-900">
-                                Service Provider Details
+                            <div className="mt-1 space-y-1">
+                              <p className="text-sm text-gray-600">
+                                Scheduled:{" "}
+                                {order.date}
                               </p>
+                              {order.time && (
+                                <p className="text-sm text-gray-600">
+                                  Time: {order.time}
+                                </p>
+                              )}
                             </div>
-                            <div className="flex items-center">
-                              {order.Partner.isActive && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  Active Now
-                                </span>
+                            <div className="mt-2 space-y-1">
+                              <p className="text-sm text-gray-600">
+                                Amount: ₹{amount.toFixed(2)}
+                              </p>
+                              {walletAmount > 0 && (
+                                <p className="text-sm text-green-600">
+                                  Wallet Used: ₹{walletAmount.toFixed(2)}
+                                </p>
+                              )}
+                              {remainingAmount > 0 && (
+                                <p className="text-sm text-blue-600">
+                                  Balance Due: ₹{remainingAmount.toFixed(2)}
+                                </p>
                               )}
                             </div>
                           </div>
 
-                          <div className="flex items-start space-x-4">
-                            <div className="flex-shrink-0">
-                              {order.Partner.profileImage ? (
-                                <Image
-                                  src={order.Partner.profileImage}
-                                  alt={order.Partner.name}
-                                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                  width={48}
-                                  height={48}
-                                />
-                              ) : (
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">
-                                  <span className="text-lg font-semibold text-blue-600">
-                                    {order.Partner.name
-                                      .charAt(0)
-                                      .toUpperCase()}
-                                  </span>
+                          {order.status === "PENDING" && (
+                            <OrderCancellationStatus
+                              order={{
+                                id: order.id,
+                                status: order.status,
+                                createdAt: new Date(order.date || ""),
+                                service: {
+                                  name: order.service?.name || "",
+                                  threshold: order.service?.threshold || 2,
+                                },
+                                date: order.date,
+                                time: order.time,
+                                amount: order.amount || 0,
+                                Partner: order.Partner,
+                              }}
+                            />
+                          )}
+
+                          {order.Partner && (
+                            <div className="bg-gray-50 rounded-lg p-4 mt-3">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  <div className="bg-blue-100 p-1.5 rounded-full">
+                                    <UserCheck className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    Service Provider Details
+                                  </p>
                                 </div>
-                              )}
-                            </div>
-
-                            <div className="flex-grow">
-                              <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-medium text-gray-900">
-                                  {order.Partner.name}
-                                </h4>
+                                <div className="flex items-center">
+                                  {order.Partner.isActive && (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      Active Now
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
-                              <div className="mt-2 space-y-1.5">
-                                {order.acceptedAt && (
-                                  <div className="flex items-center text-xs text-gray-500">
-                                    <Clock className="w-3 h-3 mr-1 text-blue-500" />
-                                    Accepted: {formatDate(order.acceptedAt)}
-                                  </div>
-                                )}
-                                {order.startedAt && (
-                                  <div className="flex items-center text-xs text-gray-500">
-                                    <Clock className="w-3 h-3 mr-1 text-blue-500" />
-                                    Started: {formatDate(order.startedAt)}
-                                  </div>
-                                )}
-                                {order.completedAt && (
-                                  <div className="flex items-center text-xs text-gray-500">
-                                    <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
-                                    Completed: {formatDate(order.completedAt)}
-                                  </div>
-                                )}
-                              </div>
+                              <div className="flex items-start space-x-4">
+                                <div className="flex-shrink-0">
+                                  {order.Partner.profileImage ? (
+                                    <Image
+                                      src={order.Partner.profileImage}
+                                      alt={order.Partner.name}
+                                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                      width={48}
+                                      height={48}
+                                    />
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center border-2 border-white shadow-sm">
+                                      <span className="text-lg font-semibold text-blue-600">
+                                        {order.Partner.name
+                                          .charAt(0)
+                                          .toUpperCase()}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
 
-                              <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                                {order.Partner.phoneno && (
-                                  <div className="flex items-center text-sm text-gray-600">
-                                    <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                                    <a
-                                      href={`tel:${order.Partner.phoneno}`}
-                                      className="hover:text-blue-600 transition-colors"
+                                <div className="flex-grow">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium text-gray-900">
+                                      {order.Partner.name}
+                                    </h4>
+                                  </div>
+
+                                  <div className="mt-2 space-y-1.5">
+                                    {order.acceptedAt && (
+                                      <div className="flex items-center text-xs text-gray-500">
+                                        <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                                        Accepted: {formatDate(order.acceptedAt)}
+                                      </div>
+                                    )}
+                                    {order.startedAt && (
+                                      <div className="flex items-center text-xs text-gray-500">
+                                        <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                                        Started: {formatDate(order.startedAt)}
+                                      </div>
+                                    )}
+                                    {order.completedAt && (
+                                      <div className="flex items-center text-xs text-gray-500">
+                                        <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
+                                        Completed:{" "}
+                                        {formatDate(order.completedAt)}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                                    {order.Partner.phoneno && (
+                                      <div className="flex items-center text-sm text-gray-600">
+                                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                                        <a
+                                          href={`tel:${order.Partner.phoneno}`}
+                                          className="hover:text-blue-600 transition-colors"
+                                        >
+                                          {order.Partner.phoneno}
+                                        </a>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center text-sm text-gray-600">
+                                      <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                                      <a
+                                        href={`mailto:${order.Partner.email}`}
+                                        className="hover:text-blue-600 transition-colors"
+                                      >
+                                        {order.Partner.email}
+                                      </a>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-4 flex justify-end space-x-2">
+                                    {order.Partner.phoneno && (
+                                      <button
+                                        onClick={() =>
+                                          order.Partner &&
+                                          (window.location.href = `tel:${order.Partner.phoneno}`)
+                                        }
+                                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+                                      >
+                                        <Phone className="w-3 h-3 mr-1.5" />
+                                        Call
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() =>
+                                        order.Partner &&
+                                        (window.location.href = `mailto:${order.Partner.email}`)
+                                      }
+                                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                                     >
-                                      {order.Partner.phoneno}
-                                    </a>
+                                      <Mail className="w-3 h-3 mr-1.5" />
+                                      Email
+                                    </button>
                                   </div>
-                                )}
-                                <div className="flex items-center text-sm text-gray-600">
-                                  <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                                  <a
-                                    href={`mailto:${order.Partner.email}`}
-                                    className="hover:text-blue-600 transition-colors"
-                                  >
-                                    {order.Partner.email}
-                                  </a>
                                 </div>
                               </div>
-
-                              <div className="mt-4 flex justify-end space-x-2">
-                                {order.Partner.phoneno && (
-                                  <button
-                                    onClick={() =>
-                                      order.Partner &&
-                                      (window.location.href = `tel:${order.Partner.phoneno}`)
-                                    }
-                                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
-                                  >
-                                    <Phone className="w-3 h-3 mr-1.5" />
-                                    Call
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() =>
-                                    order.Partner &&
-                                    (window.location.href = `mailto:${order.Partner.email}`)
-                                  }
-                                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
-                                >
-                                  <Mail className="w-3 h-3 mr-1.5" />
-                                  Email
-                                </button>
-                              </div>
                             </div>
-                          </div>
+                          )}
+
+                          {order.status === "SERVICE_COMPLETED" &&
+                            !order.razorpayPaymentId && (
+                              <div className="mt-3">
+                                <PaymentOptions
+                                  order={{
+                                    id: order.id,
+                                    amount: order.amount,
+                                    remainingAmount: order.remainingAmount,
+                                    status: order.status,
+                                  }}
+                                  onPaymentComplete={() => {
+                                    // Refresh the orders list
+                                    window.location.reload();
+                                  }}
+                                />
+                              </div>
+                            )}
                         </div>
-                      )}
 
-                      {order.status === "SERVICE_COMPLETED" && !order.razorpayPaymentId && (
-                        <div className="mt-3">
-                          <PaymentOptions
-                            order={{
-                              id: order.id,
-                              amount: order.amount,
-                              remainingAmount: order.remainingAmount,
-                              status: order.status,
-                            }}
-                            onPaymentComplete={() => {
-                              // Refresh the orders list
-                              window.location.reload();
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
+                        <div className="flex flex-col items-end space-y-2 ml-4">
+                          <span
+                            className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}
+                          >
+                            {statusDisplay.icon}
+                            <span className="ml-1">{statusDisplay.text}</span>
+                          </span>
 
-                    <div className="flex flex-col items-end space-y-2 ml-4">
-                      <span className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}>
-                        {statusDisplay.icon}
-                        <span className="ml-1">{statusDisplay.text}</span>
-                      </span>
-
-                      {shouldShowPaymentButton(order) && (
+                          {shouldShowPaymentButton(order) && (
                         <Link
                           href={`/payment/${order.id}`}
                           className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -800,35 +829,85 @@ const shouldShowPaymentButton = (order: Order) => {
                           Pay Now
                         </Link>
                       )}
-                    </div>
-                  </div>
-
-                  {order.razorpayPaymentId && (
-                    <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">
-                        Payment Completed
-                      </p>
-                      <div className="mt-1 space-y-1">
-                        <p className="text-xs text-green-700">
-                          Transaction ID: {order.razorpayPaymentId}
-                        </p>
-                        {order.paidAt && (
-                          <p className="text-xs text-green-700">
-                            Paid on: {formatDate(order.paidAt)}
-                          </p>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-gray-500 text-center py-4">No orders found</p>
-          )}
+
+                      {order.razorpayPaymentId && (
+                        <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                          <p className="text-sm font-medium text-green-800">
+                            Payment Completed
+                          </p>
+                          <div className="mt-1 space-y-1">
+                            <p className="text-xs text-green-700">
+                              Transaction ID: {order.razorpayPaymentId}
+                            </p>
+                            {order.paidAt && (
+                              <p className="text-xs text-green-700">
+                                Paid on: {formatDate(order.paidAt)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+
+{/* Show review button only for completed orders without reviews */}
+{order.status === "COMPLETED" && (
+  <div className="mt-3">
+    <Review 
+      orderId={order.id}
+      orderStatus={order.status}
+      isPaid={Boolean(order.paidAt || order.razorpayPaymentId)}
+      isServiceCompleted={Boolean(order.completedAt)}
+      hasReview={Boolean(order.Review)} // Pass whether review exists
+      onReviewSubmit={() => {
+        // Refresh orders after review
+        window.location.reload();
+      }}
+    />
+  </div>
+)}
+
+{/* Show existing review if it exists */}
+{order.Review && (
+  <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <div className="flex">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={`w-4 h-4 ${
+                (order.Review?.rating ?? 0) >= star
+                  ? 'text-yellow-400 fill-current'
+                  : 'text-gray-300'
+              }`}
+            />
+          ))}
         </div>
+        <span className="text-sm text-gray-500">
+          {formatDate(order.Review.createdAt.toISOString())}
+        </span>
       </div>
     </div>
+    {order.Review.description && (
+      <p className="mt-2 text-sm text-gray-600">
+        "{order.Review.description}"
+      </p>
+    )}
+  </div>
+)}
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  No orders found
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

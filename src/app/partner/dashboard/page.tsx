@@ -62,6 +62,7 @@ interface Order {
     | "COMPLETED"
     | "CANCELLED";
   amount: number;
+  walletAmount?: number;
   razorpayPaymentId?: string;
   startedAt?: string;
   paidAt?: string;
@@ -151,18 +152,21 @@ export default function PartnerDashboard() {
         };
       case "SERVICE_COMPLETED":
         return {
-          text: order.razorpayPaymentId
-            ? "Service Completed (Prepaid)"
-            : "Service Completed",
+          text: "Service Completed (Awaiting Payment)",
+          className: "bg-yellow-100 text-yellow-800",
+        };
+      case "COMPLETED":
+        return {
+          text: "Order Completed",
           className: "bg-green-100 text-green-800",
         };
       case "PAYMENT_COMPLETED":
-        return order.paymentMode === "COD"
-          ? { text: "Paid by Cash", className: "bg-green-100 text-green-800" }
-          : {
-              text: "Payment Completed",
-              className: "bg-green-100 text-green-800",
-            };
+        return {
+          text: order.paymentMode === "COD" 
+            ? "Paid by Cash" 
+            : "Payment Completed",
+          className: "bg-green-100 text-green-800",
+        };
       default:
         return {
           text: order.status,
@@ -170,6 +174,26 @@ export default function PartnerDashboard() {
         };
     }
   };
+
+  // const getPaymentStatusMessage = (order: Order) => {
+  //   if (!order) return null;
+
+  //   if (order.walletAmount && order.walletAmount === order.amount) {
+  //     return {
+  //       text: "Payment received from wallet",
+  //       className: "bg-blue-50",
+  //       textColor: "text-blue-800",
+  //     };
+  //   }
+  //   if (order.razorpayPaymentId) {
+  //     return {
+  //       text: "Payment received in advance",
+  //       className: "bg-blue-50",
+  //       textColor: "text-blue-800",
+  //     };
+  //   }
+  //   return null;
+  // };
 
   const handleStatusUpdate = async (
     orderId: string,
@@ -322,6 +346,9 @@ export default function PartnerDashboard() {
                   );
                   const status = getOrderStatusDisplay(order);
                   const isUpdating = isUpdatingStatus[order.id] || false;
+                  const isAdvancePayment =
+                    order.razorpayPaymentId ||
+                    (order.walletAmount && order.walletAmount === order.amount);
 
                   return (
                     <div key={order.id} className="border rounded-lg p-4">
@@ -345,6 +372,12 @@ export default function PartnerDashboard() {
                         >
                           {status.text}
                         </span>
+                        {isAdvancePayment && (
+                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full flex items-center">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Payment Done in Advance
+                          </span>
+                        )}
                       </div>
                       <div className="mt-2 pt-2 border-t">
                         <div className="flex justify-between items-center">
@@ -360,77 +393,86 @@ export default function PartnerDashboard() {
                         </div>
 
                         {/* Service Status Update Button */}
-<div className="mt-3">
-  {/* Show payment status if prepaid */}
-  {order.razorpayPaymentId && (
-    <div className="mb-2 p-2 bg-blue-50 rounded-lg">
-      <p className="text-xs text-blue-800">
-        Payment received in advance
-      </p>
-    </div>
-  )}
+                        <div className="mt-3">
+                          {/* Single button based on status */}
+                          {(order.status === "ACCEPTED" ||
+                            (order.status === "PAYMENT_COMPLETED" &&
+                              !order.startedAt)) && (
+                            <button
+                              onClick={() =>
+                                handleStatusUpdate(order.id, "IN_PROGRESS")
+                              }
+                              disabled={isUpdating}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+                            >
+                              {isUpdating ? (
+                                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <PlayCircle className="w-4 h-4 mr-2" />
+                              )}
+                              Start Service
+                            </button>
+                          )}
 
-  {/* Single button based on status */}
-  {(order.status === 'ACCEPTED' || (order.status === 'PAYMENT_COMPLETED' && !order.startedAt)) && (
-    <button
-      onClick={() => handleStatusUpdate(order.id, 'IN_PROGRESS')}
-      disabled={isUpdating}
-      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
-    >
-      {isUpdating ? (
-        <Clock className="w-4 h-4 mr-2 animate-spin" />
-      ) : (
-        <PlayCircle className="w-4 h-4 mr-2" />
-      )}
-      Start Service
-    </button>
-  )}
+                          {order.status === "IN_PROGRESS" && (
+                            <button
+                              onClick={() =>
+                                handleStatusUpdate(
+                                  order.id,
+                                  "SERVICE_COMPLETED"
+                                )
+                              }
+                              disabled={isUpdating}
+                              className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+                            >
+                              {isUpdating ? (
+                                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              )}
+                              Complete Service
+                            </button>
+                          )}
 
-  {order.status === 'IN_PROGRESS' && (
-    <button
-      onClick={() => handleStatusUpdate(order.id, 'SERVICE_COMPLETED')}
-      disabled={isUpdating}
-      className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
-    >
-      {isUpdating ? (
-        <Clock className="w-4 h-4 mr-2 animate-spin" />
-      ) : (
-        <CheckCircle className="w-4 h-4 mr-2" />
-      )}
-      Complete Service
-    </button>
-  )}
+                          {/* Service Completed Status */}
+                          {order.status === "SERVICE_COMPLETED" && (
+                            <div className="p-3 bg-yellow-50 rounded-lg">
+                              <p className="text-sm text-yellow-800">
+                                {isAdvancePayment
+                                  ? "Service completed (Payment received in advance)"
+                                  : "Waiting for customer payment"}
+                              </p>
+                              {order.paidAt && (
+                                <p className="text-xs text-yellow-700 mt-1">
+                                  Paid on:{" "}
+                                  {new Date(order.paidAt).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
-  {/* Status messages for completed states */}
-  {order.status === 'SERVICE_COMPLETED' && (
-    <div className="p-3 bg-yellow-50 rounded-lg">
-      <p className="text-sm text-yellow-800">
-        {order.razorpayPaymentId 
-          ? "Service completed (Payment received in advance)"
-          : "Waiting for customer payment"
-        }
-      </p>
-      {order.razorpayPaymentId && order.paidAt && (
-        <p className="text-xs text-yellow-700 mt-1">
-          Paid on: {new Date(order.paidAt).toLocaleDateString()}
-        </p>
-      )}
-    </div>
-  )}
-
-  {order.status === 'PAYMENT_COMPLETED' && order.startedAt && (
-    <div className="p-3 bg-green-50 rounded-lg">
-      <p className="text-sm text-green-800">
-        {order.paymentMode === 'COD' ? 'Payment received by cash' : 'Payment received online'}
-      </p>
-      {order.paidAt && (
-        <p className="text-xs text-green-700 mt-1">
-          Paid on: {new Date(order.paidAt).toLocaleDateString()}
-        </p>
-      )}
-    </div>
-  )}
-</div>
+                          {/* Payment Completed Status */}
+                          {order.status === "PAYMENT_COMPLETED" &&
+                            order.startedAt && (
+                              <div className="p-3 bg-green-50 rounded-lg">
+                                <p className="text-sm text-green-800">
+                                  {order.walletAmount === order.amount
+                                    ? "Payment received from wallet"
+                                    : order.paymentMode === "COD"
+                                    ? "Payment received by cash"
+                                    : "Payment received online"}
+                                </p>
+                                {order.paidAt && (
+                                  <p className="text-xs text-green-700 mt-1">
+                                    Paid on:{" "}
+                                    {new Date(
+                                      order.paidAt
+                                    ).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                        </div>
                       </div>
                     </div>
                   );
