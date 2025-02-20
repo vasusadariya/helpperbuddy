@@ -50,7 +50,9 @@ export default function DashboardLayout({
       } md:translate-x-0 transition duration-200 ease-in-out z-30 w-64 bg-black shadow-lg mt-16`}
     >
       <div className="p-6">
+        <Link href="/user/dashboard">
         <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+          </Link>
         <nav className="mt-8 space-y-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon
