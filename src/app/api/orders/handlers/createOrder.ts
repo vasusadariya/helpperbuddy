@@ -294,6 +294,12 @@ export async function handleCreateOrder(req: NextRequest) {
       maxWait: 15000,
     });
 
+    try {
+        await awardReferralBonus(user.id);
+      } catch (bonusError) {
+        console.error("Error awarding referral bonus:", bonusError);
+      }
+
     // Send notifications outside transaction
     let notificationResult;
     try {
