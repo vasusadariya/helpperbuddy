@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, AlertCircle, XCircle } from 'lucide-react';
 
 interface PartnerType {
   name: string;
