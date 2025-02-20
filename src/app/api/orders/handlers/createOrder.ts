@@ -6,7 +6,7 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { sendNewOrderToEligiblePartners } from "../../services/emailServices";
 import { validateServerDateTime } from "../utils/dateValidation";
 import { handleWalletTransaction } from "../utils/walletUtils";
-import { awardReferralBonus } from "../../refferals/route";
+import { awardReferralBonus } from "../../refferals";
 
 const prisma = new PrismaClient();
 
