@@ -452,7 +452,7 @@ export default function UserDashboard() {
             <Wallet className="text-blue-500 w-8 h-8" />
           </div>
           <Link
-            href="/user/dashboard/transactions"
+            href="/user/dashboard/wallet"
             className="mt-4 text-sm text-blue-600 hover:text-blue-800 flex items-center group"
           >
             View Transactions
@@ -503,7 +503,7 @@ export default function UserDashboard() {
 
           <div className="space-y-4">
             {recentOrders.length > 0 ? (
-        recentOrders.slice(0, 3).map((order) => {
+             recentOrders.slice(0, 3).map((order) => {
                 const statusDisplay = getStatusDisplay(order);
 
                 // Defensive checks and formatting
@@ -550,14 +550,12 @@ export default function UserDashboard() {
                             )}
                           </div>
                         </div>
-                      <div classname="mt-3 sm:mt-0 sm:ml-4">
-                          <span
-                          className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}
-                        >
-                          {statusDisplay.icon}
-                          <span className="ml-1">{statusDisplay.text}</span>
-                        </span>
-                      </div>
+                <div className="mt-3 sm:mt-0 sm:ml-4">
+                  <span className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}>
+                    {statusDisplay.icon}
+                    <span className="ml-1">{statusDisplay.text}</span>
+                  </span>
+                </div>
                         {/* Order cancellation condition */}
                         {order.status === "PENDING" && (
                           <OrderCancellationStatus
@@ -714,7 +712,7 @@ export default function UserDashboard() {
 
                       {/* Right column with status and payment button */}
                       <div className="flex flex-col items-end space-y-2 ml-4">
-{/*                         <span
+                        {/* <span
                           className={`px-3 py-1 text-xs rounded-full flex items-center ${statusDisplay.class}`}
                         >
                           {statusDisplay.icon}
