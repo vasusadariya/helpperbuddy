@@ -72,7 +72,7 @@ export async function handleUpdateOrder(req: NextRequest) {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: updateData,
-      });
+      })
       return updatedOrder;
     });
 

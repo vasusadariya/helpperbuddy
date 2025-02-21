@@ -293,6 +293,7 @@ export async function handleCreateOrder(req: NextRequest) {
       timeout: 10000,
       maxWait: 15000,
     });
+
     // Send notifications outside transaction
     let notificationResult;
     try {
