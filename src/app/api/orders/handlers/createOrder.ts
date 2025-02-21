@@ -6,7 +6,6 @@ import { authOptions } from "../../auth/[...nextauth]/options";
 import { sendNewOrderToEligiblePartners } from "../../services/emailServices";
 import { validateServerDateTime } from "../utils/dateValidation";
 import { handleWalletTransaction } from "../utils/walletUtils";
-import { awardReferralBonus } from "../../refferals";
 
 const prisma = new PrismaClient();
 
@@ -294,13 +293,6 @@ export async function handleCreateOrder(req: NextRequest) {
       timeout: 10000,
       maxWait: 15000,
     });
-
-    try {
-        await awardReferralBonus(user.id);
-      } catch (bonusError) {
-        console.error("Error awarding referral bonus:", bonusError);
-      }
-
     // Send notifications outside transaction
     let notificationResult;
     try {

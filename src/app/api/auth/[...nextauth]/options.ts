@@ -211,7 +211,7 @@ export const authOptions: NextAuthOptions = {
         signIn: "/signin",
         error: "/auth/error",
     },
-    debug: process.env.NODE_ENV === "development",
+    secret: process.env.NEXTAUTH_SECRET,
 };
 
 export default NextAuth(authOptions);

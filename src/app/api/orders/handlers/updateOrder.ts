@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { PrismaClient } from "@prisma/client";
 import { authOptions } from "../../auth/[...nextauth]/options";
-import { awardReferralBonus } from "../../refferals/";
 
 
 const prisma = new PrismaClient();
@@ -74,15 +73,6 @@ export async function handleUpdateOrder(req: NextRequest) {
         where: { id: orderId },
         data: updateData,
       });
-
-      if (status === "COMPLETED") {
-        try {
-          await awardReferralBonus(currentOrder.userId);
-        } catch (error) {
-          console.error("Error awarding referral bonus:", error);
-        }
-      }
-
       return updatedOrder;
     });
 

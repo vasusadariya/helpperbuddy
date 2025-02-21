@@ -3,7 +3,6 @@
 import { useState, useEffect, JSX } from "react";
 import { useForm } from "react-hook-form";
 import type { SubmitHandler } from "react-hook-form";
-import ReferralCodeCard from "@/components/ReferralCodeCard";
 interface UserProfile {
   id: string;
   email: string;
@@ -161,9 +160,6 @@ export default function ProfilePage(): JSX.Element {
           )}
         </button>
       </form>
-      <section>
-          <ReferralCodeCard />
-        </section>
     </div>
   );
 }
